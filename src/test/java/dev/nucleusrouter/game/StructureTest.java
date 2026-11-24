@@ -90,6 +90,17 @@ class StructureTest {
 		assertEquals(609.5, m.locate(Structure.KHAZAD_DUM).pos().x(), 1.5);
 	}
 
+	/** In-game 2026-11-24 the temple marker sat beside the Door Guardian: the body under the tag wins. */
+	@Test
+	void theNpcBodyBeatsAFloatingTag() {
+		StructureMap m = new StructureMap();
+		m.observeNametag(Structure.JUNGLE_TEMPLE, "Kalhuiki Door Guardian", 300, 72, 300, 0, false);
+		m.observeNametag(Structure.JUNGLE_TEMPLE, "Kalhuiki Door Guardian", 302.5, 70, 301, 1, true);
+		assertEquals(new Vec3(302.5, 70, 301), m.locate(Structure.JUNGLE_TEMPLE).pos(), "tag-only sighting dropped");
+		m.observeNametag(Structure.JUNGLE_TEMPLE, "Kalhuiki Door Guardian", 300, 72, 300, 2, false);
+		assertEquals(new Vec3(302.5, 70, 301), m.locate(Structure.JUNGLE_TEMPLE).pos(), "a later tag-only sighting is ignored");
+	}
+
 	@Test
 	void clearAllForgetsEverything() {
 		StructureMap m = new StructureMap();

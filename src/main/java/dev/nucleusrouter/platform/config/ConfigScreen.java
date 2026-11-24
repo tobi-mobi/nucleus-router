@@ -111,7 +111,7 @@ public final class ConfigScreen {
 		ConfigCategory structures = ConfigCategory.createBuilder()
 				.name(Component.literal("Structures"))
 				.option(boolOpt("Show found structures", "Draw a beam and the name of each found structure, through walls.", d.structures.showMarkers, () -> c.structures.showMarkers, v -> c.structures.showMarkers = v))
-				.option(boolOpt("Rough position from area name", "When no name tag has been seen yet, use where you stood while the scoreboard showed the structure's area.", d.structures.useAreaHints, () -> c.structures.useAreaHints, v -> c.structures.useAreaHints = v))
+				.option(boolOpt("Rough position from area name", "When no name tag has been seen yet, note where you stood while the scoreboard showed the structure's area (only listed in /nr structures, never drawn; it was usually wrong).", d.structures.useAreaHints, () -> c.structures.useAreaHints, v -> c.structures.useAreaHints = v))
 				.option(intOpt("Scan every (ticks)", "How often nearby name tags are checked. 20 ticks = 1 second.", d.structures.scanEveryTicks, () -> c.structures.scanEveryTicks, v -> c.structures.scanEveryTicks = v, 1, 200))
 				.option(stringList("Mines of Divan name tags", "The 4 keepers." + names, d.structures.minesOfDivanNames, () -> c.structures.minesOfDivanNames, v -> c.structures.minesOfDivanNames = v))
 				.option(stringList("Precursor City name tags", "Professor Robot." + names, d.structures.precursorCityNames, () -> c.structures.precursorCityNames, v -> c.structures.precursorCityNames = v))
@@ -121,9 +121,19 @@ public final class ConfigScreen {
 				.option(stringList("Khazad-dum name tags", "Bal." + names, d.structures.khazadDumNames, () -> c.structures.khazadDumNames, v -> c.structures.khazadDumNames = v))
 				.build();
 
+		ConfigCategory compass = ConfigCategory.createBuilder()
+				.name(Component.literal("Wishing Compass"))
+				.option(boolOpt("Show in the world", "Draw compass lines, the estimated target and the suggested next spot.", d.compass.showInWorld, () -> c.compass.showInWorld, v -> c.compass.showInWorld = v))
+				.option(dblOpt("Good enough radius (blocks)", "Once the target is known this precisely, no more compass uses are suggested.", d.compass.goodRadiusBlocks, () -> c.compass.goodRadiusBlocks, v -> c.compass.goodRadiusBlocks = v, 1, 100))
+				.option(dblOpt("Collect particles for (s)", "How long after a compass use particles are collected." + VERIFY, d.compass.captureSeconds, () -> c.compass.captureSeconds, v -> c.compass.captureSeconds = v, 0.5, 15))
+				.option(dblOpt("Collect within (blocks)", "Particles further away from you are ignored.", d.compass.captureRadius, () -> c.compass.captureRadius, v -> c.compass.captureRadius = v, 5, 128))
+				.option(intOpt("Minimum particles", "A trail needs at least this many particles.", d.compass.minPoints, () -> c.compass.minPoints, v -> c.compass.minPoints = v, 3, 100))
+				.option(stringList("Trail particle types", "Only these particle types can form the trail, e.g. minecraft:happy_villager. Empty = any (the straightest trail wins)." + VERIFY, d.compass.particleTypes, () -> c.compass.particleTypes, v -> c.compass.particleTypes = v))
+				.build();
+
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.literal("Nucleus Router"))
-				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost).category(structures)
+				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost).category(structures).category(compass)
 				.save(ConfigManager::save)
 				.build()
 				.generateScreen(parent);

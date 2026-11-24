@@ -14,7 +14,7 @@ import java.util.List;
  * resets that value for existing users.
  */
 public final class NrConfig {
-	public static final int CURRENT_VERSION = 4;
+	public static final int CURRENT_VERSION = 5;
 	public int configVersion = CURRENT_VERSION;
 
 	public General general = new General();
@@ -33,6 +33,7 @@ public final class NrConfig {
 	public Placing placing = new Placing();
 	public Cost cost = new Cost();
 	public Structures structures = new Structures();
+	public Compass compass = new Compass();
 
 	/** §2.1 Crystal Hollows and the run. */
 	public static final class Hollows {
@@ -171,8 +172,11 @@ public final class NrConfig {
 	public static final class Structures {
 		/** Draw found structures in the world (through walls) with their names. */
 		public boolean showMarkers = true;
-		/** Use the scoreboard area name as a rough position when no name tag has been seen. */
-		public boolean useAreaHints = true;
+		/**
+		 * Note the scoreboard area name as a rough position when no name tag has been seen. Off by default:
+		 * the user found it wrong most of the time (2026-11-24). Never drawn in the world.
+		 */
+		public boolean useAreaHints = false;
 		/** How often to look at nearby name tags, in ticks (20 = once a second). */
 		public int scanEveryTicks = 10;
 		public List<String> minesOfDivanNames = new ArrayList<>(List.of("Keeper of"));
@@ -181,6 +185,28 @@ public final class NrConfig {
 		public List<String> goblinQueenNames = new ArrayList<>(List.of("Goblin Queen"));
 		public List<String> jungleTempleNames = new ArrayList<>(List.of("Kalhuiki Door Guardian"));
 		public List<String> khazadDumNames = new ArrayList<>(List.of("Bal"));
+	}
+
+	/**
+	 * §4 Wishing Compass solver. [VERIFY] how the compass trail looks in-game: which particle type, how
+	 * long it lasts, and whether every use points at the same structure. The mod picks the straightest
+	 * particle trail by itself, so these rarely need changing.
+	 */
+	public static final class Compass {
+		/** Item name that marks a Wishing Compass use (right-click). */
+		public String itemName = "Wishing Compass";
+		/** How long after a use particles are collected, in seconds. */
+		public double captureSeconds = 3.0;
+		/** Particles further than this from you are ignored, in blocks. */
+		public double captureRadius = 40;
+		/** A trail needs at least this many particles. */
+		public int minPoints = 5;
+		/** Particle types that can form the trail, e.g. "minecraft:happy_villager". Empty = any type (the straightest wins). */
+		public List<String> particleTypes = new ArrayList<>();
+		/** Once the estimate is this sure (95% radius, blocks), stop suggesting another compass. */
+		public double goodRadiusBlocks = 10;
+		/** Draw compass lines, the estimate and the suggested next spot. */
+		public boolean showInWorld = true;
 	}
 
 	/**
@@ -222,6 +248,11 @@ public final class NrConfig {
 			}
 			configVersion = 4;
 		}
+		if (configVersion < 5) {
+			// User 2026-11-24: rough area positions were wrong ~90% of the time
+			if (structures != null && structures.useAreaHints) { structures.useAreaHints = false; notes.add("structures.useAreaHints -> off"); }
+			configVersion = 5;
+		}
 		return notes;
 	}
 
@@ -239,6 +270,7 @@ public final class NrConfig {
 		if (placing == null) { placing = new Placing(); fixes.add("placing section missing, reset to defaults"); }
 		if (cost == null) { cost = new Cost(); fixes.add("cost section missing, reset to defaults"); }
 		if (structures == null) { structures = new Structures(); fixes.add("structures section missing, reset to defaults"); }
+		if (compass == null) { compass = new Compass(); fixes.add("compass section missing, reset to defaults"); }
 
 		Hollows h = hollows;
 		if (h.minX > h.maxX) { int t = h.minX; h.minX = h.maxX; h.maxX = t; fixes.add("hollows minX > maxX, swapped"); }
@@ -277,6 +309,12 @@ public final class NrConfig {
 		cost.turnSecondsAt90 = clamp(fixes, "cost.turnSecondsAt90", cost.turnSecondsAt90, 0, 5);
 		cost.turnExponent = clamp(fixes, "cost.turnExponent", cost.turnExponent, 0.5, 4);
 		cost.missRecoverySeconds = clamp(fixes, "cost.missRecoverySeconds", cost.missRecoverySeconds, 0, 30);
+		if (compass.itemName == null || compass.itemName.isBlank()) { compass.itemName = "Wishing Compass"; fixes.add("compass.itemName empty, reset"); }
+		if (compass.particleTypes == null) { compass.particleTypes = new ArrayList<>(); fixes.add("compass.particleTypes missing, reset"); }
+		compass.captureSeconds = clamp(fixes, "compass.captureSeconds", compass.captureSeconds, 0.5, 15);
+		compass.captureRadius = clamp(fixes, "compass.captureRadius", compass.captureRadius, 5, 128);
+		compass.minPoints = (int) clamp(fixes, "compass.minPoints", compass.minPoints, 3, 100);
+		compass.goodRadiusBlocks = clamp(fixes, "compass.goodRadiusBlocks", compass.goodRadiusBlocks, 1, 100);
 		structures.scanEveryTicks = (int) clamp(fixes, "structures.scanEveryTicks", structures.scanEveryTicks, 1, 200);
 		Structures sd = new Structures();
 		if (structures.minesOfDivanNames == null) { structures.minesOfDivanNames = sd.minesOfDivanNames; fixes.add("structures.minesOfDivanNames missing, reset"); }

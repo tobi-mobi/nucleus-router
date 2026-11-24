@@ -43,6 +43,14 @@ public final class NrCommands {
 								.then(literal("cancel").executes(DebugCommands::calibrateBombCancel))))
 						.then(StructureCommands.structuresNode())
 						.then(StructureCommands.structureNode())
+						.then(literal("compass").executes(ctx -> { dev.nucleusrouter.platform.compass.CompassTracker.status(); return 1; })
+								.then(literal("undo").executes(ctx -> { dev.nucleusrouter.platform.compass.CompassTracker.undoAndReport(); return 1; }))
+								.then(literal("clear").executes(ctx -> {
+									dev.nucleusrouter.platform.compass.CompassTracker.clearAll();
+									ctx.getSource().sendFeedback(Component.literal("Compass lines cleared.").withStyle(ChatFormatting.GREEN));
+									return 1;
+								})))
+						.then(literal("inspect").executes(InspectCommand::run))
 						.then(literal("dump").executes(DebugCommands::dump))
 						.then(literal("config").executes(NrCommands::openConfig))
 						.then(literal("reload").executes(NrCommands::reload));
@@ -66,6 +74,9 @@ public final class NrCommands {
 		line(src, "/nr structures", "which run structures are found in this lobby, and where");
 		line(src, "/nr structure set <name>", "mark a structure where you stand (divan, precursor, king, queen, temple, khazad)");
 		line(src, "/nr structure clear <name|all>", "forget a structure so it's found again");
+		line(src, "/nr compass", "Wishing Compass lines and the estimated target");
+		line(src, "/nr compass undo | clear", "remove the last compass line, or all of them");
+		line(src, "/nr inspect", "what the block you look at is, and every entity near it (names, items)");
 		line(src, "/nr dump", "save this lobby's terrain + settings to a file for offline testing");
 		line(src, "/nr config", "open the settings screen");
 		line(src, "/nr reload", "reload settings from config/nucleusrouter.json");

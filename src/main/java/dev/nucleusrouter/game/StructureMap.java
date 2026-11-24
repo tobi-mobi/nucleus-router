@@ -30,6 +30,8 @@ public final class StructureMap {
 		public double x, y, z;
 		public int samples;
 		public long firstSeenMs, lastSeenMs;
+		/** True if the position is the NPC's body (found under the name tag), false if only the floating tag. */
+		public boolean onBody;
 
 		public Vec3 pos() { return new Vec3(x, y, z); }
 	}
@@ -65,11 +67,17 @@ public final class StructureMap {
 		return entries == null ? null : entries.get(s.name());
 	}
 
-	/**
-	 * Records a name tag sighting. Returns true if this is the first NPC evidence for the structure
-	 * (so the caller can announce "found").
-	 */
+	/** Same as {@link #observeNametag(Structure, String, double, double, double, long, boolean)} with no body found. */
 	public boolean observeNametag(Structure s, String label, double x, double y, double z, long nowMs) {
+		return observeNametag(s, label, x, y, z, nowMs, false);
+	}
+
+	/**
+	 * Records a name tag sighting at (x, y, z). {@code onBody} says the position is the NPC's body under
+	 * the tag; such a sighting replaces tag-only ones and is never averaged with them.
+	 * Returns true if this is the first NPC evidence for the structure (so the caller can announce "found").
+	 */
+	public boolean observeNametag(Structure s, String label, double x, double y, double z, long nowMs, boolean onBody) {
 		Entry e = entry(s);
 		boolean first = e.npcs.isEmpty();
 		Npc match = null;
@@ -81,11 +89,14 @@ public final class StructureMap {
 				if (dx * dx + dy * dy + dz * dz <= SAME_NPC_DISTANCE * SAME_NPC_DISTANCE) { match = n; break; }
 			}
 		}
+		if (match != null && match.onBody && !onBody) return false; // keep the better evidence
+		if (match != null && onBody && !match.onBody) match.samples = 0; // restart on the body
 		if (match == null) {
 			match = new Npc();
 			match.firstSeenMs = nowMs;
 			e.npcs.add(match);
 		}
+		match.onBody = onBody;
 		int n = Math.min(match.samples, MAX_SAMPLES - 1);
 		match.x = (match.x * n + x) / (n + 1);
 		match.y = (match.y * n + y) / (n + 1);

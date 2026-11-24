@@ -21,6 +21,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.entity.player.Player;
 
 import java.io.IOException;
@@ -94,9 +97,14 @@ public final class StructureTracker {
 			Structure s = matcher.match(text);
 			if (s == null) continue;
 			String label = dev.nucleusrouter.core.location.LocationParser.clean(text);
-			if (map.observeNametag(s, label, e.getX(), e.getY(), e.getZ(), now)) {
-				NucleusRouterClient.LOG.info("[Nucleus Router] Structures: found {} from name tag '{}' at {} {} {}", s.displayName, label, e.getX(), e.getY(), e.getZ());
-				notice(Component.literal("Found " + s.displayName + " (" + label + ") at " + fmt(e.getX(), e.getY(), e.getZ())).withStyle(ChatFormatting.GREEN));
+			// The name is often a floating label (armour stand); anchor on the NPC body standing under it.
+			Entity body = (e instanceof LivingEntity && !(e instanceof ArmorStand)) ? e : bodyUnder(client, e);
+			Entity at = body != null ? body : e;
+			if (map.observeNametag(s, label, at.getX(), at.getY(), at.getZ(), now, body != null)) {
+				NucleusRouterClient.LOG.info("[Nucleus Router] Structures: found {} from name tag '{}' ({} at {} {} {}), body: {}", s.displayName, label,
+						e.getType().toShortString(), e.getX(), e.getY(), e.getZ(),
+						body == null ? "none" : body.getType().toShortString() + " at " + body.getX() + " " + body.getY() + " " + body.getZ());
+				notice(Component.literal("Found " + s.displayName + " (" + label + ") at " + fmt(at.getX(), at.getY(), at.getZ())).withStyle(ChatFormatting.GREEN));
 			}
 		}
 
@@ -113,6 +121,20 @@ public final class StructureTracker {
 		}
 
 		if (map.version() != savedVersion && now - lastSaveMs > SAVE_EVERY_MS) saveIfDirty();
+	}
+
+	/** The living entity (not an armour stand, not you) standing right under a floating name tag, or null. */
+	private static Entity bodyUnder(Minecraft client, Entity tag) {
+		Entity best = null;
+		double bestD = Double.MAX_VALUE;
+		AABB box = new AABB(tag.getX() - 1.5, tag.getY() - 3.5, tag.getZ() - 1.5, tag.getX() + 1.5, tag.getY() + 0.5, tag.getZ() + 1.5);
+		for (Entity o : client.level.getEntities(tag, box)) {
+			if (!(o instanceof LivingEntity) || o instanceof ArmorStand || o == client.player) continue;
+			double dx = o.getX() - tag.getX(), dz = o.getZ() - tag.getZ();
+			double d = dx * dx + dz * dz;
+			if (d < bestD) { bestD = d; best = o; }
+		}
+		return best;
 	}
 
 	private static void switchLobby(LocationState loc) {
@@ -183,27 +205,27 @@ public final class StructureTracker {
 
 	// ------------------------------------------------------------------ drawing
 
-	private static final int COLOR_MANUAL = 0x55FFFF, COLOR_NPC = 0x55FF55, COLOR_AREA = 0xFFFF55;
+	private static final int COLOR_MANUAL = 0x55FFFF, COLOR_NPC = 0x55FF55;
 
 	private static void draw(WorldDraw draw) {
 		Minecraft client = Minecraft.getInstance();
 		if (client.player == null) return;
 		Vec3 eye = new Vec3(client.player.getX(), client.player.getEyeY(), client.player.getZ());
 		for (StructureMap.Location l : map.located()) {
-			int rgb = switch (l.source()) { case MANUAL -> COLOR_MANUAL; case NPC -> COLOR_NPC; case AREA -> COLOR_AREA; };
+			if (l.source() == StructureMap.Source.AREA) continue; // rough positions were mostly wrong (user, 2026-11-24)
+			int rgb = l.source() == StructureMap.Source.MANUAL ? COLOR_MANUAL : COLOR_NPC;
 			Vec3 p = l.pos();
 			double dist = p.sub(eye).length();
 			// A tall beam so it can be found from far away, and a label above it
 			draw.line(WorldDraw.mc(p), WorldDraw.mc(p.add(new Vec3(0, 30, 0))), WorldDraw.argb(200, rgb), 3f, true);
 			draw.marker(WorldDraw.mc(p), 0.6, WorldDraw.argb(255, rgb), WorldDraw.argb(90, rgb), true);
-			if (l.source() == StructureMap.Source.AREA) draw.circle(WorldDraw.mc(p), (float) l.uncertainty(), WorldDraw.argb(160, rgb), true);
 			if (l.source() != StructureMap.Source.MANUAL) {
 				for (StructureMap.Npc n : map.npcs(l.structure())) {
 					draw.marker(WorldDraw.mc(n.pos()), 0.4, WorldDraw.argb(255, COLOR_NPC), WorldDraw.argb(60, COLOR_NPC), true);
 				}
 			}
 			float scale = (float) (0.6 * Math.max(1.0, dist / 10.0));
-			String label = l.structure().displayName + (l.source() == StructureMap.Source.AREA ? " (rough)" : "") + "  " + Math.round(dist) + "m";
+			String label = l.structure().displayName + "  " + Math.round(dist) + "m";
 			draw.text(label, WorldDraw.mc(p.add(new Vec3(0, 31 + scale, 0))), WorldDraw.argb(255, rgb), scale, true);
 		}
 	}

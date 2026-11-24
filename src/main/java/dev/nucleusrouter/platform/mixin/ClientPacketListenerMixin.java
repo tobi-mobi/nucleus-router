@@ -3,6 +3,7 @@ package dev.nucleusrouter.platform.mixin;
 import dev.nucleusrouter.platform.debug.DebugRay;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundExplodePacket;
+import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,5 +25,11 @@ public abstract class ClientPacketListenerMixin {
 	@Inject(method = "handleExplosion", at = @At("TAIL"))
 	private void nucleusrouter$afterExplosion(ClientboundExplodePacket packet, CallbackInfo ci) {
 		dev.nucleusrouter.platform.debug.BombCalibration.onExplosion(packet.center(), packet.radius(), packet.blockCount());
+	}
+
+	/** Particles from the server, collected for a few seconds after a Wishing Compass use. */
+	@Inject(method = "handleParticleEvent", at = @At("TAIL"))
+	private void nucleusrouter$afterParticles(ClientboundLevelParticlesPacket packet, CallbackInfo ci) {
+		dev.nucleusrouter.platform.compass.CompassTracker.onParticle(packet.getParticle(), packet.getX(), packet.getY(), packet.getZ());
 	}
 }
