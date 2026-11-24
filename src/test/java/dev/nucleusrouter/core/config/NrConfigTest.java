@@ -43,6 +43,7 @@ class NrConfigTest {
 		old.configVersion = 1;
 		old.etherwarp.eyeHeight = 1.54;
 		old.etherwarp.rayPassesThrough = new java.util.ArrayList<>(List.of("minecraft:water", "minecraft:lava"));
+		old.bombs.bombImmuneBlocks.remove("*_fence"); // version 1 didn't have it
 		List<String> notes = old.migrate();
 		assertEquals(1.27, old.etherwarp.eyeHeight);
 		assertTrue(old.etherwarp.rayPassesThrough.contains("minecraft:torch"));
