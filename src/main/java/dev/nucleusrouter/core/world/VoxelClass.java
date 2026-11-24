@@ -8,7 +8,7 @@ public enum VoxelClass {
 	UNKNOWN,
 	/** Air now, and nothing that respawns was ever seen here. */
 	AIR,
-	/** Water or lava. The etherwarp ray passes through it (confirmed in-game 2026-11-24). */
+	/** Water or lava. Invisible to etherwarp: the ray passes through and it counts as air above a landing block (confirmed in-game 2026-11-24). */
 	FLUID,
 	/** Hard Stone: breaks for good. Solid until broken. */
 	HARD_STONE,
