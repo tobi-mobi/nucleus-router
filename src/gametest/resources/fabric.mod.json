@@ -1,0 +1,14 @@
+{
+	"schemaVersion": 1,
+	"id": "nucleusrouter-gametest",
+	"version": "0.0.0",
+	"name": "Nucleus Router in-game tests",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": ["dev.nucleusrouter.gametest.RenderGameTest"]
+	},
+	"depends": {
+		"nucleusrouter": "*",
+		"fabric-client-gametest-api-v1": "*"
+	}
+}

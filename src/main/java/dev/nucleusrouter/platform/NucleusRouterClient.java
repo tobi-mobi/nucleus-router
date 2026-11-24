@@ -5,6 +5,8 @@ import dev.nucleusrouter.platform.command.NrCommands;
 import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.location.LocationTracker;
 import dev.nucleusrouter.platform.world.WorldCapture;
+import dev.nucleusrouter.platform.render.WorldDraw;
+import dev.nucleusrouter.platform.debug.DebugRay;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -25,6 +27,8 @@ public final class NucleusRouterClient implements ClientModInitializer {
 		ConfigManager.load();
 		LocationTracker.init();
 		WorldCapture.init();
+		WorldDraw.init();
+		DebugRay.init();
 		NrCommands.register();
 		LOG.info("[Nucleus Router] {} loaded (render-only; never sends input, chat or packets).", NucleusRouter.VERSION_LABEL);
 	}

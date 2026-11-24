@@ -11,7 +11,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - [x] 1.3 `/nr` command root. Crystal Hollows detection (Hypixel Mod API location event, with scoreboard/tab-list fallback), lobby id, lobby day (`dayTime / 24000`), and ping reading. (§1, §2.1, §2.6)
 - [x] 1.4 World model: voxel classes, sticky "ghost solid" memory for respawning blocks, capture from chunk loads and block updates, per-lobby persistence on disk. Unit tests. (§3.1, §2.4)
 - [x] 1.5 Etherwarp ray model (DDA, first hit, 2 air above, full-cube rule, configurable eye height, valid aim region). Unit tests. (§2.3)
-- [ ] 1.6 `/nr debug ray` overlay + logging of predicted vs actual landing + eye-height suggestion. Also the first world-render utility: lines, outlines and filled boxes through walls, working on OpenGL, Vulkan and Iris. (§6, §5)
+- [x] 1.6 `/nr debug ray` overlay + logging of predicted vs actual landing + eye-height suggestion. Also the first world-render utility: lines, outlines and filled boxes through walls, working on OpenGL, Vulkan and Iris. (§6, §5)
 - [ ] 1.7 `/nr calibrate bomb` (snapshot → block diff → measured centre/radius/shape, impact vs predicted throw) and `/nr dump`. (§6, §2.4)
 - [ ] 1.8 Milestone report: in-game checklist + open [VERIFY] items. **Stop.**
 
@@ -55,7 +55,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 ## Confirmed game facts (from in-game tests; these override SPEC.md)
 | Item | Value | Confirmed on |
 |---|---|---|
-| Etherwarp eye height | _[VERIFY]_ (default 1.54) | |
+| Etherwarp eye height | _[VERIFY]_ (default 1.54). Settle with `/nr debug ray` + ~20 warps, then `/nr debug ray stats` / `apply` | |
 | Etherwarp range is measured to where the ray enters the target block | _[VERIFY]_ (default: entry point within `etherwarp.range`; 1.6 logs predicted vs actual) | |
 | Hard Stone block type(s) | `minecraft:stone` (advanced tooltip shows skyblock:HARD_STONE) | 2026-11-24 |
 | Respawn time of ores/gemstones | _[VERIFY]_ | |
@@ -75,6 +75,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Do fluids (water/lava) block the etherwarp ray? | **No**: to etherwarp, water and lava are as if they don't exist. The ray passes through, and you can land on a block with water/lava in the 2 spaces above. Class FLUID counts as air for rays and landing (`etherwarp.rayPassesThrough`) | 2026-11-24 |
 | Which block(s) the user places for +2/+1 targets | Mainly cobblestone and Hard Stone, other blocks work too. Your own placements are now detected (client prediction), whatever the type | 2026-11-24 |
 | What a mined ore/gemstone turns into until it respawns (air? bedrock?) | _[VERIFY]_ (`/nr world here` on a freshly mined gemstone) | |
+| World overlay renders correctly with Iris shaders on | _[VERIFY]_ (`/nr debug ray` with your shader pack on). OpenGL and Vulkan already checked by the automated in-game test | |
 | What exactly ends the 3 s timer (leaving the castle's bounds? any message?) | _[VERIFY]_ Needed before 3.3/3.6 (den exit plan and countdown) | |
 | Ping on Hypixel | 130-200 ms for this user (EU). Will be measured from real etherwarps in 1.6 instead of configured | 2026-11-24 |
 | Own tab-list latency is real ping on Hypixel | **No**: shows 1 ms for an EU player. Values <= 5 ms are ignored; `cost.fallbackPingMs` is used | 2026-11-24 |
@@ -93,6 +94,9 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24 Fix after in-game test: block changes are hooked on `Level.setBlock` (client world only), because server-sent changes skip the `ClientLevel.setBlock` override. Changes the client applies while predicting (your own actions) are flagged `byPlayer`, and a block you place is PLACED whatever its type. `placing.placedBlockTypes` is now only a fallback.
 - 2026-11-24 Lobby saving kept but made optional (`general.saveLobbies`, default on). The user rarely returns to the same lobby; saving still protects a long setup against a crash or reconnect, and costs nothing when unused.
 - 2026-11-24 Etherwarp model (1.5): range counts to where the ray *enters* the target block; the block containing the eye is checked too. The valid aim region is measured by casting real rays at an n x n grid on each target face that faces you (plus a ring just outside each face); size is reported as solid angle and as an equivalent cone width, and the best aim point is the valid direction furthest from any invalid one (its "margin"). Grid size is `etherwarp.aimSamplesPerFace` (default 8). Planning uses sticky solidity (`plannedSolid`), live prediction uses `currentlySolid`.
+- 2026-11-24 Rendering (1.6) uses vanilla **gizmos** (`net.minecraft.gizmos.Gizmos`: cuboid stroke/fill, line, text, `setAlwaysOnTop()` for through walls), added from Fabric's `LevelExtractionEvents.END_EXTRACTION`, instead of Skyblocker-style custom pipelines. They use vanilla pipelines, so no raw GL and no custom shaders; shown one frame later, which doesn't matter. All drawing goes through `platform/render/WorldDraw` so this can be swapped if needed.
+- 2026-11-24 Automated in-game tests: `./gradlew runClientGameTest` (add `-PnrVulkan` for the Vulkan backend) builds a test scene and saves screenshots to `build/run/clientGameTest/screenshots/`. Code in `src/gametest`, not in the mod jar.
+- 2026-11-24 `/nr debug ray` only observes: right-clicks (via Fabric use-item/use-block events, always PASS) while sneaking with an item named "Aspect of the Void/End", and the server's teleport packet (read-only mixin on `handleMovePlayer`). It also measures click-to-teleport delay, which replaces the useless tab-list ping for the cost model.
 - 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
 ## Session log
@@ -104,3 +108,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24: In-game test of 1.4 found server block changes were missed (wrong hook). Fixed; added FLUID class (ray passes through water/lava), detection of your own placements, longer `/nr world here` look range, `general.saveLobbies` toggle. 29 tests pass. Needs a re-test in-game. Next: 1.5.
 - 2026-11-24: User re-tested 1.4: block changes, gemstone memory, Hard Stone and placed blocks all correct. Fluids confirmed invisible to etherwarp (ray and landing). Next: 1.5 etherwarp ray model.
 - 2026-11-24: 1.5 etherwarp ray model in `core/etherwarp`: exact voxel ray (DDA), landing rule, eye height from config, valid aim region with best aim point and margin. 40 unit tests pass. Nothing to see in-game yet; 1.6 adds `/nr debug ray` to show and check it. Next: 1.6.
+- 2026-11-24: 1.6 `/nr debug ray` (live target box green/red, landing marker, aim margin + best aim dot, label) and warp checking (predicted vs actual, eye-height fit, click-to-teleport delay) with `stats`/`apply`/`clear`. World-render utility on vanilla gizmos; verified by screenshot on OpenGL and Vulkan via a new client gametest. 43 unit tests pass. Needs in-game check with Iris + real warps. Next: 1.7.

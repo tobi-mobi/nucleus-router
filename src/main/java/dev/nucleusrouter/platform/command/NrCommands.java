@@ -35,6 +35,10 @@ public final class NrCommands {
 						.then(literal("world").executes(WorldCommands::stats)
 								.then(literal("here").executes(WorldCommands::here))
 								.then(literal("save").executes(WorldCommands::save)))
+						.then(literal("debug").then(literal("ray").executes(DebugCommands::toggleRay)
+								.then(literal("stats").executes(DebugCommands::rayStats))
+								.then(literal("clear").executes(DebugCommands::rayClear))
+								.then(literal("apply").executes(DebugCommands::rayApply))))
 						.then(literal("config").executes(NrCommands::openConfig))
 						.then(literal("reload").executes(NrCommands::reload));
 				dispatcher.register(cmd);
@@ -50,6 +54,9 @@ public final class NrCommands {
 		line(src, "/nr world", "remembered terrain: lobby, sections, block classes");
 		line(src, "/nr world here", "what the mod remembers about the block you look at and the one you stand on");
 		line(src, "/nr world save", "save this lobby's terrain now");
+		line(src, "/nr debug ray", "show where an etherwarp would land; checks your real warps");
+		line(src, "/nr debug ray stats", "predicted vs actual, eye height suggestion, warp delay");
+		line(src, "/nr debug ray apply", "use the suggested eye height");
 		line(src, "/nr config", "open the settings screen");
 		line(src, "/nr reload", "reload settings from config/nucleusrouter.json");
 		return 1;

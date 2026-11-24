@@ -27,6 +27,18 @@ loom {
 	}
 }
 
+// In-game client tests (./gradlew runClientGameTest): start a real client, build a test scene,
+// take screenshots. Lives in src/gametest and is never part of the mod jar.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "nucleusrouter-gametest"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
@@ -70,4 +82,9 @@ test {
 		events "failed"
 		exceptionFormat "full"
 	}
+}
+
+// ./gradlew runClientGameTest -PnrVulkan  -> run the in-game tests on the Vulkan backend
+tasks.named("runClientGameTest") {
+	if (project.hasProperty("nrVulkan")) args("--graphicsBackend", "vulkan")
 }
