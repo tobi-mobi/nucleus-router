@@ -14,7 +14,7 @@ import java.util.List;
  * resets that value for existing users.
  */
 public final class NrConfig {
-	public static final int CURRENT_VERSION = 1;
+	public static final int CURRENT_VERSION = 2;
 	public int configVersion = CURRENT_VERSION;
 
 	public General general = new General();
@@ -68,14 +68,21 @@ public final class NrConfig {
 	public static final class Etherwarp {
 		/** 57 base + 1 per Transmission Tuner, max 61. */
 		public int range = 61;
-		/** [VERIFY] Eye height above the feet the server uses while sneaking. */
-		public double eyeHeight = 1.54;
+		/**
+		 * Eye height above the feet that the server uses while crouching. Confirmed 2026-11-24 from 16 real
+		 * warps: 1.235 to 1.290 fits all of them; 1.27 is modern Minecraft's crouching eye height.
+		 */
+		public double eyeHeight = 1.27;
 		/** Air blocks needed above a target to land on it. */
 		public int requiredAirAbove = 2;
 		/** Aim-region precision: sample grid per visible target face (n x n). Higher is finer but slower. */
 		public int aimSamplesPerFace = 8;
-		/** Blocks the etherwarp ray passes straight through (confirmed in-game 2026-11-24: water and lava). */
-		public List<String> rayPassesThrough = new ArrayList<>(List.of("minecraft:water", "minecraft:lava", "minecraft:bubble_column"));
+		/**
+		 * Blocks that don't exist for etherwarp: the ray passes through them and they count as air above a
+		 * landing block. Confirmed in-game 2026-11-24: water, lava, torches.
+		 */
+		public List<String> rayPassesThrough = new ArrayList<>(List.of("minecraft:water", "minecraft:lava", "minecraft:bubble_column",
+				"minecraft:torch", "minecraft:wall_torch"));
 	}
 
 	/** §2.4 Bob-ombs. */
@@ -131,6 +138,27 @@ public final class NrConfig {
 		public double turnExponent = 1.5;
 		/** Time lost when a warp lands in the wrong spot. */
 		public double missRecoverySeconds = 1.5;
+	}
+
+	/**
+	 * Updates a config saved by an older version, keeping the user's own changes.
+	 * Returns one readable line per change.
+	 */
+	public List<String> migrate() {
+		List<String> notes = new ArrayList<>();
+		if (configVersion < 2) {
+			if (etherwarp != null) {
+				// 1.54 was the untested spec default; only replace it if the user never changed it
+				if (etherwarp.eyeHeight == 1.54) { etherwarp.eyeHeight = 1.27; notes.add("etherwarp.eyeHeight 1.54 -> 1.27 (measured in-game)"); }
+				if (etherwarp.rayPassesThrough != null) {
+					for (String t : List.of("minecraft:torch", "minecraft:wall_torch")) {
+						if (!etherwarp.rayPassesThrough.contains(t)) { etherwarp.rayPassesThrough.add(t); notes.add("etherwarp.rayPassesThrough + " + t); }
+					}
+				}
+			}
+			configVersion = 2;
+		}
+		return notes;
 	}
 
 	/**

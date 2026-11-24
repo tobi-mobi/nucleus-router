@@ -52,6 +52,7 @@ public final class ConfigManager {
 			}
 		}
 		if (loaded == null) loaded = new NrConfig();
+		for (String note : loaded.migrate()) NucleusRouterClient.LOG.info("[Nucleus Router] Config updated: {}", note);
 		List<String> fixes = loaded.validate();
 		for (String fix : fixes) NucleusRouterClient.LOG.warn("[Nucleus Router] Config: {}", fix);
 		current = loaded;

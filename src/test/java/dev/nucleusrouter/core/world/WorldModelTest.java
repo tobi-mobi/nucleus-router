@@ -37,7 +37,7 @@ class WorldModelTest {
 		assertEquals(BlockClassifier.Kind.HARD_STONE, classifier.classify("minecraft:stone"));
 		assertEquals(BlockClassifier.Kind.UNBREAKABLE, classifier.classify("minecraft:jungle_log"));
 		assertEquals(BlockClassifier.Kind.UNBREAKABLE, classifier.classify("minecraft:podzol"));
-		assertEquals(BlockClassifier.Kind.FLUID, classifier.classify("minecraft:lava"));
+		assertEquals(BlockClassifier.Kind.PASS_THROUGH, classifier.classify("minecraft:lava"));
 		assertEquals(BlockClassifier.Kind.PLACEABLE, classifier.classify("minecraft:cobblestone"));
 		assertEquals(BlockClassifier.Kind.RESPAWNING, classifier.classify("minecraft:red_stained_glass_pane"));
 		assertEquals(BlockClassifier.Kind.RESPAWNING, classifier.classify("minecraft:prismarine"));
@@ -100,7 +100,7 @@ class WorldModelTest {
 		model.observe(302, 100, 300, bedrock);
 		WorldSnapshot s = model.snapshot();
 		assertEquals(UNBREAKABLE, s.classAt(300, 100, 300));
-		assertEquals(FLUID, s.classAt(301, 100, 300));
+		assertEquals(PASS_THROUGH, s.classAt(301, 100, 300));
 		assertFalse(s.plannedSolid(301, 100, 300), "the etherwarp ray passes through water and lava");
 		assertEquals(UNBREAKABLE, s.classAt(302, 100, 300));
 	}

@@ -141,6 +141,22 @@ class EtherwarpTest {
 		assertTrue(now.isBlock(300, 100, 320), "right now the ray flies through the hole and the water");
 	}
 
+	/** In-game 2026-11-24: warping onto a wall block with a torch on it lands on the wall block. */
+	@Test
+	void torchesDoNotExistForEtherwarp() {
+		WorldModel m = new WorldModel(BlockClassifier.fromConfig(new NrConfig()));
+		int air = m.blockId("minecraft:air"), wall = m.blockId("minecraft:cobblestone_wall"), torch = m.blockId("minecraft:torch");
+		for (int z = 300; z <= 330; z++) for (int y = 100; y <= 104; y++) m.observe(300, y, z, air);
+		m.observe(300, 100, 310, wall);
+		m.observe(300, 101, 310, torch); // torch on top of the wall
+		m.observe(300, 102, 305, m.blockId("minecraft:wall_torch")); // a torch in the way of the ray
+		WorldSnapshot s = m.snapshot();
+		Vec3 eye = new Vec3(300.5, 102.5, 300.5);
+		Etherwarp.Result r = Etherwarp.warp(eye, new Vec3(300.5, 100.9, 310.5).sub(eye), P, s::plannedSolid);
+		assertTrue(r.valid(), r.toString());
+		assertTrue(r.hit().isBlock(300, 100, 310));
+	}
+
 	@Test
 	void aimRegionIsBigForAnOpenTargetAndShrinksWhenCovered() {
 		Blocks open = new Blocks().add(0, 100, 10);

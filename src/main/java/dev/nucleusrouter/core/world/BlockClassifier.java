@@ -12,20 +12,20 @@ import java.util.Set;
  * <ul>
  *   <li>Hard Stone ({@code bombs.hardStoneBlocks}) stays gone once broken.</li>
  *   <li>Bomb-immune blocks never break.</li>
- *   <li>Ray pass-through blocks ({@code etherwarp.rayPassesThrough}: water, lava) are fluids.</li>
+ *   <li>Ray pass-through blocks ({@code etherwarp.rayPassesThrough}: water, lava, torches) don't exist for etherwarp.</li>
  *   <li>Placed-block types ({@code placing.placedBlockTypes}) appearing in air count as placed.</li>
  *   <li>Everything else respawns.</li>
  * </ul>
  */
 public final class BlockClassifier {
 	public enum Kind {
-		AIR(0), FLUID(0), HARD_STONE(1), PLACEABLE(1), RESPAWNING(2), UNBREAKABLE(3);
+		AIR(0), PASS_THROUGH(0), HARD_STONE(1), PLACEABLE(1), RESPAWNING(2), UNBREAKABLE(3);
 
 		/** Higher rank wins when deciding what a position "originally" was. */
 		final int rank;
 		Kind(int rank) { this.rank = rank; }
 
-		boolean emptyish() { return this == AIR || this == FLUID; }
+		boolean emptyish() { return this == AIR || this == PASS_THROUGH; }
 	}
 
 	public static final Set<String> AIR_BLOCKS = Set.of("minecraft:air", "minecraft:cave_air", "minecraft:void_air");
@@ -52,7 +52,7 @@ public final class BlockClassifier {
 
 	public Kind classify(String blockId) {
 		if (blockId == null || AIR_BLOCKS.contains(blockId)) return Kind.AIR;
-		if (fluids.contains(blockId)) return Kind.FLUID;
+		if (fluids.contains(blockId)) return Kind.PASS_THROUGH;
 		if (hardStone.contains(blockId)) return Kind.HARD_STONE;
 		if (immuneExact.contains(blockId) || OVERFLOW_BLOCK.equals(blockId)) return Kind.UNBREAKABLE;
 		for (String suffix : immuneSuffixes) if (blockId.endsWith(suffix)) return Kind.UNBREAKABLE;
@@ -71,9 +71,9 @@ public final class BlockClassifier {
 		return switch (original) {
 			case RESPAWNING -> VoxelClass.RESPAWNING_SOLID;
 			case UNBREAKABLE -> VoxelClass.UNBREAKABLE;
-			case AIR, FLUID, HARD_STONE, PLACEABLE -> {
+			case AIR, PASS_THROUGH, HARD_STONE, PLACEABLE -> {
 				if (current == Kind.AIR) yield VoxelClass.AIR;
-				if (current == Kind.FLUID) yield VoxelClass.FLUID;
+				if (current == Kind.PASS_THROUGH) yield VoxelClass.PASS_THROUGH;
 				if (original == Kind.HARD_STONE && current == Kind.HARD_STONE) yield VoxelClass.HARD_STONE;
 				yield VoxelClass.PLACED;
 			}
