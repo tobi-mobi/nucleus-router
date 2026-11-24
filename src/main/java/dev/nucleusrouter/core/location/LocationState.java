@@ -17,6 +17,12 @@ public record LocationState(boolean inHollows, LocationReading.Source hollowsSou
 
 	public enum PingSource { PLAYER_LIST_LATENCY, TAB_WIDGET, FALLBACK_CONFIG }
 
+	/**
+	 * Tab-list latency at or below this is treated as fake. Confirmed 2026-11-24: Hypixel reports 1 ms
+	 * for a player in the EU, so on Hypixel the config fallback is normally what gets used.
+	 */
+	public static final int FAKE_LATENCY_MAX_MS = 5;
+
 	public static final LocationState NONE = new LocationState(false, null, null, null, -1, 0, 0, PingSource.FALLBACK_CONFIG);
 
 	/** Lobby day as defined in SPEC §2.1: {@code worldDayTime / 24000}. */
@@ -26,7 +32,7 @@ public record LocationState(boolean inHollows, LocationReading.Source hollowsSou
 
 	/**
 	 * Combines the sources. Priority for "in Hollows" and server id: Mod API, then tab list, then scoreboard.
-	 * Ping: the player's own tab-list latency if it's above 0, else the tab "Ping:" widget, else the config fallback.
+	 * Ping: the player's own tab-list latency if it looks real (above {@link #FAKE_LATENCY_MAX_MS}), else the tab "Ping:" widget, else the config fallback.
 	 */
 	public static LocationState resolve(LocationReading modApi, LocationReading tab, LocationReading scoreboard,
 			long clockTicks, boolean hasWorld, int playerListLatency, boolean useMeasuredPing, int fallbackPingMs) {
@@ -40,7 +46,7 @@ public record LocationState(boolean inHollows, LocationReading.Source hollowsSou
 
 		int ping;
 		PingSource pingSource;
-		if (useMeasuredPing && playerListLatency > 0) {
+		if (useMeasuredPing && playerListLatency > FAKE_LATENCY_MAX_MS) {
 			ping = playerListLatency; pingSource = PingSource.PLAYER_LIST_LATENCY;
 		} else if (useMeasuredPing && tab != null && tab.pingMs() != null && tab.pingMs() > 0) {
 			ping = tab.pingMs(); pingSource = PingSource.TAB_WIDGET;

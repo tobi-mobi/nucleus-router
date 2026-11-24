@@ -67,11 +67,11 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Block placing allowed everywhere in the Hollows? | _[VERIFY]_ (default: yes, outside structures) | |
 | Crystal Hollows bounds | _[VERIFY]_ (default x,z 202–823, y 31–188) | |
 | Wishing Compass particle behaviour | _[VERIFY]_ | |
-| Hypixel Mod API location packets arrive (via SkyHanni's subscription) and mode = `crystal_hollows` | _[VERIFY]_ (`/nr where`, "Hypixel Mod API" line) | |
-| Tab list shows `Area: Crystal Hollows` and `Server: mini…` | _[VERIFY]_ (`/nr where raw`) | |
-| Scoreboard area names inside the Hollows (list in `game/HollowsAreas.java`) | _[VERIFY]_ (`/nr where` in each area) | |
-| Own tab-list latency is real ping on Hypixel | _[VERIFY]_ (`/nr where` Ping line vs. your usual ping) | |
-| Lobby day from the world clock matches the real lobby day | _[VERIFY]_ (`/nr where` vs. another mod's day display) | |
+| Hypixel Mod API location packets arrive (via SkyHanni's subscription) and mode = `crystal_hollows` | Yes: `server=mini89R type=SKYBLOCK mode=crystal_hollows map=Crystal Hollows` | 2026-11-24 |
+| Tab list shows `Area: Crystal Hollows` and `Server: mini…` | Yes (`Area: Crystal Hollows`, `Server: mini89R`). No `Ping:` widget in the user's tab list | 2026-11-24 |
+| Scoreboard area names inside the Hollows (list in `game/HollowsAreas.java`) | "Mines of Divan" confirmed; its ⏣ marker arrives as a custom-font character, so names are matched directly. Others _[VERIFY]_ (`/nr where` in each area) | 2026-11-24 (partial) |
+| Own tab-list latency is real ping on Hypixel | **No**: shows 1 ms for an EU player. Values <= 5 ms are ignored; `cost.fallbackPingMs` is used | 2026-11-24 |
+| Lobby day from the world clock matches the real lobby day | Yes (day 14 at clock 356020 matched) | 2026-11-24 |
 
 ## Decisions (changes from SPEC.md)
 - 2026-11-23 Build versions (looked up, not from memory): MC 26.2, Fabric Loader 0.20.1, Loom 1.19-SNAPSHOT (resolves 1.19.4), Fabric API 0.161.0+26.2, Gradle 9.8.2, YACL 3.9.7+26.2-fabric, Mod Menu 20.0.1.
@@ -85,3 +85,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 ## Session log
 - 2026-11-23: 1.1 Gradle/Loom project builds and launches in the dev client. 1.2 JSON config (`config/nucleusrouter.json`, auto-repairs bad values, broken file moved to `.broken`) + YACL screen with 6 categories + Mod Menu entry. 3 unit tests pass. Next: 1.3 `/nr` command root, Crystal Hollows detection, lobby id/day, ping.
 - 2026-11-24: 1.3 `/nr` (help, where, where raw, config, reload). Location from Mod API (listen-only) > tab list > scoreboard; lobby id canonicalised (`m123AB` -> `mini123AB`); lobby day = clock / 24000; ping with fallbacks. 10 unit tests pass. Next: 1.4 world model.
+- 2026-11-24: In-game test of 1.3: Mod API, lobby id and lobby day work. Fixed scoreboard area (custom-font marker) and fake 1 ms ping (now falls back to config). 11 tests pass. Plan: measure real warp delay passively from the user's own etherwarps in 1.6. Next: 1.4.

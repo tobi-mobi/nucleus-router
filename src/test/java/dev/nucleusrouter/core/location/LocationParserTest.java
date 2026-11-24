@@ -56,6 +56,23 @@ class LocationParserTest {
 		assertEquals("Goblin Holdout", r.area());
 		assertNull(LocationParser.fromScoreboard("BED WARS", lines, SUB_AREAS));
 		assertFalse(LocationParser.fromScoreboard("SKYBLOCK", List.of("⏣ Village"), SUB_AREAS).inHollows());
+		assertEquals("Village", LocationParser.fromScoreboard("SKYBLOCK", List.of("⏣ Village"), SUB_AREAS).area());
+	}
+
+	/** Real sidebar from 2026-11-24 in the Mines of Divan: the area symbol is a custom-font character. */
+	@Test
+	void scoreboardWithCustomFontSymbol() {
+		Set<String> areas = Set.of("Mines of Divan", "Goblin Holdout");
+		List<String> real = List.of("11/24/26 §8m89R", "Late Winter 13th", "5:30am", " §7 §bMines of Divan",
+				"Purse: 50,000", "Bits: 70,335", "Slayer Quest", "Revenant Horror III", "Boss slain!", "(4)", "www.hypixel.net");
+		LocationReading r = LocationParser.fromScoreboard("SKYBLOCK", real, areas);
+		assertEquals("Mines of Divan", r.area());
+		assertTrue(r.inHollows());
+		assertEquals("mini89R", r.serverId());
+		// Unknown area outside the list is still found via the custom-font marker
+		assertEquals("Dwarven Village", LocationParser.scoreboardArea(List.of("Purse: 5", " Dwarven Village"), areas));
+		// Exact known name even with no marker at all
+		assertEquals("Goblin Holdout", LocationParser.scoreboardArea(List.of("Bits: 1", "goblin holdout"), areas));
 	}
 
 	@Test
@@ -77,6 +94,11 @@ class LocationParserTest {
 		assertEquals(LocationReading.Source.TAB_LIST, s.hollowsSource());
 		assertEquals("mini2B", s.serverId());
 		assertEquals(42, s.pingMs());
+
+		// Hypixel's fake 1 ms latency is ignored
+		s = LocationState.resolve(null, null, sb, 0, true, 1, true, 130);
+		assertEquals(130, s.pingMs());
+		assertEquals(LocationState.PingSource.FALLBACK_CONFIG, s.pingSource());
 
 		s = LocationState.resolve(null, null, sb, 0, false, 0, false, 120);
 		assertEquals(LocationReading.Source.SCOREBOARD, s.hollowsSource());

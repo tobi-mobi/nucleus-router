@@ -85,35 +85,46 @@ public final class LocationParser {
 	}
 
 	/**
-	 * Reads the sidebar. {@code hollowsSubAreas} are the scoreboard location names that only exist
-	 * inside the Crystal Hollows (e.g. "Goblin Holdout"). Returns null if the sidebar isn't SkyBlock's.
+	 * Reads the sidebar. {@code knownAreas} are scoreboard location names we recognise directly
+	 * (the Crystal Hollows sub-areas, e.g. "Goblin Holdout"). Returns null if the sidebar isn't SkyBlock's.
 	 */
-	public static LocationReading fromScoreboard(String title, List<String> lines, Set<String> hollowsSubAreas) {
+	public static LocationReading fromScoreboard(String title, List<String> lines, Set<String> knownAreas) {
 		if (!clean(title).toUpperCase(Locale.ROOT).contains("SKYBLOCK")) return null;
-		String server = null, area = null;
+		String server = null;
 		for (String raw : lines) {
-			String line = clean(raw);
 			Matcher m;
-			if (server == null && (m = SB_DATE_SERVER.matcher(line)).find()) server = m.group(1);
-			int sym = line.indexOf(SB_AREA_SYMBOL);
-			if (area == null && sym >= 0) area = line.substring(sym + 1).trim();
+			if (server == null && (m = SB_DATE_SERVER.matcher(clean(raw))).find()) server = m.group(1);
 		}
-		boolean hollows = area != null && (HOLLOWS_AREA.equalsIgnoreCase(area) || containsIgnoreCase(hollowsSubAreas, area));
+		String area = scoreboardArea(lines, knownAreas);
+		boolean hollows = area != null && (HOLLOWS_AREA.equalsIgnoreCase(area) || knownName(knownAreas, area) != null);
 		return new LocationReading(LocationReading.Source.SCOREBOARD, hollows, canonicalServerId(server), area, null);
 	}
 
-	/** Scoreboard area name, for checks like "is the player back in Goblin Holdout". */
-	public static String scoreboardArea(List<String> lines) {
+	/**
+	 * Finds the location line of the sidebar. Hypixel marks it with a symbol (⏣, or a custom-font
+	 * character that {@link #clean} removes, confirmed 2026-11-24: the line arrives as just "Mines of Divan").
+	 * So: first, a line that is exactly a known area name; otherwise a line that starts with ⏣ or a
+	 * private-use (custom font) character.
+	 */
+	public static String scoreboardArea(List<String> lines, Set<String> knownAreas) {
 		for (String raw : lines) {
-			String line = clean(raw);
-			int sym = line.indexOf(SB_AREA_SYMBOL);
-			if (sym >= 0) return line.substring(sym + 1).trim();
+			String known = knownName(knownAreas, clean(raw));
+			if (known != null) return known;
+		}
+		for (String raw : lines) {
+			String noCodes = FORMATTING.matcher(raw == null ? "" : raw).replaceAll("").trim();
+			if (noCodes.isEmpty()) continue;
+			int first = noCodes.codePointAt(0);
+			if (first == SB_AREA_SYMBOL || Character.getType(first) == Character.PRIVATE_USE) {
+				String area = clean(noCodes.substring(Character.charCount(first)));
+				if (!area.isEmpty()) return area;
+			}
 		}
 		return null;
 	}
 
-	private static boolean containsIgnoreCase(Set<String> set, String value) {
-		for (String s : set) if (s.equalsIgnoreCase(value)) return true;
-		return false;
+	private static String knownName(Set<String> set, String value) {
+		for (String s : set) if (s.equalsIgnoreCase(value)) return s;
+		return null;
 	}
 }
