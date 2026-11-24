@@ -11,7 +11,10 @@ import java.util.Map;
  * Where each structure is in the current lobby (SPEC §3.5, §4), from three kinds of evidence, best first:
  * <ol>
  *   <li><b>MANUAL</b>: set by the user with {@code /nr structure set}; always wins.</li>
+ *   <li><b>CRYSTAL</b>: the barrier box that holds the structure's crystal (exact; Queen's den, Khazad-dum).</li>
  *   <li><b>NPC</b>: an NPC or mob name tag such as "King Yolkar" was seen there (exact).</li>
+ *   <li><b>SKYBLOCKER</b>: Skyblocker's Crystal Hollows waypoint (its compass solver, chat coordinates or
+ *       shared by other players; usually close, not exact).</li>
  *   <li><b>AREA</b>: the scoreboard showed the structure's area name while you stood there (rough).</li>
  * </ol>
  * Plain fields so it can be saved as JSON as-is. Not thread-safe: used from the client thread only.
@@ -19,10 +22,15 @@ import java.util.Map;
 public final class StructureMap {
 	/** Name tags of one structure closer than this are the same NPC (the 4 keepers are far apart). */
 	public static final double SAME_NPC_DISTANCE = 8.0;
+	/**
+	 * For other structures, name tags closer than this are the same NPC. Small, because the Jungle Temple
+	 * has two Door Guardians a few blocks apart (seen in-game 2026-11-24) that must not be averaged.
+	 */
+	public static final double SAME_NPC_DISTANCE_SINGLE = 1.5;
 	/** Running average weight cap, so a slowly moving mob (Bal) is still followed. */
 	static final int MAX_SAMPLES = 100;
 
-	public enum Source { MANUAL, NPC, AREA }
+	public enum Source { MANUAL, CRYSTAL, NPC, SKYBLOCKER, AREA }
 
 	/** One NPC name tag, averaged over every sighting. */
 	public static final class Npc {
@@ -42,6 +50,11 @@ public final class StructureMap {
 		public double[] manual;
 		/** Box around the positions where you stood while the scoreboard showed this structure's area, or null. */
 		public double[] areaMin, areaMax;
+		/** Barrier box around the crystal (inclusive block corners), or null. */
+		public int[] crystalMin, crystalMax;
+		/** Skyblocker's waypoint {x, y, z}, or null. */
+		public double[] skyblocker;
+		public boolean skyblockerVerified;
 	}
 
 	/**
@@ -81,12 +94,18 @@ public final class StructureMap {
 		Entry e = entry(s);
 		boolean first = e.npcs.isEmpty();
 		Npc match = null;
-		if (s.expectedAnchors <= 1) {
-			if (!e.npcs.isEmpty()) match = e.npcs.get(0);
+		if (s.mobileAnchor) {
+			if (!e.npcs.isEmpty()) match = e.npcs.get(0); // one boss that walks around
 		} else {
+			double r = s.expectedAnchors > 1 ? SAME_NPC_DISTANCE : SAME_NPC_DISTANCE_SINGLE;
 			for (Npc n : e.npcs) {
 				double dx = n.x - x, dy = n.y - y, dz = n.z - z;
-				if (dx * dx + dy * dy + dz * dz <= SAME_NPC_DISTANCE * SAME_NPC_DISTANCE) { match = n; break; }
+				if (dx * dx + dz * dz <= r * r && Math.abs(dy) <= 4) { match = n; break; }
+			}
+			// A body found: forget label-only sightings right next to it (they were the same NPC)
+			if (onBody) {
+				Npc keep = match;
+				e.npcs.removeIf(n -> n != keep && !n.onBody && Math.hypot(n.x - x, n.z - z) <= 3 && Math.abs(n.y - y) <= 4);
 			}
 		}
 		if (match != null && match.onBody && !onBody) return false; // keep the better evidence
@@ -128,6 +147,34 @@ public final class StructureMap {
 		return false;
 	}
 
+	/** Records the barrier box around the crystal. Returns true the first time. */
+	public boolean setCrystal(Structure s, int[] min, int[] max) {
+		Entry e = entry(s);
+		if (java.util.Arrays.equals(e.crystalMin, min) && java.util.Arrays.equals(e.crystalMax, max)) return false;
+		boolean first = e.crystalMin == null;
+		e.crystalMin = min.clone();
+		e.crystalMax = max.clone();
+		version++;
+		return first;
+	}
+
+	/** Barrier box {min, max} around the crystal, or null. */
+	public int[][] crystalBox(Structure s) {
+		Entry e = peek(s);
+		return e == null || e.crystalMin == null || e.crystalMax == null ? null : new int[][]{e.crystalMin.clone(), e.crystalMax.clone()};
+	}
+
+	/** Records Skyblocker's waypoint for {@code s} (null removes it). Returns true if it changed. */
+	public boolean setSkyblocker(Structure s, double[] pos, boolean verified) {
+		Entry e = pos == null ? peek(s) : entry(s);
+		if (e == null) return false;
+		if (java.util.Arrays.equals(e.skyblocker, pos) && e.skyblockerVerified == (pos != null && verified)) return false;
+		e.skyblocker = pos == null ? null : pos.clone();
+		e.skyblockerVerified = pos != null && verified;
+		version++;
+		return true;
+	}
+
 	public void setManual(Structure s, double x, double y, double z) {
 		entry(s).manual = new double[]{x, y, z};
 		version++;
@@ -148,14 +195,25 @@ public final class StructureMap {
 		if (e == null) return null;
 		if (e.manual != null && e.manual.length == 3)
 			return new Location(s, new Vec3(e.manual[0], e.manual[1], e.manual[2]), Source.MANUAL, 0, "set by you");
+		if (e.crystalMin != null && e.crystalMax != null) {
+			Vec3 c = new Vec3((e.crystalMin[0] + e.crystalMax[0] + 1) / 2.0, (e.crystalMin[1] + e.crystalMax[1] + 1) / 2.0, (e.crystalMin[2] + e.crystalMax[2] + 1) / 2.0);
+			return new Location(s, c, Source.CRYSTAL, 0, "crystal (barrier box)");
+		}
 		if (e.npcs != null && !e.npcs.isEmpty()) {
-			double x = 0, y = 0, z = 0;
-			for (Npc n : e.npcs) { x += n.x; y += n.y; z += n.z; }
 			int k = e.npcs.size();
-			String detail = s.expectedAnchors > 1
-					? k + " of " + s.expectedAnchors + " name tags (" + s.anchorNoun + ")"
-					: "name tag " + e.npcs.get(0).label;
-			return new Location(s, new Vec3(x / k, y / k, z / k), Source.NPC, 0, detail);
+			if (s.expectedAnchors > 1) {
+				double x = 0, y = 0, z = 0;
+				for (Npc n : e.npcs) { x += n.x; y += n.y; z += n.z; }
+				return new Location(s, new Vec3(x / k, y / k, z / k), Source.NPC, 0, k + " of " + s.expectedAnchors + " name tags (" + s.anchorNoun + ")");
+			}
+			// One NPC expected: use the first one found on its body (the temple has two equal Door Guardians)
+			Npc n = e.npcs.get(0);
+			for (Npc o : e.npcs) if (o.onBody) { n = o; break; }
+			return new Location(s, n.pos(), Source.NPC, 0, "name tag " + n.label + (k > 1 ? " (" + k + " seen)" : ""));
+		}
+		if (e.skyblocker != null && e.skyblocker.length == 3) {
+			return new Location(s, new Vec3(e.skyblocker[0], e.skyblocker[1], e.skyblocker[2]), Source.SKYBLOCKER, 16,
+					"Skyblocker waypoint" + (e.skyblockerVerified ? " (verified)" : ""));
 		}
 		if (e.areaMin != null && e.areaMax != null) {
 			Vec3 min = new Vec3(e.areaMin[0], e.areaMin[1], e.areaMin[2]);

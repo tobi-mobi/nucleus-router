@@ -72,6 +72,31 @@ public final class WorldSnapshot {
 		return g >= 0 && kinds[g] == BlockClassifier.Kind.AIR;
 	}
 
+	/**
+	 * Every position in the box (inclusive) whose current block is {@code blockId}. Fast: sections whose
+	 * palette doesn't contain the block are skipped.
+	 */
+	public java.util.List<int[]> findBlocks(String blockId, int x0, int y0, int z0, int x1, int y1, int z1) {
+		java.util.List<int[]> out = new java.util.ArrayList<>();
+		int gid = names.indexOf(blockId);
+		if (gid < 0) return out;
+		for (int sx = x0 >> 4; sx <= x1 >> 4; sx++)
+			for (int sy = y0 >> 4; sy <= y1 >> 4; sy++)
+				for (int sz = z0 >> 4; sz <= z1 >> 4; sz++) {
+					Section s = sections.get(Section.key(sx, sy, sz));
+					if (s == null) continue;
+					boolean has = false;
+					for (int i = 1; i < s.paletteSize; i++) if (s.palette[i] == gid) { has = true; break; }
+					if (!has) continue;
+					for (int ly = 0; ly < 16; ly++) for (int lz = 0; lz < 16; lz++) for (int lx = 0; lx < 16; lx++) {
+						int x = (sx << 4) + lx, y = (sy << 4) + ly, z = (sz << 4) + lz;
+						if (x < x0 || x > x1 || y < y0 || y > y1 || z < z0 || z > z1) continue;
+						if (s.curGlobal(Section.index(lx, ly, lz)) == gid) out.add(new int[]{x, y, z});
+					}
+				}
+		return out;
+	}
+
 	public int sectionCount() { return sections.size(); }
 	public long version() { return version; }
 

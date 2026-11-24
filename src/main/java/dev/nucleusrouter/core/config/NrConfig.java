@@ -14,7 +14,7 @@ import java.util.List;
  * resets that value for existing users.
  */
 public final class NrConfig {
-	public static final int CURRENT_VERSION = 5;
+	public static final int CURRENT_VERSION = 6;
 	public int configVersion = CURRENT_VERSION;
 
 	public General general = new General();
@@ -42,10 +42,10 @@ public final class NrConfig {
 		public int minY = 31, maxY = 188;
 		public int minZ = 202, maxZ = 823;
 		/**
-		 * [VERIFY] Seconds a /warp nucleus costs, from deciding to warp until you can act at the nucleus.
-		 * Arrival itself is instant (confirmed 2026-11-24); this is mostly the time to open chat and send the command.
+		 * Seconds a /warp nucleus costs, from deciding to warp until you can act at the nucleus.
+		 * Confirmed 2026-11-24: less than a second in total, arrival is instant.
 		 */
-		public double warpNucleusSeconds = 2.5;
+		public double warpNucleusSeconds = 1.0;
 		/** Where /warp nucleus puts you (feet position). Confirmed 2026-11-24. */
 		public double nucleusSpawnX = 513.5, nucleusSpawnY = 106, nucleusSpawnZ = 526.5;
 		/** Lobbies close after roughly this many Minecraft days (lobby day = dayTime / 24000). */
@@ -59,6 +59,11 @@ public final class NrConfig {
 		public double queenDenExitLimitSeconds = 3.0;
 		/** The planned den exit must fit inside this (margin below the limit). */
 		public double queenDenExitTargetSeconds = 2.5;
+		/**
+		 * Leaving the Queen's castle upwards: this many blocks above the Amber crystal counts as out
+		 * (confirmed 2026-11-24: 30). Every side of the castle counts as out too.
+		 */
+		public int denExitHeightAboveCrystal = 30;
 		/** /warp nucleus right after taking the Amber crystal keeps it (confirmed 2026-11-24). */
 		public boolean warpNucleusCountsAsLeavingDen = true;
 		/** Jungle Temple parkour, done by hand (abilities don't work inside). */
@@ -177,6 +182,13 @@ public final class NrConfig {
 		 * the user found it wrong most of the time (2026-11-24). Never drawn in the world.
 		 */
 		public boolean useAreaHints = false;
+		/** Also use Skyblocker's Crystal Hollows waypoints (read-only) as approximate positions. */
+		public boolean useSkyblocker = true;
+		/**
+		 * The Queen's den and Khazad-dum crystals sit in a box of barrier blocks (seen in-game 2026-11-24).
+		 * A clump of at least this many barriers counts as such a box.
+		 */
+		public int crystalBoxMinBarriers = 20;
 		/** How often to look at nearby name tags, in ticks (20 = once a second). */
 		public int scanEveryTicks = 10;
 		public List<String> minesOfDivanNames = new ArrayList<>(List.of("Keeper of"));
@@ -253,6 +265,11 @@ public final class NrConfig {
 			if (structures != null && structures.useAreaHints) { structures.useAreaHints = false; notes.add("structures.useAreaHints -> off"); }
 			configVersion = 5;
 		}
+		if (configVersion < 6) {
+			// Confirmed 2026-11-24: /warp nucleus takes less than a second
+			if (hollows != null && hollows.warpNucleusSeconds == 2.5) { hollows.warpNucleusSeconds = 1.0; notes.add("hollows.warpNucleusSeconds 2.5 -> 1.0 (confirmed)"); }
+			configVersion = 6;
+		}
 		return notes;
 	}
 
@@ -281,6 +298,7 @@ public final class NrConfig {
 
 		stops.queenDenExitLimitSeconds = clamp(fixes, "stops.queenDenExitLimitSeconds", stops.queenDenExitLimitSeconds, 0.5, 10);
 		stops.queenDenExitTargetSeconds = clamp(fixes, "stops.queenDenExitTargetSeconds", stops.queenDenExitTargetSeconds, 0.1, stops.queenDenExitLimitSeconds);
+		stops.denExitHeightAboveCrystal = (int) clamp(fixes, "stops.denExitHeightAboveCrystal", stops.denExitHeightAboveCrystal, 1, 100);
 		stops.templeManualSeconds = clamp(fixes, "stops.templeManualSeconds", stops.templeManualSeconds, 0, 300);
 		stops.balFightSeconds = clamp(fixes, "stops.balFightSeconds", stops.balFightSeconds, 0, 300);
 		stops.npcInteractionSeconds = clamp(fixes, "stops.npcInteractionSeconds", stops.npcInteractionSeconds, 0, 30);
@@ -315,6 +333,7 @@ public final class NrConfig {
 		compass.captureRadius = clamp(fixes, "compass.captureRadius", compass.captureRadius, 5, 128);
 		compass.minPoints = (int) clamp(fixes, "compass.minPoints", compass.minPoints, 3, 100);
 		compass.goodRadiusBlocks = clamp(fixes, "compass.goodRadiusBlocks", compass.goodRadiusBlocks, 1, 100);
+		structures.crystalBoxMinBarriers = (int) clamp(fixes, "structures.crystalBoxMinBarriers", structures.crystalBoxMinBarriers, 4, 10000);
 		structures.scanEveryTicks = (int) clamp(fixes, "structures.scanEveryTicks", structures.scanEveryTicks, 1, 200);
 		Structures sd = new Structures();
 		if (structures.minesOfDivanNames == null) { structures.minesOfDivanNames = sd.minesOfDivanNames; fixes.add("structures.minesOfDivanNames missing, reset"); }

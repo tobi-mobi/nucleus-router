@@ -17,7 +17,9 @@ class NrConfigTest {
 		assertEquals(32.0, c.bombs.throwRange, "measured in-game");
 		assertEquals(7.0, c.bombs.blastRadius, "measured in-game");
 		assertEquals(List.of("minecraft:stone"), c.bombs.hardStoneBlocks);
-		assertEquals(2.5, c.hollows.warpNucleusSeconds);
+		assertEquals(1.0, c.hollows.warpNucleusSeconds, "confirmed in-game: under a second");
+		assertEquals(30, c.stops.denExitHeightAboveCrystal);
+		assertFalse(c.structures.useAreaHints);
 		assertTrue(c.stops.warpNucleusCountsAsLeavingDen, "confirmed in-game");
 		assertEquals(0.20, c.cost.baseWarpSeconds);
 		assertEquals(1.5, c.cost.missRecoverySeconds);

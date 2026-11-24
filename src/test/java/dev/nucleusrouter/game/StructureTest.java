@@ -101,6 +101,53 @@ class StructureTest {
 		assertEquals(new Vec3(302.5, 70, 301), m.locate(Structure.JUNGLE_TEMPLE).pos(), "a later tag-only sighting is ignored");
 	}
 
+	/** In-game 2026-11-24: two Door Guardians a few blocks apart; the marker ended up between them. */
+	@Test
+	void twoDoorGuardiansAreNotAveraged() {
+		StructureMap m = new StructureMap();
+		m.observeNametag(Structure.JUNGLE_TEMPLE, "Kalhuiki Door Guardian", 300.5, 70, 300.5, 0, true);
+		m.observeNametag(Structure.JUNGLE_TEMPLE, "Kalhuiki Door Guardian", 305.5, 70, 300.5, 1, true);
+		m.observeNametag(Structure.JUNGLE_TEMPLE, "Kalhuiki Door Guardian", 300.5, 70, 300.5, 2, true);
+		assertEquals(2, m.npcs(Structure.JUNGLE_TEMPLE).size());
+		assertEquals(new Vec3(300.5, 70, 300.5), m.locate(Structure.JUNGLE_TEMPLE).pos(), "on the first guardian, not between them");
+	}
+
+	@Test
+	void crystalBeatsBalAndSkyblockerIsTheFallback() {
+		StructureMap m = new StructureMap();
+		m.setSkyblocker(Structure.KHAZAD_DUM, new double[]{600, 50, 600}, false);
+		assertEquals(StructureMap.Source.SKYBLOCKER, m.locate(Structure.KHAZAD_DUM).source());
+		m.observeNametag(Structure.KHAZAD_DUM, "Bal", 610, 40, 610, 0, true);
+		assertEquals(StructureMap.Source.NPC, m.locate(Structure.KHAZAD_DUM).source());
+		assertTrue(m.setCrystal(Structure.KHAZAD_DUM, new int[]{620, 100, 470}, new int[]{626, 106, 476}));
+		StructureMap.Location l = m.locate(Structure.KHAZAD_DUM);
+		assertEquals(StructureMap.Source.CRYSTAL, l.source());
+		assertEquals(new Vec3(623.5, 103.5, 473.5), l.pos(), "centre of the barrier box");
+		assertFalse(m.setCrystal(Structure.KHAZAD_DUM, new int[]{620, 100, 470}, new int[]{626, 106, 476}), "same box again");
+		assertTrue(m.setSkyblocker(Structure.KHAZAD_DUM, null, false));
+		assertEquals(StructureMap.Source.CRYSTAL, m.locate(Structure.KHAZAD_DUM).source());
+	}
+
+	@Test
+	void findsTheBarrierBoxAmongStrayBarriers() {
+		List<int[]> blocks = new java.util.ArrayList<>();
+		// Hollow 7x7x7 box shell around the crystal at 479..485, 108..114, 527..533
+		for (int x = 479; x <= 485; x++) for (int y = 108; y <= 114; y++) for (int z = 527; z <= 533; z++)
+			if (x == 479 || x == 485 || y == 108 || y == 114 || z == 527 || z == 533) blocks.add(new int[]{x, y, z});
+		// A few stray barriers elsewhere
+		blocks.add(new int[]{500, 100, 500});
+		blocks.add(new int[]{501, 101, 500});
+		blocks.add(new int[]{450, 90, 520});
+		List<BarrierBoxes.Box> boxes = BarrierBoxes.group(blocks);
+		assertEquals(3, boxes.size());
+		BarrierBoxes.Box b = BarrierBoxes.pickCrystalBox(boxes, 20, 481, 114, 534);
+		assertNotNull(b);
+		assertArrayEquals(new int[]{479, 108, 527}, b.min());
+		assertArrayEquals(new int[]{485, 114, 533}, b.max());
+		assertEquals(482.5, b.centreX());
+		assertNull(BarrierBoxes.pickCrystalBox(boxes, 1000, 0, 0, 0));
+	}
+
 	@Test
 	void clearAllForgetsEverything() {
 		StructureMap m = new StructureMap();

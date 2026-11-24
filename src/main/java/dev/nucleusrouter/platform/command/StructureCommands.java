@@ -55,10 +55,14 @@ final class StructureCommands {
 			} else {
 				Vec3 p = l.pos();
 				String dist = player != null ? "  " + Math.round(p.sub(new Vec3(player.getX(), player.getY(), player.getZ())).length()) + " m away" : "";
-				ChatFormatting colour = switch (l.source()) { case MANUAL -> ChatFormatting.AQUA; case NPC -> ChatFormatting.GREEN; case AREA -> ChatFormatting.YELLOW; };
+				ChatFormatting colour = switch (l.source()) {
+					case MANUAL -> ChatFormatting.AQUA;
+					case CRYSTAL, NPC -> ChatFormatting.GREEN;
+					case SKYBLOCKER, AREA -> ChatFormatting.YELLOW;
+				};
 				String how = switch (l.source()) {
 					case MANUAL -> "set by you";
-					case NPC -> l.detail();
+					case CRYSTAL, NPC, SKYBLOCKER -> l.detail();
 					case AREA -> "rough, +-" + Math.round(l.uncertainty()) + " blocks (" + l.detail() + ")";
 				};
 				value = Component.literal(StructureTracker.fmt(p.x(), p.y(), p.z()) + dist).withStyle(colour)
@@ -66,6 +70,7 @@ final class StructureCommands {
 			}
 			src.sendFeedback(Component.literal("  " + s.displayName + " [" + s.key + "]: ").withStyle(ChatFormatting.GRAY).append(value));
 		}
+		src.sendFeedback(Component.literal("  Skyblocker: " + dev.nucleusrouter.platform.structure.SkyblockerBridge.status()).withStyle(ChatFormatting.DARK_GRAY));
 		src.sendFeedback(Component.literal("  Set by hand: /nr structure set <name> (where you stand). Forget: /nr structure clear <name|all>").withStyle(ChatFormatting.DARK_GRAY));
 		return 1;
 	}

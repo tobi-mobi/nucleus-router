@@ -7,6 +7,8 @@ import dev.nucleusrouter.core.geom.Vec3;
 import dev.nucleusrouter.core.location.LocationState;
 import dev.nucleusrouter.core.world.LobbyIdentity;
 import dev.nucleusrouter.game.AnchorMatcher;
+import dev.nucleusrouter.game.BarrierBoxes;
+import dev.nucleusrouter.platform.world.WorldCapture;
 import dev.nucleusrouter.game.Structure;
 import dev.nucleusrouter.game.StructureMap;
 import dev.nucleusrouter.platform.NucleusRouterClient;
@@ -30,6 +32,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -120,7 +124,69 @@ public final class StructureTracker {
 			}
 		}
 
+		if (cfg.useSkyblocker && ticks % SKYBLOCKER_EVERY_TICKS < cfg.scanEveryTicks) pollSkyblocker();
+		if (ticks % CRYSTAL_SEARCH_EVERY_TICKS < cfg.scanEveryTicks) searchCrystals(client, loc);
+
 		if (map.version() != savedVersion && now - lastSaveMs > SAVE_EVERY_MS) saveIfDirty();
+	}
+
+	private static final int SKYBLOCKER_EVERY_TICKS = 40, CRYSTAL_SEARCH_EVERY_TICKS = 100;
+	/** Barrier boxes are looked for within this many blocks of the search centre. */
+	private static final int CRYSTAL_SEARCH_RADIUS = 48;
+	private static boolean crystalSearchRunning;
+
+	private static void pollSkyblocker() {
+		Map<Structure, SkyblockerBridge.Waypoint> wps = SkyblockerBridge.read();
+		for (Structure s : Structure.values()) {
+			SkyblockerBridge.Waypoint w = wps.get(s);
+			boolean had = map.locate(s) != null;
+			if (map.setSkyblocker(s, w == null ? null : new double[]{w.x(), w.y(), w.z()}, w != null && w.verified()) && w != null && !had) {
+				NucleusRouterClient.LOG.info("[Nucleus Router] Structures: Skyblocker waypoint for {} at {} {} {}", s.displayName, w.x(), w.y(), w.z());
+				notice(Component.literal("Skyblocker knows " + s.displayName + ": " + fmt(w.x(), w.y(), w.z()) + " (approximate until its name tag or crystal is seen)").withStyle(ChatFormatting.YELLOW));
+			}
+		}
+	}
+
+	/**
+	 * For structures marked at their crystal: when you are in their area, near their NPC or near
+	 * Skyblocker's waypoint, look for the barrier box around the crystal in the remembered terrain
+	 * (background thread).
+	 */
+	private static void searchCrystals(Minecraft client, LocationState loc) {
+		if (crystalSearchRunning) return;
+		Vec3 player = new Vec3(client.player.getX(), client.player.getY(), client.player.getZ());
+		Structure target = null;
+		Vec3 centre = null;
+		for (Structure s : Structure.values()) {
+			if (!s.markCrystal || map.crystalBox(s) != null) continue;
+			Vec3 c = null;
+			if (s.areaName != null && s.areaName.equalsIgnoreCase(loc.scoreboardArea() == null ? "" : loc.scoreboardArea().trim())) c = player;
+			for (StructureMap.Npc n : map.npcs(s)) if (c == null && n.pos().sub(player).length() < 96) c = n.pos();
+			StructureMap.Location l = map.locate(s);
+			if (c == null && l != null && l.source() == StructureMap.Source.SKYBLOCKER && l.pos().sub(player).length() < 96) c = l.pos();
+			if (c != null) { target = s; centre = c; break; }
+		}
+		if (target == null) return;
+		crystalSearchRunning = true;
+		Structure s = target;
+		Vec3 c = centre;
+		int minCount = ConfigManager.get().structures.crystalBoxMinBarriers;
+		String lobbyAtStart = lobby;
+		int r = CRYSTAL_SEARCH_RADIUS;
+		WorldCapture.snapshot().thenApplyAsync(snap -> {
+			List<int[]> barriers = snap.findBlocks("minecraft:barrier", (int) c.x() - r, (int) c.y() - r, (int) c.z() - r, (int) c.x() + r, (int) c.y() + r, (int) c.z() + r);
+			List<BarrierBoxes.Box> boxes = BarrierBoxes.group(barriers);
+			return BarrierBoxes.pickCrystalBox(boxes, minCount, c.x(), c.y(), c.z());
+		}).whenComplete((box, err) -> client.execute(() -> {
+			crystalSearchRunning = false;
+			if (err != null) { NucleusRouterClient.LOG.warn("[Nucleus Router] Structures: crystal search failed: {}", err.toString()); return; }
+			if (box == null || !java.util.Objects.equals(lobbyAtStart, lobby)) return;
+			if (map.setCrystal(s, box.min(), box.max())) {
+				NucleusRouterClient.LOG.info("[Nucleus Router] Structures: {} crystal box {} .. {} ({} barriers)", s.displayName,
+						java.util.Arrays.toString(box.min()), java.util.Arrays.toString(box.max()), box.count());
+				notice(Component.literal("Found the " + s.crystal + " crystal of " + s.displayName + " at " + fmt(box.centreX(), box.centreY(), box.centreZ())).withStyle(ChatFormatting.GREEN));
+			}
+		}));
 	}
 
 	/** The living entity (not an armour stand, not you) standing right under a floating name tag, or null. */
@@ -205,7 +271,7 @@ public final class StructureTracker {
 
 	// ------------------------------------------------------------------ drawing
 
-	private static final int COLOR_MANUAL = 0x55FFFF, COLOR_NPC = 0x55FF55;
+	private static final int COLOR_MANUAL = 0x55FFFF, COLOR_NPC = 0x55FF55, COLOR_SKYBLOCKER = 0xFFFF55;
 
 	private static void draw(WorldDraw draw) {
 		Minecraft client = Minecraft.getInstance();
@@ -213,7 +279,15 @@ public final class StructureTracker {
 		Vec3 eye = new Vec3(client.player.getX(), client.player.getEyeY(), client.player.getZ());
 		for (StructureMap.Location l : map.located()) {
 			if (l.source() == StructureMap.Source.AREA) continue; // rough positions were mostly wrong (user, 2026-11-24)
-			int rgb = l.source() == StructureMap.Source.MANUAL ? COLOR_MANUAL : COLOR_NPC;
+			int rgb = switch (l.source()) {
+				case MANUAL -> COLOR_MANUAL;
+				case SKYBLOCKER -> COLOR_SKYBLOCKER;
+				default -> COLOR_NPC;
+			};
+			int[][] crystal = map.crystalBox(l.structure());
+			if (crystal != null) {
+				draw.outline(new AABB(crystal[0][0], crystal[0][1], crystal[0][2], crystal[1][0] + 1, crystal[1][1] + 1, crystal[1][2] + 1), WorldDraw.argb(255, COLOR_NPC), 2f, true);
+			}
 			Vec3 p = l.pos();
 			double dist = p.sub(eye).length();
 			// A tall beam so it can be found from far away, and a label above it
@@ -225,7 +299,7 @@ public final class StructureTracker {
 				}
 			}
 			float scale = (float) (0.6 * Math.max(1.0, dist / 10.0));
-			String label = l.structure().displayName + "  " + Math.round(dist) + "m";
+			String label = l.structure().displayName + (l.source() == StructureMap.Source.SKYBLOCKER ? " (Skyblocker)" : "") + "  " + Math.round(dist) + "m";
 			draw.text(label, WorldDraw.mc(p.add(new Vec3(0, 31 + scale, 0))), WorldDraw.argb(255, rgb), scale, true);
 		}
 	}
