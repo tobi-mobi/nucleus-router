@@ -8,7 +8,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 ## Milestone 1: Skeleton and sensing
 - [x] 1.1 Gradle/Loom project for MC 26.2, Java 25, Fabric API, accepts Fabric Loader 0.20.1. Module or package layout `core` / `game` / `platform`. Builds and launches in the dev client. (§1)
 - [x] 1.2 JSON config + YACL config screen + Mod Menu entry. Add every tunable from §2 now, with the spec's defaults. (§1, §2)
-- [ ] 1.3 `/nr` command root. Crystal Hollows detection (Hypixel Mod API location event, with scoreboard/tab-list fallback), lobby id, lobby day (`dayTime / 24000`), and ping reading. (§1, §2.1, §2.6)
+- [x] 1.3 `/nr` command root. Crystal Hollows detection (Hypixel Mod API location event, with scoreboard/tab-list fallback), lobby id, lobby day (`dayTime / 24000`), and ping reading. (§1, §2.1, §2.6)
 - [ ] 1.4 World model: voxel classes, sticky "ghost solid" memory for respawning blocks, capture from chunk loads and block updates, per-lobby persistence on disk. Unit tests. (§3.1, §2.4)
 - [ ] 1.5 Etherwarp ray model (DDA, first hit, 2 air above, full-cube rule, configurable eye height, valid aim region). Unit tests. (§2.3)
 - [ ] 1.6 `/nr debug ray` overlay + logging of predicted vs actual landing + eye-height suggestion. Also the first world-render utility: lines, outlines and filled boxes through walls, working on OpenGL, Vulkan and Iris. (§6, §5)
@@ -67,12 +67,21 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Block placing allowed everywhere in the Hollows? | _[VERIFY]_ (default: yes, outside structures) | |
 | Crystal Hollows bounds | _[VERIFY]_ (default x,z 202–823, y 31–188) | |
 | Wishing Compass particle behaviour | _[VERIFY]_ | |
+| Hypixel Mod API location packets arrive (via SkyHanni's subscription) and mode = `crystal_hollows` | _[VERIFY]_ (`/nr where`, "Hypixel Mod API" line) | |
+| Tab list shows `Area: Crystal Hollows` and `Server: mini…` | _[VERIFY]_ (`/nr where raw`) | |
+| Scoreboard area names inside the Hollows (list in `game/HollowsAreas.java`) | _[VERIFY]_ (`/nr where` in each area) | |
+| Own tab-list latency is real ping on Hypixel | _[VERIFY]_ (`/nr where` Ping line vs. your usual ping) | |
+| Lobby day from the world clock matches the real lobby day | _[VERIFY]_ (`/nr where` vs. another mod's day display) | |
 
 ## Decisions (changes from SPEC.md)
 - 2026-11-23 Build versions (looked up, not from memory): MC 26.2, Fabric Loader 0.20.1, Loom 1.19-SNAPSHOT (resolves 1.19.4), Fabric API 0.161.0+26.2, Gradle 9.8.2, YACL 3.9.7+26.2-fabric, Mod Menu 20.0.1.
 - 2026-11-23 Mod id `nucleusrouter`, Java package `dev.nucleusrouter`. `core` / `game` / `platform` are packages in one Gradle project, not separate modules. `LayerRulesTest` fails the build if `core` or `game` import Minecraft/Fabric classes.
 - 2026-11-23 YACL is a required dependency (it's in the pack). Mod Menu is optional.
 - 2026-11-23 Config tunables added beyond SPEC §2 (estimates, not game facts; user to confirm): `stops.npcInteractionSeconds` 1.0, `stops.crystalPickupSeconds` 0.5, `cost.turnExponent` 1.5 (turn time = turnSecondsAt90 x (angle/90)^exp), `cost.fallbackPingMs` 100, `bombs.fuseSeconds` 3.0 (upper end of 2.5-3 s, safer), `bombs.blastCentre` enum (default: centre of the impact block).
+- 2026-11-24 Hypixel Mod API is used **listen-only**: the mod adds a handler but never calls `subscribeToEventPacket` or `sendPacket`, so it causes no extra packets (Hard rule). Location packets arrive only because SkyHanni already subscribes; otherwise tab list, then scoreboard, are used. Ping comes from the vanilla tab-list latency, then the SkyBlock tab "Ping:" widget, then `cost.fallbackPingMs`. The Mod API ping packet is never sent.
+- 2026-11-24 `/nucleusrouter` is an alias of `/nr` in case another mod takes `/nr`. Added `general.chatNotices` (local-only chat lines, default on).
+- 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
 ## Session log
 - 2026-11-23: 1.1 Gradle/Loom project builds and launches in the dev client. 1.2 JSON config (`config/nucleusrouter.json`, auto-repairs bad values, broken file moved to `.broken`) + YACL screen with 6 categories + Mod Menu entry. 3 unit tests pass. Next: 1.3 `/nr` command root, Crystal Hollows detection, lobby id/day, ping.
+- 2026-11-24: 1.3 `/nr` (help, where, where raw, config, reload). Location from Mod API (listen-only) > tab list > scoreboard; lobby id canonicalised (`m123AB` -> `mini123AB`); lobby day = clock / 24000; ping with fallbacks. 10 unit tests pass. Next: 1.4 world model.

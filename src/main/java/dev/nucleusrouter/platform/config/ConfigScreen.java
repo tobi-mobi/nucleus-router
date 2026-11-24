@@ -29,6 +29,11 @@ public final class ConfigScreen {
 		NrConfig c = ConfigManager.get();
 		NrConfig d = new NrConfig(); // defaults
 
+		ConfigCategory general = ConfigCategory.createBuilder()
+				.name(Component.literal("General"))
+				.option(boolOpt("Chat notices", "Short local chat messages such as \"Entered Crystal Hollows\". Only you see them; nothing is sent to the server.", d.general.chatNotices, () -> c.general.chatNotices, v -> c.general.chatNotices = v))
+				.build();
+
 		ConfigCategory hollows = ConfigCategory.createBuilder()
 				.name(Component.literal("Hollows"))
 				.option(intOpt("Min X", "West edge of the Crystal Hollows." + VERIFY, d.hollows.minX, () -> c.hollows.minX, v -> c.hollows.minX = v, 0, 1024))
@@ -94,7 +99,7 @@ public final class ConfigScreen {
 
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.literal("Nucleus Router"))
-				.category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost)
+				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost)
 				.save(ConfigManager::save)
 				.build()
 				.generateScreen(parent);

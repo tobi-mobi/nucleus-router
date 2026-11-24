@@ -12,6 +12,11 @@ base {
 repositories {
 	maven { name = 'Xander (YACL)'; url = 'https://maven.isxander.dev/releases' }
 	maven { name = 'Terraformers (Mod Menu)'; url = 'https://maven.terraformersmc.com/releases' }
+	maven { name = 'Hypixel (Mod API)'; url = 'https://repo.hypixel.net/repository/Hypixel/' }
+	exclusiveContent {
+		forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
+		filter { includeGroup 'maven.modrinth' }
+	}
 }
 
 loom {
@@ -31,6 +36,10 @@ dependencies {
 	implementation "dev.isxander:yet-another-config-lib:${project.yacl_version}"
 	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 	localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+	// Hypixel Mod API (in the pack, required by SkyHanni). Optional: used for location if present.
+	compileOnly "net.hypixel:mod-api:${project.hypixel_mod_api_version}"
+	localRuntime "maven.modrinth:hypixel-mod-api:${project.hypixel_mod_api_fabric_version}"
 
 	testImplementation platform("org.junit:junit-bom:5.13.4")
 	testImplementation "org.junit.jupiter:junit-jupiter"

@@ -17,8 +17,15 @@ public final class NrConfig {
 	public static final int CURRENT_VERSION = 1;
 	public int configVersion = CURRENT_VERSION;
 
+	public General general = new General();
 	public Hollows hollows = new Hollows();
 	public Stops stops = new Stops();
+
+	/** Mod behaviour (not game mechanics). */
+	public static final class General {
+		/** Show short local chat notices, e.g. "Entered Crystal Hollows". Only you see them; nothing is sent. */
+		public boolean chatNotices = true;
+	}
 	public Etherwarp etherwarp = new Etherwarp();
 	public Bombs bombs = new Bombs();
 	public Placing placing = new Placing();
@@ -120,6 +127,7 @@ public final class NrConfig {
 	 */
 	public List<String> validate() {
 		List<String> fixes = new ArrayList<>();
+		if (general == null) { general = new General(); fixes.add("general section missing, reset to defaults"); }
 		if (hollows == null) { hollows = new Hollows(); fixes.add("hollows section missing, reset to defaults"); }
 		if (stops == null) { stops = new Stops(); fixes.add("stops section missing, reset to defaults"); }
 		if (etherwarp == null) { etherwarp = new Etherwarp(); fixes.add("etherwarp section missing, reset to defaults"); }
