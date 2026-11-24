@@ -81,6 +81,23 @@ public final class SkyblockerBridge {
 		return out;
 	}
 
+	/**
+	 * Whether Skyblocker should skip drawing its waypoint of this category (called from the optional
+	 * Skyblocker mixin, once per waypoint per frame; must be cheap and never throw).
+	 */
+	public static boolean shouldHide(String category) {
+		try {
+			dev.nucleusrouter.core.config.NrConfig cfg = dev.nucleusrouter.platform.config.ConfigManager.get();
+			return switch (cfg.structures.skyblockerWaypoints) {
+				case SHOW -> false;
+				case HIDE_ALL -> true;
+				case HIDE_RUN_STRUCTURES -> category != null && map(category) != null && cfg.structures.showMarkers;
+			};
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
 	private static Structure map(String category) {
 		return switch (category) {
 			case "MINES_OF_DIVAN" -> Structure.MINES_OF_DIVAN;

@@ -5,7 +5,8 @@
 	"client": [
 		"ClientLevelAccessor",
 		"ClientPacketListenerMixin",
-		"LevelMixin"
+		"LevelMixin",
+		"compat.SkyblockerCrystalsMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

@@ -185,6 +185,11 @@ public final class NrConfig {
 		/** Also use Skyblocker's Crystal Hollows waypoints (read-only) as approximate positions. */
 		public boolean useSkyblocker = true;
 		/**
+		 * Which of Skyblocker's own Crystal Hollows waypoints Skyblocker still draws (less clutter).
+		 * Only the drawing is skipped; Skyblocker keeps collecting them and this mod keeps reading them.
+		 */
+		public SkyblockerWaypoints skyblockerWaypoints = SkyblockerWaypoints.HIDE_RUN_STRUCTURES;
+		/**
 		 * The Queen's den and Khazad-dum crystals sit in a box of barrier blocks (seen in-game 2026-11-24).
 		 * A clump of at least this many barriers counts as such a box.
 		 */
@@ -219,6 +224,15 @@ public final class NrConfig {
 		public double goodRadiusBlocks = 10;
 		/** Draw compass lines, the estimate and the suggested next spot. */
 		public boolean showInWorld = true;
+	}
+
+	public enum SkyblockerWaypoints {
+		/** Skyblocker draws all of them as usual. */
+		SHOW,
+		/** Hide the 6 run structures this mod already marks; keep the rest (Fairy Grotto, Corleone, ...). */
+		HIDE_RUN_STRUCTURES,
+		/** Hide all of Skyblocker's Crystal Hollows waypoints. */
+		HIDE_ALL
 	}
 
 	/**
@@ -333,6 +347,7 @@ public final class NrConfig {
 		compass.captureRadius = clamp(fixes, "compass.captureRadius", compass.captureRadius, 5, 128);
 		compass.minPoints = (int) clamp(fixes, "compass.minPoints", compass.minPoints, 3, 100);
 		compass.goodRadiusBlocks = clamp(fixes, "compass.goodRadiusBlocks", compass.goodRadiusBlocks, 1, 100);
+		if (structures.skyblockerWaypoints == null) { structures.skyblockerWaypoints = SkyblockerWaypoints.HIDE_RUN_STRUCTURES; fixes.add("structures.skyblockerWaypoints unknown, reset"); }
 		structures.crystalBoxMinBarriers = (int) clamp(fixes, "structures.crystalBoxMinBarriers", structures.crystalBoxMinBarriers, 4, 10000);
 		structures.scanEveryTicks = (int) clamp(fixes, "structures.scanEveryTicks", structures.scanEveryTicks, 1, 200);
 		Structures sd = new Structures();

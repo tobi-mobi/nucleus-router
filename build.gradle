@@ -53,6 +53,9 @@ dependencies {
 	compileOnly "net.hypixel:mod-api:${project.hypixel_mod_api_version}"
 	localRuntime "maven.modrinth:hypixel-mod-api:${project.hypixel_mod_api_fabric_version}"
 
+	// Skyblocker: compile-only, for the optional hook that hides its Crystal Hollows waypoints
+	compileOnly("maven.modrinth:skyblocker-liap:${project.skyblocker_version}") { transitive = false }
+
 	testImplementation platform("org.junit:junit-bom:5.13.4")
 	testImplementation "org.junit.jupiter:junit-jupiter"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
