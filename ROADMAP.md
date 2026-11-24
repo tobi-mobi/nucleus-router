@@ -10,7 +10,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - [x] 1.2 JSON config + YACL config screen + Mod Menu entry. Add every tunable from §2 now, with the spec's defaults. (§1, §2)
 - [x] 1.3 `/nr` command root. Crystal Hollows detection (Hypixel Mod API location event, with scoreboard/tab-list fallback), lobby id, lobby day (`dayTime / 24000`), and ping reading. (§1, §2.1, §2.6)
 - [x] 1.4 World model: voxel classes, sticky "ghost solid" memory for respawning blocks, capture from chunk loads and block updates, per-lobby persistence on disk. Unit tests. (§3.1, §2.4)
-- [ ] 1.5 Etherwarp ray model (DDA, first hit, 2 air above, full-cube rule, configurable eye height, valid aim region). Unit tests. (§2.3)
+- [x] 1.5 Etherwarp ray model (DDA, first hit, 2 air above, full-cube rule, configurable eye height, valid aim region). Unit tests. (§2.3)
 - [ ] 1.6 `/nr debug ray` overlay + logging of predicted vs actual landing + eye-height suggestion. Also the first world-render utility: lines, outlines and filled boxes through walls, working on OpenGL, Vulkan and Iris. (§6, §5)
 - [ ] 1.7 `/nr calibrate bomb` (snapshot → block diff → measured centre/radius/shape, impact vs predicted throw) and `/nr dump`. (§6, §2.4)
 - [ ] 1.8 Milestone report: in-game checklist + open [VERIFY] items. **Stop.**
@@ -56,6 +56,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Item | Value | Confirmed on |
 |---|---|---|
 | Etherwarp eye height | _[VERIFY]_ (default 1.54) | |
+| Etherwarp range is measured to where the ray enters the target block | _[VERIFY]_ (default: entry point within `etherwarp.range`; 1.6 logs predicted vs actual) | |
 | Hard Stone block type(s) | `minecraft:stone` (advanced tooltip shows skyblock:HARD_STONE) | 2026-11-24 |
 | Respawn time of ores/gemstones | _[VERIFY]_ | |
 | Bob-omb throw range / drop rule | _[VERIFY]_ (default 45, straight then down) | |
@@ -91,6 +92,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24 World capture runs on one background thread; the client thread only copies chunk sections. Block changes come from a read-only mixin on `ClientLevel.setBlock` (Fabric has no client block-change event). Saves go to `<game dir>/nucleusrouter/lobbies/<server>.nrw` every 2 min, on world change, disconnect and game close.
 - 2026-11-24 Fix after in-game test: block changes are hooked on `Level.setBlock` (client world only), because server-sent changes skip the `ClientLevel.setBlock` override. Changes the client applies while predicting (your own actions) are flagged `byPlayer`, and a block you place is PLACED whatever its type. `placing.placedBlockTypes` is now only a fallback.
 - 2026-11-24 Lobby saving kept but made optional (`general.saveLobbies`, default on). The user rarely returns to the same lobby; saving still protects a long setup against a crash or reconnect, and costs nothing when unused.
+- 2026-11-24 Etherwarp model (1.5): range counts to where the ray *enters* the target block; the block containing the eye is checked too. The valid aim region is measured by casting real rays at an n x n grid on each target face that faces you (plus a ring just outside each face); size is reported as solid angle and as an equivalent cone width, and the best aim point is the valid direction furthest from any invalid one (its "margin"). Grid size is `etherwarp.aimSamplesPerFace` (default 8). Planning uses sticky solidity (`plannedSolid`), live prediction uses `currentlySolid`.
 - 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
 ## Session log
@@ -101,3 +103,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24: 1.4 world model + capture + per-lobby saves. A save is only reused if the world clock advanced in line with real time (else the server name was reused by a new lobby and the old file is moved to `.old`). Lobby attaches after its id is stable for 5 s. `/nr world`, `/nr world here`, `/nr world save`. 27 unit tests pass. Next: 1.5 etherwarp ray model.
 - 2026-11-24: In-game test of 1.4 found server block changes were missed (wrong hook). Fixed; added FLUID class (ray passes through water/lava), detection of your own placements, longer `/nr world here` look range, `general.saveLobbies` toggle. 29 tests pass. Needs a re-test in-game. Next: 1.5.
 - 2026-11-24: User re-tested 1.4: block changes, gemstone memory, Hard Stone and placed blocks all correct. Fluids confirmed invisible to etherwarp (ray and landing). Next: 1.5 etherwarp ray model.
+- 2026-11-24: 1.5 etherwarp ray model in `core/etherwarp`: exact voxel ray (DDA), landing rule, eye height from config, valid aim region with best aim point and margin. 40 unit tests pass. Nothing to see in-game yet; 1.6 adds `/nr debug ray` to show and check it. Next: 1.6.

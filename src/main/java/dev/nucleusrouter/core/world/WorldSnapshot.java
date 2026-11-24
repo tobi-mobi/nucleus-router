@@ -37,6 +37,17 @@ public final class WorldSnapshot {
 		return classAt(x, y, z).plannedSolid();
 	}
 
+	/**
+	 * Solid right now, ignoring stickiness: what a warp made this instant would hit.
+	 * Air and fluids are not solid; never-seen blocks count as solid.
+	 */
+	public boolean currentlySolid(int x, int y, int z) {
+		Section s = sections.get(Section.key(x >> 4, y >> 4, z >> 4));
+		if (s == null) return true;
+		int g = s.curGlobal(Section.index(x & 15, y & 15, z & 15));
+		return g < 0 || !kinds[g].emptyish();
+	}
+
 	/** Block there right now, e.g. "minecraft:stone"; null if never seen. */
 	public String currentBlock(int x, int y, int z) {
 		Section s = sections.get(Section.key(x >> 4, y >> 4, z >> 4));

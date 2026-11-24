@@ -72,6 +72,8 @@ public final class NrConfig {
 		public double eyeHeight = 1.54;
 		/** Air blocks needed above a target to land on it. */
 		public int requiredAirAbove = 2;
+		/** Aim-region precision: sample grid per visible target face (n x n). Higher is finer but slower. */
+		public int aimSamplesPerFace = 8;
 		/** Blocks the etherwarp ray passes straight through (confirmed in-game 2026-11-24: water and lava). */
 		public List<String> rayPassesThrough = new ArrayList<>(List.of("minecraft:water", "minecraft:lava", "minecraft:bubble_column"));
 	}
@@ -161,6 +163,7 @@ public final class NrConfig {
 
 		etherwarp.range = (int) clamp(fixes, "etherwarp.range", etherwarp.range, 57, 61);
 		etherwarp.eyeHeight = clamp(fixes, "etherwarp.eyeHeight", etherwarp.eyeHeight, 1.0, 1.8);
+		etherwarp.aimSamplesPerFace = (int) clamp(fixes, "etherwarp.aimSamplesPerFace", etherwarp.aimSamplesPerFace, 2, 32);
 		etherwarp.requiredAirAbove = (int) clamp(fixes, "etherwarp.requiredAirAbove", etherwarp.requiredAirAbove, 1, 3);
 
 		bombs.throwRange = clamp(fixes, "bombs.throwRange", bombs.throwRange, 1, 100);
