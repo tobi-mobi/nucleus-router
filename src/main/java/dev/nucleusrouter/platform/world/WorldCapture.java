@@ -140,6 +140,7 @@ public final class WorldCapture {
 	/** Called by {@code LevelMixin} after any block change applied to the client world. */
 	public static void onBlockChanged(ClientLevel level, BlockPos pos, BlockState state, boolean byPlayer) {
 		ensureLevel(level);
+		dev.nucleusrouter.platform.debug.BombCalibration.onBlockChanged(pos, state, byPlayer);
 		NrConfig.Hollows h = ConfigManager.get().hollows;
 		int x = pos.getX(), y = pos.getY(), z = pos.getZ();
 		if (x < h.minX || x > h.maxX || y < h.minY || y > h.maxY || z < h.minZ || z > h.maxZ) return;
@@ -276,6 +277,45 @@ public final class WorldCapture {
 			savedVersion = -1;
 			saveIfDirty("manual");
 			return "Saved lobby " + lobby + " to " + fileFor(lobby);
+		}, WORLD);
+	}
+
+	/**
+	 * {@code /nr dump} (SPEC §6): writes the current terrain model and a JSON summary (settings,
+	 * location, lobby) to {@code nucleusrouter/dumps/}, so the planner can be tested offline.
+	 * The .nrw file is the same format as lobby saves ({@link WorldStore}); the planner's plan will be
+	 * added to the JSON once there is one (milestone 3).
+	 */
+	public static CompletableFuture<String> dump() {
+		LocationState loc = LocationTracker.state();
+		NrConfig cfg = ConfigManager.get();
+		return CompletableFuture.supplyAsync(() -> {
+			WorldSnapshot snap = model.snapshot();
+			String name = (lobby != null ? lobby : loc.serverId() != null ? loc.serverId() : "unknown").replaceAll("[^A-Za-z0-9_-]", "_")
+					+ "-" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+			Path dir = FabricLoader.getInstance().getGameDir().resolve("nucleusrouter").resolve("dumps");
+			try {
+				Files.createDirectories(dir);
+				Path world = dir.resolve(name + ".nrw");
+				try (OutputStream out = Files.newOutputStream(world)) {
+					WorldStore.write(snap, new WorldStore.Meta(lobby != null ? lobby : "unknown", loc.clockTicks(), System.currentTimeMillis()), out);
+				}
+				java.util.Map<String, Object> meta = new java.util.LinkedHashMap<>();
+				meta.put("modVersion", FabricLoader.getInstance().getModContainer("nucleusrouter").map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("?"));
+				meta.put("time", java.time.LocalDateTime.now().toString());
+				meta.put("lobby", lobby);
+				meta.put("lobbyNote", lobbyNote);
+				meta.put("location", loc);
+				meta.put("sections", snap.sectionCount());
+				meta.put("worldFile", world.getFileName().toString());
+				meta.put("config", cfg);
+				Path json = dir.resolve(name + ".json");
+				Files.writeString(json, new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(meta));
+				NucleusRouterClient.LOG.info("[Nucleus Router] Dump written: {} ({} sections) and {}", world, snap.sectionCount(), json.getFileName());
+				return "Dump saved: " + world + " (" + snap.sectionCount() + " sections, " + Files.size(world) / 1024 + " KB) + " + json.getFileName();
+			} catch (IOException e) {
+				throw new java.io.UncheckedIOException("could not write dump to " + dir, e);
+			}
 		}, WORLD);
 	}
 

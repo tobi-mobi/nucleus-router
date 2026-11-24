@@ -39,6 +39,9 @@ public final class NrCommands {
 								.then(literal("stats").executes(DebugCommands::rayStats))
 								.then(literal("clear").executes(DebugCommands::rayClear))
 								.then(literal("apply").executes(DebugCommands::rayApply))))
+						.then(literal("calibrate").then(literal("bomb").executes(DebugCommands::calibrateBomb)
+								.then(literal("cancel").executes(DebugCommands::calibrateBombCancel))))
+						.then(literal("dump").executes(DebugCommands::dump))
 						.then(literal("config").executes(NrCommands::openConfig))
 						.then(literal("reload").executes(NrCommands::reload));
 				dispatcher.register(cmd);
@@ -57,6 +60,8 @@ public final class NrCommands {
 		line(src, "/nr debug ray", "show where an etherwarp would land; checks your real warps");
 		line(src, "/nr debug ray stats", "predicted vs actual, eye height suggestion, warp delay");
 		line(src, "/nr debug ray apply", "use the suggested eye height");
+		line(src, "/nr calibrate bomb", "measure one real Bob-omb blast against the model");
+		line(src, "/nr dump", "save this lobby's terrain + settings to a file for offline testing");
 		line(src, "/nr config", "open the settings screen");
 		line(src, "/nr reload", "reload settings from config/nucleusrouter.json");
 		return 1;

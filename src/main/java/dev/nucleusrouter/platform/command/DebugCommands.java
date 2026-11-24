@@ -56,6 +56,24 @@ final class DebugCommands {
 		return 1;
 	}
 
+	static int calibrateBomb(CommandContext<FabricClientCommandSource> ctx) {
+		ctx.getSource().sendFeedback(Component.literal(dev.nucleusrouter.platform.debug.BombCalibration.arm()).withStyle(ChatFormatting.YELLOW));
+		return 1;
+	}
+
+	static int calibrateBombCancel(CommandContext<FabricClientCommandSource> ctx) {
+		ctx.getSource().sendFeedback(Component.literal(dev.nucleusrouter.platform.debug.BombCalibration.cancel()).withStyle(ChatFormatting.GRAY));
+		return 1;
+	}
+
+	static int dump(CommandContext<FabricClientCommandSource> ctx) {
+		ctx.getSource().sendFeedback(Component.literal("Saving dump...").withStyle(ChatFormatting.GRAY));
+		dev.nucleusrouter.platform.world.WorldCapture.dump()
+				.thenAccept(msg -> dev.nucleusrouter.platform.NucleusRouterClient.showLocal(Component.literal(msg).withStyle(ChatFormatting.GREEN)))
+				.exceptionally(dev.nucleusrouter.platform.NucleusRouterClient::reportAsyncError);
+		return 1;
+	}
+
 	private static void kv(FabricClientCommandSource src, String key, String value) {
 		src.sendFeedback(Component.literal("  " + key + ": ").withStyle(ChatFormatting.GRAY).append(Component.literal(value).withStyle(ChatFormatting.WHITE)));
 	}

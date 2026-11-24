@@ -107,6 +107,11 @@ public final class WorldDraw {
 		box(new AABB(centre.x - h, centre.y - h, centre.z - h, centre.x + h, centre.y + h, centre.z + h), strokeArgb, 2f, fillArgb, throughWalls);
 	}
 
+	/** Horizontal circle (e.g. the outline of a blast sphere at its centre height). */
+	public void circle(Vec3 centre, float radius, int argb, boolean throughWalls) {
+		through(Gizmos.circle(centre, radius, GizmoStyle.stroke(argb, 3f)), throughWalls);
+	}
+
 	/** Text that always faces the camera. */
 	public void text(String text, Vec3 pos, int argb, float scale, boolean throughWalls) {
 		through(Gizmos.billboardText(text, pos, TextGizmo.Style.forColorAndCentered(argb).withScale(scale)), throughWalls);

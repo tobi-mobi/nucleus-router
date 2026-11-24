@@ -5,7 +5,10 @@
 	"name": "Nucleus Router in-game tests",
 	"environment": "client",
 	"entrypoints": {
-		"fabric-client-gametest": ["dev.nucleusrouter.gametest.RenderGameTest"]
+		"fabric-client-gametest": [
+			"dev.nucleusrouter.gametest.RenderGameTest",
+			"dev.nucleusrouter.gametest.BombCalibrationGameTest"
+		]
 	},
 	"depends": {
 		"nucleusrouter": "*",

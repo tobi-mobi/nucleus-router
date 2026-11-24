@@ -30,6 +30,7 @@ public final class NucleusRouterClient implements ClientModInitializer {
 		WorldCapture.init();
 		WorldDraw.init();
 		DebugRay.init();
+		dev.nucleusrouter.platform.debug.BombCalibration.init();
 		NrCommands.register();
 		LOG.info("[Nucleus Router] {} loaded (render-only; never sends input, chat or packets).", NucleusRouter.VERSION_LABEL);
 	}

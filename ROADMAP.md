@@ -12,8 +12,8 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - [x] 1.4 World model: voxel classes, sticky "ghost solid" memory for respawning blocks, capture from chunk loads and block updates, per-lobby persistence on disk. Unit tests. (§3.1, §2.4)
 - [x] 1.5 Etherwarp ray model (DDA, first hit, 2 air above, full-cube rule, configurable eye height, valid aim region). Unit tests. (§2.3)
 - [x] 1.6 `/nr debug ray` overlay + logging of predicted vs actual landing + eye-height suggestion. Also the first world-render utility: lines, outlines and filled boxes through walls, working on OpenGL, Vulkan and Iris. (§6, §5)
-- [ ] 1.7 `/nr calibrate bomb` (snapshot → block diff → measured centre/radius/shape, impact vs predicted throw) and `/nr dump`. (§6, §2.4)
-- [ ] 1.8 Milestone report: in-game checklist + open [VERIFY] items. **Stop.**
+- [x] 1.7 `/nr calibrate bomb` (snapshot → block diff → measured centre/radius/shape, impact vs predicted throw) and `/nr dump`. (§6, §2.4)
+- [x] 1.8 Milestone report: in-game checklist + open [VERIFY] items. **Stop.**
 
 ## Milestone 2: Discovery and lobby evaluation
 - [ ] 2.1 Structure anchors from NPC/entity nametags + scoreboard area names. Manual set/clear commands. (§3.5, §4)
@@ -82,7 +82,9 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Scoreboard "Goblin Queen's Den" vs. the 3 s Amber timer | The **whole den area** shows "Goblin Queen's Den", but the 3 s timer only applies inside **the Queen's castle in the centre**. So "scoreboard shows Goblin Holdout" (SPEC §2.2) is **not** the exit condition | 2026-11-24 |
 | Do fluids (water/lava) block the etherwarp ray? | **No**: to etherwarp, water and lava are as if they don't exist. The ray passes through, and you can land on a block with water/lava in the 2 spaces above. Class FLUID counts as air for rays and landing (`etherwarp.rayPassesThrough`) | 2026-11-24 |
 | Which block(s) the user places for +2/+1 targets | Mainly cobblestone and Hard Stone, other blocks work too. Your own placements are now detected (client prediction), whatever the type | 2026-11-24 |
-| What a mined ore/gemstone turns into until it respawns (air? bedrock?) | _[VERIFY]_ (`/nr world here` on a freshly mined gemstone) | |
+| What a mined ore/gemstone turns into until it respawns | Plain air (`/nr world here` showed "now air" on a mined gemstone) | 2026-11-24 |
+| Bob-omb item is recognised by its name containing "Bob-omb" | _[VERIFY]_ (`/nr calibrate bomb`, throw: chat must say "Throw recorded") | |
+| Does Hypixel send a vanilla explosion packet for a Bob-omb? | _[VERIFY]_ (calibration report shows a "Server explosion packet" line if yes) | |
 | World overlay with Iris shaders | Not needed: most players don't use shader packs (user, 2026-11-24). Rendering uses vanilla pipelines, so it should still work. OpenGL and Vulkan checked by the automated in-game test | 2026-11-24 |
 | What exactly ends the 3 s timer (leaving the castle's bounds? any message?) | _[VERIFY]_ Needed before 3.3/3.6 (den exit plan and countdown) | |
 | Ping on Hypixel | 130-200 ms for this user (EU). Will be measured from real etherwarps in 1.6 instead of configured | 2026-11-24 |
@@ -107,6 +109,8 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24 `/nr debug ray` only observes: right-clicks (via Fabric use-item/use-block events, always PASS) while sneaking with an item named "Aspect of the Void/End", and the server's teleport packet (read-only mixin on `handleMovePlayer`). It also measures click-to-teleport delay, which replaces the useless tab-list ping for the cost model.
 - 2026-11-24 SPEC §2.3 change: "every non-air block blocks the ray" is not true for torches (and water/lava). Such blocks are class PASS_THROUGH (renamed from FLUID): ignored by the ray and count as air above a landing block. Old configs are migrated (config version 2): eye height 1.54 -> 1.27 if the user never changed it, torches added to the list.
 - 2026-11-24 SPEC §2.3 change, generalised: **every block you can walk through (no collision box) is invisible to etherwarp** (`etherwarp.noCollisionPassesThrough`, default on). The set (245 block types) is read from Minecraft's registry at startup (`platform/world/BlockRules`); `etherwarp.rayPassesThrough` is an extra list on top. Fits every in-game result so far: water, lava, torches, grass, flowers; fences with torches are landable.
+- 2026-11-24 `/nr calibrate bomb` (1.7): arm, throw one Bob-omb (detected by item name "Bob-omb", observed via use events only). At the throw: world snapshot + predicted landing (straight up to `throwRange`, then straight down; walk-through blocks ignored like for etherwarp). Blast = non-player block changes to air within 20 blocks of the predicted centre, collected for 1.5 s after the first one. Analysis tries ball / cube / diamond shapes around 3 candidate centres and reports the best fit (agreement = overlap of predicted vs real removed blocks), the model's error, and breakable survivors. Report JSON in `nucleusrouter/calibration/`. A vanilla explosion packet, if Hypixel sends one, is recorded too.
+- 2026-11-24 `/nr dump` writes `nucleusrouter/dumps/<lobby>-<time>.nrw` (same format as lobby saves) + `.json` (settings, location, lobby). The plan will be added in milestone 3.
 - 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
 ## Session log
@@ -121,3 +125,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24: 1.6 `/nr debug ray` (live target box green/red, landing marker, aim margin + best aim dot, label) and warp checking (predicted vs actual, eye-height fit, click-to-teleport delay) with `stats`/`apply`/`clear`. World-render utility on vanilla gizmos; verified by screenshot on OpenGL and Vulkan via a new client gametest. 43 unit tests pass. Needs in-game check with Iris + real warps. Next: 1.7.
 - 2026-11-24: In-game test of 1.6 with 16 real warps: eye height measured 1.27 (was 1.54), delay ~170 ms, overlay 0.009 ms/frame. Torches found to be invisible to etherwarp. Defaults and old configs updated. 45 tests pass. Still open: Iris check, range rule, other thin blocks. Next: 1.7.
 - 2026-11-24: User found grass/flowers are invisible too and the overlay still blocked on a torch. Replaced the hand list with "no collision box = invisible" read from Minecraft (245 types); debug label shows the block hit. Gametest screenshot confirms fences with torch/soul torch are now green. 46 tests pass. Next: 1.7.
+- 2026-11-24: Fences bomb-immune (config v3). 1.7 `/nr calibrate bomb` + `/nr dump`. New client gametest fakes a radius-8 blast 1 block off the model: measured ball r=8.00, 100% agreement, model error 1.42 (as built), report + dump written. 50 unit tests + 2 client gametests pass. **Milestone 1 done; report given, waiting for the user's in-game results.** Next: Milestone 2 (2.1 structure anchors).

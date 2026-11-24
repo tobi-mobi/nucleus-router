@@ -2,6 +2,7 @@ package dev.nucleusrouter.platform.mixin;
 
 import dev.nucleusrouter.platform.debug.DebugRay;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.protocol.game.ClientboundExplodePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -17,5 +18,11 @@ public abstract class ClientPacketListenerMixin {
 	@Inject(method = "handleMovePlayer", at = @At("TAIL"))
 	private void nucleusrouter$afterTeleport(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
 		DebugRay.onServerTeleport();
+	}
+
+	/** If the server sends a vanilla explosion packet, /nr calibrate bomb records its centre and radius. */
+	@Inject(method = "handleExplosion", at = @At("TAIL"))
+	private void nucleusrouter$afterExplosion(ClientboundExplodePacket packet, CallbackInfo ci) {
+		dev.nucleusrouter.platform.debug.BombCalibration.onExplosion(packet.center(), packet.radius(), packet.blockCount());
 	}
 }
