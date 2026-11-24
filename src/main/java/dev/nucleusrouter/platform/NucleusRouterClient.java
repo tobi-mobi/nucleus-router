@@ -25,6 +25,7 @@ public final class NucleusRouterClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		ConfigManager.load();
+		dev.nucleusrouter.platform.world.BlockRules.init();
 		LocationTracker.init();
 		WorldCapture.init();
 		WorldDraw.init();

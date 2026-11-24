@@ -73,7 +73,7 @@ public final class DebugRay {
 	private static Etherwarp.Params params() { return Etherwarp.Params.fromConfig(ConfigManager.get()); }
 
 	private static LiveSolid liveSolid(Minecraft mc) {
-		return new LiveSolid(mc.level, new HashSet<>(ConfigManager.get().etherwarp.rayPassesThrough));
+		return new LiveSolid(mc.level, dev.nucleusrouter.platform.world.BlockRules.passThrough(ConfigManager.get()));
 	}
 
 	private static Vec3 feetOf(LocalPlayer p) { return new Vec3(p.getX(), p.getY(), p.getZ()); }
@@ -122,6 +122,10 @@ public final class DebugRay {
 		} else {
 			label = String.format("%.1f blocks  |  blocked above, no warp", h.distance());
 		}
+		// Which block the ray hit (helps spot blocks that should be invisible to etherwarp)
+		String blockId = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+				.getKey(mc.level.getBlockState(new net.minecraft.core.BlockPos(h.x(), h.y(), h.z())).getBlock()).toString();
+		label = blockId.replace("minecraft:", "") + "  |  " + label;
 		// Grow the label with distance so it stays readable on far targets
 		float scale = (float) (0.5 * Math.max(1.0, h.distance() / 8.0));
 		draw.text(label, new net.minecraft.world.phys.Vec3(h.x() + 0.5, h.y() + 1.3 + scale, h.z() + 0.5), WorldDraw.argb(255, ok ? 0xFFFFFF : 0xFF8888), scale, true);

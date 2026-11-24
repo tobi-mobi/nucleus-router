@@ -58,8 +58,12 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Etherwarp eye height | **1.27** (crouching; etherwarp needs crouch). 16 real warps: 1.235-1.290 fits all 16, the old 1.54 got 7 wrong. 1.27 = modern Minecraft crouching eye height | 2026-11-24 |
 | Click-to-teleport delay for this user | median 170 ms, fastest 147 ms (16 warps) | 2026-11-24 |
 | Torches and etherwarp | Torches **don't exist** for etherwarp (like water/lava): you land on a wall block with a torch on it. Added `torch`, `wall_torch` to `etherwarp.rayPassesThrough` | 2026-11-24 |
-| Other thin blocks: flowers, tall grass, vines, ladders, carpets, slabs, glass panes, buttons, signs, redstone/soul torches | _[VERIFY]_ (SPEC §2.3 says they all block the ray; torches already proved that wrong). Test: aim `/nr debug ray` through or at each and warp | |
-| Etherwarp range is measured to where the ray enters the target block | _[VERIFY]_ (default: entry point within `etherwarp.range`). Test: warps at 59-62 blocks with `/nr debug ray` on | |
+| Grass, tall grass, flowers, tall flowers | Invisible to etherwarp (warp goes through) | 2026-11-24 |
+| Redstone/soul torches, buttons, signs, ladders | Don't occur in the Crystal Hollows | 2026-11-24 |
+| Fence with a torch on top | Can be warped onto (fence = full-cube target, torch ignored) | 2026-11-24 |
+| Vines, cobwebs (walk-through, so currently treated as invisible) and carpets, slabs, glass panes (have a collision box, so treated as full cubes) | _[VERIFY]_ with `/nr debug ray` (the label now names the block hit) | |
+| Are wooden fences bomb-immune like logs and planks? | _[VERIFY]_ (currently not in `bombs.bombImmuneBlocks`) | |
+| Etherwarp range is measured to where the ray enters the target block | Distances shown by `/nr debug ray` match the game. Exact cut-off at 61 still _[VERIFY]_ (warps at 59-62 blocks) | 2026-11-24 (partial) |
 | Hard Stone block type(s) | `minecraft:stone` (advanced tooltip shows skyblock:HARD_STONE) | 2026-11-24 |
 | Respawn time of ores/gemstones | _[VERIFY]_ | |
 | Bob-omb throw range / drop rule | _[VERIFY]_ (default 45, straight then down) | |
@@ -78,7 +82,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Do fluids (water/lava) block the etherwarp ray? | **No**: to etherwarp, water and lava are as if they don't exist. The ray passes through, and you can land on a block with water/lava in the 2 spaces above. Class FLUID counts as air for rays and landing (`etherwarp.rayPassesThrough`) | 2026-11-24 |
 | Which block(s) the user places for +2/+1 targets | Mainly cobblestone and Hard Stone, other blocks work too. Your own placements are now detected (client prediction), whatever the type | 2026-11-24 |
 | What a mined ore/gemstone turns into until it respawns (air? bedrock?) | _[VERIFY]_ (`/nr world here` on a freshly mined gemstone) | |
-| World overlay renders correctly with Iris shaders on | _[VERIFY]_ (`/nr debug ray` with your shader pack on). OpenGL and Vulkan already checked by the automated in-game test | |
+| World overlay with Iris shaders | Not needed: most players don't use shader packs (user, 2026-11-24). Rendering uses vanilla pipelines, so it should still work. OpenGL and Vulkan checked by the automated in-game test | 2026-11-24 |
 | What exactly ends the 3 s timer (leaving the castle's bounds? any message?) | _[VERIFY]_ Needed before 3.3/3.6 (den exit plan and countdown) | |
 | Ping on Hypixel | 130-200 ms for this user (EU). Will be measured from real etherwarps in 1.6 instead of configured | 2026-11-24 |
 | Own tab-list latency is real ping on Hypixel | **No**: shows 1 ms for an EU player. Values <= 5 ms are ignored; `cost.fallbackPingMs` is used | 2026-11-24 |
@@ -101,6 +105,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24 Automated in-game tests: `./gradlew runClientGameTest` (add `-PnrVulkan` for the Vulkan backend) builds a test scene and saves screenshots to `build/run/clientGameTest/screenshots/`. Code in `src/gametest`, not in the mod jar.
 - 2026-11-24 `/nr debug ray` only observes: right-clicks (via Fabric use-item/use-block events, always PASS) while sneaking with an item named "Aspect of the Void/End", and the server's teleport packet (read-only mixin on `handleMovePlayer`). It also measures click-to-teleport delay, which replaces the useless tab-list ping for the cost model.
 - 2026-11-24 SPEC §2.3 change: "every non-air block blocks the ray" is not true for torches (and water/lava). Such blocks are class PASS_THROUGH (renamed from FLUID): ignored by the ray and count as air above a landing block. Old configs are migrated (config version 2): eye height 1.54 -> 1.27 if the user never changed it, torches added to the list.
+- 2026-11-24 SPEC §2.3 change, generalised: **every block you can walk through (no collision box) is invisible to etherwarp** (`etherwarp.noCollisionPassesThrough`, default on). The set (245 block types) is read from Minecraft's registry at startup (`platform/world/BlockRules`); `etherwarp.rayPassesThrough` is an extra list on top. Fits every in-game result so far: water, lava, torches, grass, flowers; fences with torches are landable.
 - 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
 ## Session log
@@ -114,3 +119,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24: 1.5 etherwarp ray model in `core/etherwarp`: exact voxel ray (DDA), landing rule, eye height from config, valid aim region with best aim point and margin. 40 unit tests pass. Nothing to see in-game yet; 1.6 adds `/nr debug ray` to show and check it. Next: 1.6.
 - 2026-11-24: 1.6 `/nr debug ray` (live target box green/red, landing marker, aim margin + best aim dot, label) and warp checking (predicted vs actual, eye-height fit, click-to-teleport delay) with `stats`/`apply`/`clear`. World-render utility on vanilla gizmos; verified by screenshot on OpenGL and Vulkan via a new client gametest. 43 unit tests pass. Needs in-game check with Iris + real warps. Next: 1.7.
 - 2026-11-24: In-game test of 1.6 with 16 real warps: eye height measured 1.27 (was 1.54), delay ~170 ms, overlay 0.009 ms/frame. Torches found to be invisible to etherwarp. Defaults and old configs updated. 45 tests pass. Still open: Iris check, range rule, other thin blocks. Next: 1.7.
+- 2026-11-24: User found grass/flowers are invisible too and the overlay still blocked on a torch. Replaced the hand list with "no collision box = invisible" read from Minecraft (245 types); debug label shows the block hit. Gametest screenshot confirms fences with torch/soul torch are now green. 46 tests pass. Next: 1.7.

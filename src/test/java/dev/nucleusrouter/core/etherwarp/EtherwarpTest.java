@@ -157,6 +157,17 @@ class EtherwarpTest {
 		assertTrue(r.hit().isBlock(300, 100, 310));
 	}
 
+	/** In-game 2026-11-24: grass and flowers are invisible too; the platform passes in every no-collision block. */
+	@Test
+	void extraPassThroughBlocksFromTheGame() {
+		NrConfig cfg = new NrConfig();
+		BlockClassifier c = BlockClassifier.fromConfig(cfg, Set.of("minecraft:short_grass", "minecraft:poppy", "minecraft:soul_torch", "minecraft:water"));
+		assertEquals(BlockClassifier.Kind.PASS_THROUGH, c.classify("minecraft:short_grass"));
+		assertEquals(BlockClassifier.Kind.PASS_THROUGH, c.classify("minecraft:poppy"));
+		assertEquals(BlockClassifier.Kind.PASS_THROUGH, c.classify("minecraft:soul_torch"));
+		assertNotEquals(BlockClassifier.Kind.PASS_THROUGH, c.classify("minecraft:oak_fence"), "a fence has a collision box, so it stays solid");
+	}
+
 	@Test
 	void aimRegionIsBigForAnOpenTargetAndShrinksWhenCovered() {
 		Blocks open = new Blocks().add(0, 100, 10);

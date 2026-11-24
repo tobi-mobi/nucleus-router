@@ -50,6 +50,14 @@ public final class BlockClassifier {
 		return new BlockClassifier(cfg.bombs.hardStoneBlocks, cfg.bombs.bombImmuneBlocks, cfg.etherwarp.rayPassesThrough, cfg.placing.placedBlockTypes);
 	}
 
+	/**
+	 * Like {@link #fromConfig(NrConfig)} but with the full pass-through set, e.g. the config list plus
+	 * every block without a collision box (worked out by the platform layer from Minecraft's registry).
+	 */
+	public static BlockClassifier fromConfig(NrConfig cfg, java.util.Collection<String> passThrough) {
+		return new BlockClassifier(cfg.bombs.hardStoneBlocks, cfg.bombs.bombImmuneBlocks, List.copyOf(passThrough), cfg.placing.placedBlockTypes);
+	}
+
 	public Kind classify(String blockId) {
 		if (blockId == null || AIR_BLOCKS.contains(blockId)) return Kind.AIR;
 		if (fluids.contains(blockId)) return Kind.PASS_THROUGH;

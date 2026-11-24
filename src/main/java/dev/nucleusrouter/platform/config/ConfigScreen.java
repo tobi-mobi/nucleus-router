@@ -64,7 +64,8 @@ public final class ConfigScreen {
 				.option(intOpt("Range (blocks)", "57 plus 1 per Transmission Tuner, up to 61.", d.etherwarp.range, () -> c.etherwarp.range, v -> c.etherwarp.range = v, 57, 61))
 				.option(dblOpt("Eye height (blocks)", "Crouching eye height above your feet that the server uses for the etherwarp ray. Measured in-game: 1.27. /nr debug ray stats suggests a value from your own warps.", d.etherwarp.eyeHeight, () -> c.etherwarp.eyeHeight, v -> c.etherwarp.eyeHeight = v, 1.0, 1.8))
 				.option(intOpt("Aim precision (samples per face)", "How finely the mod measures how forgiving a warp's aim is. Higher is more exact but slower.", d.etherwarp.aimSamplesPerFace, () -> c.etherwarp.aimSamplesPerFace, v -> c.etherwarp.aimSamplesPerFace = v, 2, 32))
-				.option(stringList("Ray passes through", "Blocks that don't exist for etherwarp: the ray goes through them and they count as air above a landing spot (water, lava, torches, confirmed in-game).", d.etherwarp.rayPassesThrough, () -> c.etherwarp.rayPassesThrough, v -> c.etherwarp.rayPassesThrough = v))
+				.option(boolOpt("Walk-through blocks are invisible", "Blocks you can walk through (no collision box: grass, flowers, torches, water, lava...) don't exist for etherwarp. Confirmed in-game for all of those.", d.etherwarp.noCollisionPassesThrough, () -> c.etherwarp.noCollisionPassesThrough, v -> c.etherwarp.noCollisionPassesThrough = v))
+				.option(stringList("Ray passes through (extra)", "Blocks that don't exist for etherwarp: the ray goes through them and they count as air above a landing spot (water, lava, torches, confirmed in-game).", d.etherwarp.rayPassesThrough, () -> c.etherwarp.rayPassesThrough, v -> c.etherwarp.rayPassesThrough = v))
 				.option(intOpt("Air needed above target", "Air blocks needed above a block to land on it.", d.etherwarp.requiredAirAbove, () -> c.etherwarp.requiredAirAbove, v -> c.etherwarp.requiredAirAbove = v, 1, 3))
 				.build();
 

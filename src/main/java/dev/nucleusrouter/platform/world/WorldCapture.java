@@ -99,7 +99,7 @@ public final class WorldCapture {
 	}
 
 	private static BlockClassifier classifier() {
-		return BlockClassifier.fromConfig(ConfigManager.get());
+		return BlockRules.classifier();
 	}
 
 	// ------------------------------------------------------------------ client thread

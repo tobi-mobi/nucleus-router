@@ -83,6 +83,11 @@ public final class NrConfig {
 		 */
 		public List<String> rayPassesThrough = new ArrayList<>(List.of("minecraft:water", "minecraft:lava", "minecraft:bubble_column",
 				"minecraft:torch", "minecraft:wall_torch"));
+		/**
+		 * Treat every block you can walk through (no collision box) as not existing for etherwarp.
+		 * Matches everything confirmed in-game 2026-11-24: water, lava, torches, grass, flowers.
+		 */
+		public boolean noCollisionPassesThrough = true;
 	}
 
 	/** §2.4 Bob-ombs. */

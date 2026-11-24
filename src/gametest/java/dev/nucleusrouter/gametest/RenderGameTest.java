@@ -61,8 +61,22 @@ public final class RenderGameTest implements FabricClientGameTest {
 			context.waitTicks(30);
 			context.takeScreenshot("nr-3-far-target");
 
-			context.runOnClient(mc -> DebugRay.toggle());
+			// In-game report 2026-11-24: fence with a torch on top showed red, but you can warp onto it.
 			showTestShapes = false;
+			server.runCommand("setblock 0 100 38 minecraft:air");
+			server.runCommand("setblock 0 100 10 minecraft:oak_fence");
+			server.runCommand("setblock 0 101 10 minecraft:torch");
+			server.runCommand("setblock 2 100 10 minecraft:oak_fence");
+			server.runCommand("setblock 2 101 10 minecraft:soul_torch");
+			server.runCommand("fill -4 100 8 4 100 8 minecraft:short_grass");
+			server.runCommand("tp @p 0.5 100 0.5 0 4");
+			context.waitTicks(30);
+			context.takeScreenshot("nr-4-fence-with-torch");
+			server.runCommand("tp @p 0.5 100 0.5 -10 4");
+			context.waitTicks(30);
+			context.takeScreenshot("nr-5-fence-with-soul-torch");
+
+			context.runOnClient(mc -> DebugRay.toggle());
 		}
 	}
 }
