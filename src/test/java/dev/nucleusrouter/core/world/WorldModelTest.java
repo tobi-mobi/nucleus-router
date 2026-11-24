@@ -37,7 +37,7 @@ class WorldModelTest {
 		assertEquals(BlockClassifier.Kind.HARD_STONE, classifier.classify("minecraft:stone"));
 		assertEquals(BlockClassifier.Kind.UNBREAKABLE, classifier.classify("minecraft:jungle_log"));
 		assertEquals(BlockClassifier.Kind.UNBREAKABLE, classifier.classify("minecraft:podzol"));
-		assertEquals(BlockClassifier.Kind.UNBREAKABLE, classifier.classify("minecraft:lava"));
+		assertEquals(BlockClassifier.Kind.FLUID, classifier.classify("minecraft:lava"));
 		assertEquals(BlockClassifier.Kind.PLACEABLE, classifier.classify("minecraft:cobblestone"));
 		assertEquals(BlockClassifier.Kind.RESPAWNING, classifier.classify("minecraft:red_stained_glass_pane"));
 		assertEquals(BlockClassifier.Kind.RESPAWNING, classifier.classify("minecraft:prismarine"));
@@ -100,8 +100,40 @@ class WorldModelTest {
 		model.observe(302, 100, 300, bedrock);
 		WorldSnapshot s = model.snapshot();
 		assertEquals(UNBREAKABLE, s.classAt(300, 100, 300));
-		assertEquals(UNBREAKABLE, s.classAt(301, 100, 300));
+		assertEquals(FLUID, s.classAt(301, 100, 300));
+		assertFalse(s.plannedSolid(301, 100, 300), "the etherwarp ray passes through water and lava");
 		assertEquals(UNBREAKABLE, s.classAt(302, 100, 300));
+	}
+
+	@Test
+	void yourOwnPlacementsArePlacedWhateverTheType() {
+		// Glass would normally count as a respawning gemstone...
+		model.observe(300, 100, 300, air);
+		model.observe(300, 100, 300, gem, true);
+		assertEquals(PLACED, model.snapshot().classAt(300, 100, 300));
+		// ...placed into a hole where Hard Stone was bombed away
+		model.observe(301, 100, 300, stone);
+		model.observe(301, 100, 300, air);
+		model.observe(301, 100, 300, gem, true);
+		assertEquals(PLACED, model.snapshot().classAt(301, 100, 300));
+		// Placing Hard Stone into air also counts as placed
+		model.observe(302, 100, 300, air);
+		model.observe(302, 100, 300, stone, true);
+		assertEquals(PLACED, model.snapshot().classAt(302, 100, 300));
+		// The same glass appearing on its own (server) is treated as a respawning gemstone
+		model.observe(303, 100, 300, air);
+		model.observe(303, 100, 300, gem);
+		assertEquals(RESPAWNING_SOLID, model.snapshot().classAt(303, 100, 300));
+	}
+
+	@Test
+	void mergeKeepsBlocksPlacedLastSession() {
+		WorldModel older = new WorldModel(classifier);
+		older.observe(300, 100, 300, older.blockId("minecraft:air"));
+		older.observe(300, 100, 300, older.blockId("minecraft:red_stained_glass"), true);
+		model.observe(300, 100, 300, gem); // this session we first saw it already there
+		model.mergeOlder(older);
+		assertEquals(PLACED, model.snapshot().classAt(300, 100, 300));
 	}
 
 	@Test

@@ -18,6 +18,8 @@ import java.util.concurrent.CompletableFuture;
 
 /** {@code /nr world ...}: inspect the remembered terrain. All heavy work runs off the client thread. */
 final class WorldCommands {
+	private static final double LOOK_RANGE = 20.0;
+
 	private WorldCommands() {}
 
 	static int stats(CommandContext<FabricClientCommandSource> ctx) {
@@ -53,14 +55,15 @@ final class WorldCommands {
 		Minecraft client = ctx.getSource().getClient();
 		if (client.player == null) return 0;
 		BlockPos feet = client.player.blockPosition().below();
-		HitResult hit = client.hitResult;
+		// Look up to 20 blocks ahead (not just reach). Fluids are ignored, like the etherwarp ray.
+		HitResult hit = client.player.pick(LOOK_RANGE, 1.0f, false);
 		BlockPos looked = hit instanceof BlockHitResult bh && hit.getType() == HitResult.Type.BLOCK ? bh.getBlockPos() : null;
 		CompletableFuture<WorldSnapshot> snap = WorldCapture.snapshot();
 		snap.thenAccept(s -> {
 			show(Component.literal("Remembered blocks").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
-			describe(s, "Standing on", feet);
+			describe(s, "Block below your feet", feet);
 			if (looked != null) describe(s, "Looking at", looked);
-			else kv("Looking at", "no block in reach");
+			else kv("Looking at", "no block within " + (int) LOOK_RANGE + " blocks");
 		}).exceptionally(NucleusRouterClient::reportAsyncError);
 		return 1;
 	}

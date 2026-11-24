@@ -3,7 +3,8 @@
 	"package": "dev.nucleusrouter.platform.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"ClientLevelMixin"
+		"ClientLevelAccessor",
+		"LevelMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

@@ -32,6 +32,7 @@ public final class ConfigScreen {
 		ConfigCategory general = ConfigCategory.createBuilder()
 				.name(Component.literal("General"))
 				.option(boolOpt("Chat notices", "Short local chat messages such as \"Entered Crystal Hollows\". Only you see them; nothing is sent to the server.", d.general.chatNotices, () -> c.general.chatNotices, v -> c.general.chatNotices = v))
+				.option(boolOpt("Save lobbies to disk", "Keep each lobby's remembered terrain on disk, so a crash or reconnect into the same lobby keeps what was learned (mined ores stay remembered).", d.general.saveLobbies, () -> c.general.saveLobbies, v -> c.general.saveLobbies = v))
 				.build();
 
 		ConfigCategory hollows = ConfigCategory.createBuilder()
@@ -62,6 +63,7 @@ public final class ConfigScreen {
 				.name(Component.literal("Etherwarp"))
 				.option(intOpt("Range (blocks)", "57 plus 1 per Transmission Tuner, up to 61.", d.etherwarp.range, () -> c.etherwarp.range, v -> c.etherwarp.range = v, 57, 61))
 				.option(dblOpt("Eye height (blocks)", "Sneaking eye height above your feet that the server uses for the etherwarp ray. /nr debug ray suggests a value." + VERIFY, d.etherwarp.eyeHeight, () -> c.etherwarp.eyeHeight, v -> c.etherwarp.eyeHeight = v, 1.0, 1.8))
+				.option(stringList("Ray passes through", "Blocks the etherwarp ray goes straight through (water and lava, confirmed in-game).", d.etherwarp.rayPassesThrough, () -> c.etherwarp.rayPassesThrough, v -> c.etherwarp.rayPassesThrough = v))
 				.option(intOpt("Air needed above target", "Air blocks needed above a block to land on it.", d.etherwarp.requiredAirAbove, () -> c.etherwarp.requiredAirAbove, v -> c.etherwarp.requiredAirAbove = v, 1, 3))
 				.build();
 
@@ -79,13 +81,12 @@ public final class ConfigScreen {
 						.build())
 				.option(stringList("Hard Stone blocks", "Block ids that count as Hard Stone and stay gone when broken." + VERIFY, d.bombs.hardStoneBlocks, () -> c.bombs.hardStoneBlocks, v -> c.bombs.hardStoneBlocks = v))
 				.option(stringList("Bomb-immune blocks", "Block ids bombs never break. Start with * to match a suffix, e.g. *_log.", d.bombs.bombImmuneBlocks, () -> c.bombs.bombImmuneBlocks, v -> c.bombs.bombImmuneBlocks = v))
-				.option(stringList("Fluid blocks", "Treated as solid and unbreakable: they block the etherwarp ray and bombs don't remove them." + VERIFY, d.bombs.fluidBlocks, () -> c.bombs.fluidBlocks, v -> c.bombs.fluidBlocks = v))
 				.build();
 
 		ConfigCategory placing = ConfigCategory.createBuilder()
 				.name(Component.literal("Placing"))
 				.option(dblOpt("Reach (blocks)", "Reach used when planning block placements.", d.placing.reach, () -> c.placing.reach, v -> c.placing.reach = v, 1, 6))
-				.option(stringList("Blocks you place", "When one of these appears where there was air, it counts as a placed block that stays, not a respawning ore.", d.placing.placedBlockTypes, () -> c.placing.placedBlockTypes, v -> c.placing.placedBlockTypes = v))
+				.option(stringList("Placed block types (fallback)", "Blocks you place are detected automatically, whatever the type. These types also count as placed when they appear in air without the mod seeing you place them.", d.placing.placedBlockTypes, () -> c.placing.placedBlockTypes, v -> c.placing.placedBlockTypes = v))
 				.option(boolOpt("Allowed everywhere outside structures", "If on, the planner may place blocks anywhere outside structure regions." + VERIFY, d.placing.allowedEverywhereOutsideStructures, () -> c.placing.allowedEverywhereOutsideStructures, v -> c.placing.allowedEverywhereOutsideStructures = v))
 				.build();
 

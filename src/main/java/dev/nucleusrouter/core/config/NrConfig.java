@@ -25,6 +25,8 @@ public final class NrConfig {
 	public static final class General {
 		/** Show short local chat notices, e.g. "Entered Crystal Hollows". Only you see them; nothing is sent. */
 		public boolean chatNotices = true;
+		/** Save each lobby's remembered terrain to disk, so a crash or reconnect into the same lobby keeps it. */
+		public boolean saveLobbies = true;
 	}
 	public Etherwarp etherwarp = new Etherwarp();
 	public Bombs bombs = new Bombs();
@@ -70,6 +72,8 @@ public final class NrConfig {
 		public double eyeHeight = 1.54;
 		/** Air blocks needed above a target to land on it. */
 		public int requiredAirAbove = 2;
+		/** Blocks the etherwarp ray passes straight through (confirmed in-game 2026-11-24: water and lava). */
+		public List<String> rayPassesThrough = new ArrayList<>(List.of("minecraft:water", "minecraft:lava", "minecraft:bubble_column"));
 	}
 
 	/** §2.4 Bob-ombs. */
@@ -93,8 +97,6 @@ public final class NrConfig {
 				"minecraft:rooted_dirt", "minecraft:mud", "minecraft:dirt_path", "minecraft:farmland",
 				"minecraft:mycelium", "minecraft:muddy_mangrove_roots",
 				"minecraft:bedrock", "minecraft:barrier"));
-		/** [VERIFY] Fluids: treated as solid and unbreakable (they block the etherwarp ray, bombs don't remove them). */
-		public List<String> fluidBlocks = new ArrayList<>(List.of("minecraft:water", "minecraft:lava", "minecraft:bubble_column"));
 	}
 
 	public enum BlastCentre { IMPACT_BLOCK_CENTRE, IMPACT_POINT }
@@ -105,7 +107,11 @@ public final class NrConfig {
 		public double reach = 4.5;
 		/** [VERIFY] Placing allowed everywhere in the Hollows outside structure regions. */
 		public boolean allowedEverywhereOutsideStructures = true;
-		/** Block types you place. When one appears in air it counts as placed (stays), not as a respawning ore. */
+		/**
+		 * Blocks you place are detected automatically, whatever their type. This list is a fallback:
+		 * these types also count as placed when they appear in air without the mod seeing you place them
+		 * (e.g. placed by another player).
+		 */
 		public List<String> placedBlockTypes = new ArrayList<>(List.of("minecraft:cobblestone"));
 	}
 
@@ -164,7 +170,7 @@ public final class NrConfig {
 		if (bombs.hardStoneBlocks == null) { bombs.hardStoneBlocks = new Bombs().hardStoneBlocks; fixes.add("bombs.hardStoneBlocks missing, reset"); }
 		if (bombs.bombImmuneBlocks == null) { bombs.bombImmuneBlocks = new Bombs().bombImmuneBlocks; fixes.add("bombs.bombImmuneBlocks missing, reset"); }
 
-		if (bombs.fluidBlocks == null) { bombs.fluidBlocks = new Bombs().fluidBlocks; fixes.add("bombs.fluidBlocks missing, reset"); }
+		if (etherwarp.rayPassesThrough == null) { etherwarp.rayPassesThrough = new Etherwarp().rayPassesThrough; fixes.add("etherwarp.rayPassesThrough missing, reset"); }
 		if (placing.placedBlockTypes == null) { placing.placedBlockTypes = new Placing().placedBlockTypes; fixes.add("placing.placedBlockTypes missing, reset"); }
 		placing.reach = clamp(fixes, "placing.reach", placing.reach, 1, 6);
 

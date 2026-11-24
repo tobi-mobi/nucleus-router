@@ -8,21 +8,24 @@ import java.util.Set;
 
 /**
  * Sorts block ids (e.g. "minecraft:stone") into {@link Kind}s using the config lists.
- * Rules (SPEC §2.4):
+ * Rules (SPEC §2.4 plus confirmed facts in ROADMAP.md):
  * <ul>
  *   <li>Hard Stone ({@code bombs.hardStoneBlocks}) stays gone once broken.</li>
- *   <li>Bomb-immune blocks and fluids never break.</li>
+ *   <li>Bomb-immune blocks never break.</li>
+ *   <li>Ray pass-through blocks ({@code etherwarp.rayPassesThrough}: water, lava) are fluids.</li>
  *   <li>Placed-block types ({@code placing.placedBlockTypes}) appearing in air count as placed.</li>
  *   <li>Everything else respawns.</li>
  * </ul>
  */
 public final class BlockClassifier {
 	public enum Kind {
-		AIR(0), HARD_STONE(1), PLACEABLE(1), RESPAWNING(2), UNBREAKABLE(3);
+		AIR(0), FLUID(0), HARD_STONE(1), PLACEABLE(1), RESPAWNING(2), UNBREAKABLE(3);
 
 		/** Higher rank wins when deciding what a position "originally" was. */
 		final int rank;
 		Kind(int rank) { this.rank = rank; }
+
+		boolean emptyish() { return this == AIR || this == FLUID; }
 	}
 
 	public static final Set<String> AIR_BLOCKS = Set.of("minecraft:air", "minecraft:cave_air", "minecraft:void_air");
@@ -31,23 +34,25 @@ public final class BlockClassifier {
 
 	private final Set<String> hardStone;
 	private final Set<String> placeable;
+	private final Set<String> fluids;
 	private final Set<String> immuneExact = new HashSet<>();
 	private final List<String> immuneSuffixes;
 
-	public BlockClassifier(List<String> hardStone, List<String> bombImmune, List<String> fluids, List<String> placeable) {
+	public BlockClassifier(List<String> hardStone, List<String> bombImmune, List<String> rayPassesThrough, List<String> placeable) {
 		this.hardStone = Set.copyOf(hardStone);
 		this.placeable = Set.copyOf(placeable);
+		this.fluids = Set.copyOf(rayPassesThrough);
 		this.immuneSuffixes = bombImmune.stream().filter(s -> s.startsWith("*")).map(s -> s.substring(1)).toList();
 		bombImmune.stream().filter(s -> !s.startsWith("*")).forEach(immuneExact::add);
-		immuneExact.addAll(fluids);
 	}
 
 	public static BlockClassifier fromConfig(NrConfig cfg) {
-		return new BlockClassifier(cfg.bombs.hardStoneBlocks, cfg.bombs.bombImmuneBlocks, cfg.bombs.fluidBlocks, cfg.placing.placedBlockTypes);
+		return new BlockClassifier(cfg.bombs.hardStoneBlocks, cfg.bombs.bombImmuneBlocks, cfg.etherwarp.rayPassesThrough, cfg.placing.placedBlockTypes);
 	}
 
 	public Kind classify(String blockId) {
 		if (blockId == null || AIR_BLOCKS.contains(blockId)) return Kind.AIR;
+		if (fluids.contains(blockId)) return Kind.FLUID;
 		if (hardStone.contains(blockId)) return Kind.HARD_STONE;
 		if (immuneExact.contains(blockId) || OVERFLOW_BLOCK.equals(blockId)) return Kind.UNBREAKABLE;
 		for (String suffix : immuneSuffixes) if (blockId.endsWith(suffix)) return Kind.UNBREAKABLE;
@@ -58,17 +63,18 @@ public final class BlockClassifier {
 	/**
 	 * The voxel class from what a position originally was and what is there now.
 	 * Sticky: a respawning block stays solid for planning even while it is air.
+	 *
+	 * When the original is air/fluid/Hard Stone/placeable and something else is there now, it can only
+	 * be a placement: blocks appearing on their own already upgraded the original (see WorldModel).
 	 */
 	public static VoxelClass voxelClass(Kind original, Kind current, boolean sameBlock) {
 		return switch (original) {
 			case RESPAWNING -> VoxelClass.RESPAWNING_SOLID;
 			case UNBREAKABLE -> VoxelClass.UNBREAKABLE;
-			case AIR, HARD_STONE, PLACEABLE -> {
+			case AIR, FLUID, HARD_STONE, PLACEABLE -> {
 				if (current == Kind.AIR) yield VoxelClass.AIR;
-				if (original == Kind.HARD_STONE && sameBlock) yield VoxelClass.HARD_STONE;
+				if (current == Kind.FLUID) yield VoxelClass.FLUID;
 				if (original == Kind.HARD_STONE && current == Kind.HARD_STONE) yield VoxelClass.HARD_STONE;
-				if (current == Kind.UNBREAKABLE) yield VoxelClass.UNBREAKABLE;
-				if (current == Kind.RESPAWNING) yield VoxelClass.RESPAWNING_SOLID;
 				yield VoxelClass.PLACED;
 			}
 		};

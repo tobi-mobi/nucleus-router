@@ -137,14 +137,14 @@ public final class WorldCapture {
 		chunksSeen.incrementAndGet();
 	}
 
-	/** Called by {@code ClientLevelMixin} after any block change the client applies. */
-	public static void onBlockChanged(ClientLevel level, BlockPos pos, BlockState state) {
+	/** Called by {@code LevelMixin} after any block change applied to the client world. */
+	public static void onBlockChanged(ClientLevel level, BlockPos pos, BlockState state, boolean byPlayer) {
 		ensureLevel(level);
 		NrConfig.Hollows h = ConfigManager.get().hollows;
 		int x = pos.getX(), y = pos.getY(), z = pos.getZ();
 		if (x < h.minX || x > h.maxX || y < h.minY || y > h.maxY || z < h.minZ || z > h.maxZ) return;
 		blockChanges.incrementAndGet();
-		WORLD.execute(() -> { if (model != null) model.observe(x, y, z, idOf(state)); });
+		WORLD.execute(() -> { if (model != null) model.observe(x, y, z, idOf(state), byPlayer); });
 	}
 
 	private static void onTick(Minecraft client) {
@@ -204,6 +204,11 @@ public final class WorldCapture {
 	private static void attach(String serverId, long clockTicks) {
 		if (serverId.equals(lobby)) return;
 		lobby = serverId;
+		if (!ConfigManager.get().general.saveLobbies) {
+			lobbyNote = "capturing (saving to disk is off)";
+			status = "capturing " + serverId;
+			return;
+		}
 		Path file = fileFor(serverId);
 		if (!Files.exists(file)) {
 			lobbyNote = "new lobby (no save file yet)";
@@ -233,6 +238,7 @@ public final class WorldCapture {
 
 	private static void saveIfDirty(String reason) {
 		if (model == null || lobby == null || model.version() == savedVersion) return;
+		if (!ConfigManager.get().general.saveLobbies) return;
 		long start = System.nanoTime();
 		WorldSnapshot snap = model.snapshot();
 		Path file = fileFor(lobby);
@@ -266,6 +272,7 @@ public final class WorldCapture {
 	public static CompletableFuture<String> saveNow() {
 		return CompletableFuture.supplyAsync(() -> {
 			if (lobby == null) return "Not attached to a lobby yet (enter the Crystal Hollows first).";
+			if (!ConfigManager.get().general.saveLobbies) return "Saving is off (Settings > General > Save lobbies to disk).";
 			savedVersion = -1;
 			saveIfDirty("manual");
 			return "Saved lobby " + lobby + " to " + fileFor(lobby);

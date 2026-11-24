@@ -56,7 +56,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Item | Value | Confirmed on |
 |---|---|---|
 | Etherwarp eye height | _[VERIFY]_ (default 1.54) | |
-| Hard Stone block type(s) | _[VERIFY]_ (default minecraft:stone) | |
+| Hard Stone block type(s) | `minecraft:stone` (advanced tooltip shows skyblock:HARD_STONE) | 2026-11-24 |
 | Respawn time of ores/gemstones | _[VERIFY]_ | |
 | Bob-omb throw range / drop rule | _[VERIFY]_ (default 45, straight then down) | |
 | Bob-omb blast centre / metric | _[VERIFY]_ (default sphere r = 8 from impact) | |
@@ -71,8 +71,8 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Tab list shows `Area: Crystal Hollows` and `Server: mini…` | Yes (`Area: Crystal Hollows`, `Server: mini89R`). No `Ping:` widget in the user's tab list | 2026-11-24 |
 | Scoreboard area names inside the Hollows (list in `game/HollowsAreas.java`) | All areas the user visited read correctly. The ⏣ marker arrives as a custom-font character, so names are matched directly. King Yolkar's area shows "Goblin Holdout" | 2026-11-24 |
 | Scoreboard "Goblin Queen's Den" vs. the 3 s Amber timer | The **whole den area** shows "Goblin Queen's Den", but the 3 s timer only applies inside **the Queen's castle in the centre**. So "scoreboard shows Goblin Holdout" (SPEC §2.2) is **not** the exit condition | 2026-11-24 |
-| Do fluids (water/lava) block the etherwarp ray? | _[VERIFY]_ (default: yes, `bombs.fluidBlocks` are solid + unbreakable) | |
-| Which block(s) the user places for +2/+1 targets | _[VERIFY]_ (default `minecraft:cobblestone`, `placing.placedBlockTypes`) | |
+| Do fluids (water/lava) block the etherwarp ray? | **No**, the ray passes through. Now `etherwarp.rayPassesThrough`, class FLUID (not solid). Whether you can land with water/lava in the 2 blocks above is still _[VERIFY]_ | 2026-11-24 |
+| Which block(s) the user places for +2/+1 targets | Mainly cobblestone and Hard Stone, other blocks work too. Your own placements are now detected (client prediction), whatever the type | 2026-11-24 |
 | What a mined ore/gemstone turns into until it respawns (air? bedrock?) | _[VERIFY]_ (`/nr world here` on a freshly mined gemstone) | |
 | What exactly ends the 3 s timer (leaving the castle's bounds? any message?) | _[VERIFY]_ Needed before 3.3/3.6 (den exit plan and countdown) | |
 | Ping on Hypixel | 130-200 ms for this user (EU). Will be measured from real etherwarps in 1.6 instead of configured | 2026-11-24 |
@@ -89,6 +89,8 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24 `/nucleusrouter` is an alias of `/nr` in case another mod takes `/nr`. Added `general.chatNotices` (local-only chat lines, default on).
 - 2026-11-24 World model (1.4): each voxel stores its *original* block (sticky) and its *current* block, 2 bytes per voxel (~8 KB per 16^3 section). The "original" is upgraded to the most permanent kind ever seen there (air < Hard Stone/placed < respawning < unbreakable), so a gemstone first seen already mined becomes sticky once it respawns. A `placing.placedBlockTypes` block appearing in air is PLACED, not respawning. Fluids are a separate list (`bombs.fluidBlocks`) treated as unbreakable solid. Unseen voxels are UNKNOWN and count as solid. STRUCTURE comes from the structure overlay in milestone 2.
 - 2026-11-24 World capture runs on one background thread; the client thread only copies chunk sections. Block changes come from a read-only mixin on `ClientLevel.setBlock` (Fabric has no client block-change event). Saves go to `<game dir>/nucleusrouter/lobbies/<server>.nrw` every 2 min, on world change, disconnect and game close.
+- 2026-11-24 Fix after in-game test: block changes are hooked on `Level.setBlock` (client world only), because server-sent changes skip the `ClientLevel.setBlock` override. Changes the client applies while predicting (your own actions) are flagged `byPlayer`, and a block you place is PLACED whatever its type. `placing.placedBlockTypes` is now only a fallback.
+- 2026-11-24 Lobby saving kept but made optional (`general.saveLobbies`, default on). The user rarely returns to the same lobby; saving still protects a long setup against a crash or reconnect, and costs nothing when unused.
 - 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
 ## Session log
@@ -97,3 +99,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24: In-game test of 1.3: Mod API, lobby id and lobby day work. Fixed scoreboard area (custom-font marker) and fake 1 ms ping (now falls back to config). 11 tests pass. Plan: measure real warp delay passively from the user's own etherwarps in 1.6. Next: 1.4.
 - 2026-11-24: User confirmed all visited scoreboard areas. Found the den rule above. Ping (130-200 ms) left to 1.6 measurement. Next: 1.4.
 - 2026-11-24: 1.4 world model + capture + per-lobby saves. A save is only reused if the world clock advanced in line with real time (else the server name was reused by a new lobby and the old file is moved to `.old`). Lobby attaches after its id is stable for 5 s. `/nr world`, `/nr world here`, `/nr world save`. 27 unit tests pass. Next: 1.5 etherwarp ray model.
+- 2026-11-24: In-game test of 1.4 found server block changes were missed (wrong hook). Fixed; added FLUID class (ray passes through water/lava), detection of your own placements, longer `/nr world here` look range, `general.saveLobbies` toggle. 29 tests pass. Needs a re-test in-game. Next: 1.5.

@@ -49,10 +49,19 @@ public final class WorldModel {
 		version++;
 	}
 
-	/** One block changed (block update packet, mining, bomb). */
+	/** One block changed on its own or by the server (block update packet, mining, bomb, respawn). */
 	public void observe(int x, int y, int z, int blockId) {
+		observe(x, y, z, blockId, false);
+	}
+
+	/**
+	 * One block changed. {@code byPlayer} is true when it was your own action (the client applied it
+	 * as a prediction, e.g. placing a block). A block you place never changes what the spot
+	 * originally was, so it is PLACED whatever its type.
+	 */
+	public void observe(int x, int y, int z, int blockId, boolean byPlayer) {
 		Section s = writable(Section.key(x >> 4, y >> 4, z >> 4));
-		apply(s, Section.index(x & 15, y & 15, z & 15), blockId);
+		apply(s, Section.index(x & 15, y & 15, z & 15), blockId, byPlayer);
 		version++;
 	}
 
@@ -68,6 +77,10 @@ public final class WorldModel {
 	}
 
 	private void apply(Section s, int i, int blockId) {
+		apply(s, i, blockId, false);
+	}
+
+	private void apply(Section s, int i, int blockId, boolean byPlayer) {
 		int newLocal = s.local(blockId, overflowId);
 		int origLocal = s.orig[i] & 0xFF;
 		if (origLocal == Section.UNSEEN) {
@@ -78,10 +91,12 @@ public final class WorldModel {
 		s.cur[i] = (byte) newLocal;
 		BlockClassifier.Kind was = kinds[s.palette[origLocal]];
 		BlockClassifier.Kind now = kinds[s.palette[newLocal]];
-		// Placed blocks appearing in air don't change what the spot originally was.
-		boolean placedInAir = was == BlockClassifier.Kind.AIR && now == BlockClassifier.Kind.PLACEABLE;
-		// A respawning block appearing where we first saw air means it was mined before we saw it.
-		if (now.rank > was.rank && !placedInAir) s.orig[i] = (byte) newLocal;
+		// Your own placements, and placed-block types appearing in air, don't change what the spot originally was.
+		if (byPlayer && now != BlockClassifier.Kind.AIR) return;
+		if (was.emptyish() && now == BlockClassifier.Kind.PLACEABLE) return;
+		// Otherwise a more permanent block appearing wins, e.g. a gemstone respawning where we first
+		// saw air means it was mined before we saw it.
+		if (now.rank > was.rank) s.orig[i] = (byte) newLocal;
 	}
 
 	private Section writable(long key) {
@@ -120,15 +135,19 @@ public final class WorldModel {
 			Section merged = new Section();
 			for (int i = 0; i < Section.VOLUME; i++) {
 				int oo = old.origGlobal(i);
+				int olderCur = -1;
 				if (oo >= 0) {
-					int ol = merged.local(remap[oo], overflowId);
-					int cl = merged.local(remap[old.curGlobal(i)], overflowId);
-					merged.orig[i] = (byte) ol;
-					merged.cur[i] = (byte) cl;
+					olderCur = remap[old.curGlobal(i)];
+					merged.orig[i] = (byte) merged.local(remap[oo], overflowId);
+					merged.cur[i] = (byte) merged.local(olderCur, overflowId);
 				}
 				if (ours != null && ours.origGlobal(i) >= 0) {
-					apply(merged, i, ours.origGlobal(i));
-					apply(merged, i, ours.curGlobal(i));
+					// What we first saw this session. If it's what the save last saw, it's no news
+					// (this keeps e.g. a block you placed last session as PLACED).
+					int ourFirst = ours.origGlobal(i);
+					if (ourFirst != olderCur) apply(merged, i, ourFirst);
+					// Our current block was already judged this session (player placement or not), so set it directly.
+					merged.cur[i] = (byte) merged.local(ours.curGlobal(i), overflowId);
 				}
 			}
 			sections.put(e.getKey(), merged);
