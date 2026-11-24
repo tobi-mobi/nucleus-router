@@ -61,8 +61,9 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Grass, tall grass, flowers, tall flowers | Invisible to etherwarp (warp goes through) | 2026-11-24 |
 | Redstone/soul torches, buttons, signs, ladders | Don't occur in the Crystal Hollows | 2026-11-24 |
 | Fence with a torch on top | Can be warped onto (fence = full-cube target, torch ignored) | 2026-11-24 |
-| Vines, cobwebs (walk-through, so currently treated as invisible) and carpets, slabs, glass panes (have a collision box, so treated as full cubes) | _[VERIFY]_ with `/nr debug ray` (the label now names the block hit) | |
-| Are wooden fences bomb-immune like logs and planks? | _[VERIFY]_ (currently not in `bombs.bombImmuneBlocks`) | |
+| Vines, cobwebs | Not found in the Crystal Hollows | 2026-11-24 |
+| Carpets, slabs, glass panes | Block the ray and count as full cubes (as SPEC §2.3) | 2026-11-24 |
+| Fences and bombs | Bombs **don't** break fences. Added `*_fence` to `bombs.bombImmuneBlocks` (config version 3 migrates old configs) | 2026-11-24 |
 | Etherwarp range is measured to where the ray enters the target block | Distances shown by `/nr debug ray` match the game. Exact cut-off at 61 still _[VERIFY]_ (warps at 59-62 blocks) | 2026-11-24 (partial) |
 | Hard Stone block type(s) | `minecraft:stone` (advanced tooltip shows skyblock:HARD_STONE) | 2026-11-24 |
 | Respawn time of ores/gemstones | _[VERIFY]_ | |

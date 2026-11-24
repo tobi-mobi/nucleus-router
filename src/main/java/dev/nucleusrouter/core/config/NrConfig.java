@@ -14,7 +14,7 @@ import java.util.List;
  * resets that value for existing users.
  */
 public final class NrConfig {
-	public static final int CURRENT_VERSION = 2;
+	public static final int CURRENT_VERSION = 3;
 	public int configVersion = CURRENT_VERSION;
 
 	public General general = new General();
@@ -106,7 +106,7 @@ public final class NrConfig {
 		public List<String> hardStoneBlocks = new ArrayList<>(List.of("minecraft:stone"));
 		/** Blocks bombs never break. An entry starting with '*' matches by suffix, e.g. "*_log". */
 		public List<String> bombImmuneBlocks = new ArrayList<>(List.of(
-				"*_log", "*_wood", "*_planks", "*_stem", "*_hyphae",
+				"*_log", "*_wood", "*_planks", "*_stem", "*_hyphae", "*_fence",
 				"minecraft:dirt", "minecraft:grass_block", "minecraft:coarse_dirt", "minecraft:podzol",
 				"minecraft:rooted_dirt", "minecraft:mud", "minecraft:dirt_path", "minecraft:farmland",
 				"minecraft:mycelium", "minecraft:muddy_mangrove_roots",
@@ -162,6 +162,14 @@ public final class NrConfig {
 				}
 			}
 			configVersion = 2;
+		}
+		if (configVersion < 3) {
+			// Confirmed in-game 2026-11-24: bombs don't break fences
+			if (bombs != null && bombs.bombImmuneBlocks != null && !bombs.bombImmuneBlocks.contains("*_fence")) {
+				bombs.bombImmuneBlocks.add("*_fence");
+				notes.add("bombs.bombImmuneBlocks + *_fence");
+			}
+			configVersion = 3;
 		}
 		return notes;
 	}

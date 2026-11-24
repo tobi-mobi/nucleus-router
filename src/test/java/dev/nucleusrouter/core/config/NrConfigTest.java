@@ -47,7 +47,8 @@ class NrConfigTest {
 		assertEquals(1.27, old.etherwarp.eyeHeight);
 		assertTrue(old.etherwarp.rayPassesThrough.contains("minecraft:torch"));
 		assertEquals(NrConfig.CURRENT_VERSION, old.configVersion);
-		assertEquals(3, notes.size(), notes.toString());
+		assertEquals(4, notes.size(), notes.toString());
+		assertTrue(old.bombs.bombImmuneBlocks.contains("*_fence"));
 
 		// A value the user chose themselves is kept
 		NrConfig custom = new NrConfig();
