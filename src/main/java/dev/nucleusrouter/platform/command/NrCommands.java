@@ -41,6 +41,8 @@ public final class NrCommands {
 								.then(literal("apply").executes(DebugCommands::rayApply))))
 						.then(literal("calibrate").then(literal("bomb").executes(DebugCommands::calibrateBomb)
 								.then(literal("cancel").executes(DebugCommands::calibrateBombCancel))))
+						.then(StructureCommands.structuresNode())
+						.then(StructureCommands.structureNode())
 						.then(literal("dump").executes(DebugCommands::dump))
 						.then(literal("config").executes(NrCommands::openConfig))
 						.then(literal("reload").executes(NrCommands::reload));
@@ -61,6 +63,9 @@ public final class NrCommands {
 		line(src, "/nr debug ray stats", "predicted vs actual, eye height suggestion, warp delay");
 		line(src, "/nr debug ray apply", "use the suggested eye height");
 		line(src, "/nr calibrate bomb", "measure one real Bob-omb blast against the model");
+		line(src, "/nr structures", "which run structures are found in this lobby, and where");
+		line(src, "/nr structure set <name>", "mark a structure where you stand (divan, precursor, king, queen, temple, khazad)");
+		line(src, "/nr structure clear <name|all>", "forget a structure so it's found again");
 		line(src, "/nr dump", "save this lobby's terrain + settings to a file for offline testing");
 		line(src, "/nr config", "open the settings screen");
 		line(src, "/nr reload", "reload settings from config/nucleusrouter.json");

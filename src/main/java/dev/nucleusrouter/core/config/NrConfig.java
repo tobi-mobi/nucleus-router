@@ -32,6 +32,7 @@ public final class NrConfig {
 	public Bombs bombs = new Bombs();
 	public Placing placing = new Placing();
 	public Cost cost = new Cost();
+	public Structures structures = new Structures();
 
 	/** §2.1 Crystal Hollows and the run. */
 	public static final class Hollows {
@@ -164,6 +165,25 @@ public final class NrConfig {
 	}
 
 	/**
+	 * §3.5, §4 Finding structures. A name tag matches if it contains one of these phrases as whole words
+	 * (case and colours ignored). [VERIFY] the exact name tags in-game; edit these if one isn't detected.
+	 */
+	public static final class Structures {
+		/** Draw found structures in the world (through walls) with their names. */
+		public boolean showMarkers = true;
+		/** Use the scoreboard area name as a rough position when no name tag has been seen. */
+		public boolean useAreaHints = true;
+		/** How often to look at nearby name tags, in ticks (20 = once a second). */
+		public int scanEveryTicks = 10;
+		public List<String> minesOfDivanNames = new ArrayList<>(List.of("Keeper of"));
+		public List<String> precursorCityNames = new ArrayList<>(List.of("Professor Robot"));
+		public List<String> kingYolkarNames = new ArrayList<>(List.of("King Yolkar"));
+		public List<String> goblinQueenNames = new ArrayList<>(List.of("Goblin Queen"));
+		public List<String> jungleTempleNames = new ArrayList<>(List.of("Kalhuiki Door Guardian"));
+		public List<String> khazadDumNames = new ArrayList<>(List.of("Bal"));
+	}
+
+	/**
 	 * Updates a config saved by an older version, keeping the user's own changes.
 	 * Returns one readable line per change.
 	 */
@@ -218,6 +238,7 @@ public final class NrConfig {
 		if (bombs == null) { bombs = new Bombs(); fixes.add("bombs section missing, reset to defaults"); }
 		if (placing == null) { placing = new Placing(); fixes.add("placing section missing, reset to defaults"); }
 		if (cost == null) { cost = new Cost(); fixes.add("cost section missing, reset to defaults"); }
+		if (structures == null) { structures = new Structures(); fixes.add("structures section missing, reset to defaults"); }
 
 		Hollows h = hollows;
 		if (h.minX > h.maxX) { int t = h.minX; h.minX = h.maxX; h.maxX = t; fixes.add("hollows minX > maxX, swapped"); }
@@ -256,6 +277,14 @@ public final class NrConfig {
 		cost.turnSecondsAt90 = clamp(fixes, "cost.turnSecondsAt90", cost.turnSecondsAt90, 0, 5);
 		cost.turnExponent = clamp(fixes, "cost.turnExponent", cost.turnExponent, 0.5, 4);
 		cost.missRecoverySeconds = clamp(fixes, "cost.missRecoverySeconds", cost.missRecoverySeconds, 0, 30);
+		structures.scanEveryTicks = (int) clamp(fixes, "structures.scanEveryTicks", structures.scanEveryTicks, 1, 200);
+		Structures sd = new Structures();
+		if (structures.minesOfDivanNames == null) { structures.minesOfDivanNames = sd.minesOfDivanNames; fixes.add("structures.minesOfDivanNames missing, reset"); }
+		if (structures.precursorCityNames == null) { structures.precursorCityNames = sd.precursorCityNames; fixes.add("structures.precursorCityNames missing, reset"); }
+		if (structures.kingYolkarNames == null) { structures.kingYolkarNames = sd.kingYolkarNames; fixes.add("structures.kingYolkarNames missing, reset"); }
+		if (structures.goblinQueenNames == null) { structures.goblinQueenNames = sd.goblinQueenNames; fixes.add("structures.goblinQueenNames missing, reset"); }
+		if (structures.jungleTempleNames == null) { structures.jungleTempleNames = sd.jungleTempleNames; fixes.add("structures.jungleTempleNames missing, reset"); }
+		if (structures.khazadDumNames == null) { structures.khazadDumNames = sd.khazadDumNames; fixes.add("structures.khazadDumNames missing, reset"); }
 		return fixes;
 	}
 

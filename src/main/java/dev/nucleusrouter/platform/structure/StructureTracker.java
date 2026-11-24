@@ -1,0 +1,220 @@
+package dev.nucleusrouter.platform.structure;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import dev.nucleusrouter.core.config.NrConfig;
+import dev.nucleusrouter.core.geom.Vec3;
+import dev.nucleusrouter.core.location.LocationState;
+import dev.nucleusrouter.core.world.LobbyIdentity;
+import dev.nucleusrouter.game.AnchorMatcher;
+import dev.nucleusrouter.game.Structure;
+import dev.nucleusrouter.game.StructureMap;
+import dev.nucleusrouter.platform.NucleusRouterClient;
+import dev.nucleusrouter.platform.config.ConfigManager;
+import dev.nucleusrouter.platform.location.LocationTracker;
+import dev.nucleusrouter.platform.render.WorldDraw;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * Finds the run's structures in the current lobby (SPEC §3.5, §4, roadmap 2.1):
+ * <ul>
+ *   <li>every {@code structures.scanEveryTicks} ticks, looks at the name tags of loaded entities
+ *       (NPCs, mobs, armour-stand labels) and matches them against the configured names;</li>
+ *   <li>remembers where you stood while the scoreboard showed a structure's area (rough hint);</li>
+ *   <li>keeps what the user set by hand with {@code /nr structure set}.</li>
+ * </ul>
+ * Read-only: it only reads entities the client already has. Results are kept per lobby and saved
+ * to {@code nucleusrouter/lobbies/<server>.structures.json}.
+ */
+public final class StructureTracker {
+	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+	private static final long SAVE_EVERY_MS = 30_000;
+	private static final ExecutorService IO = Executors.newSingleThreadExecutor(r -> {
+		Thread t = new Thread(r, "NucleusRouter-StructureIO");
+		t.setDaemon(true);
+		return t;
+	});
+
+	/** What is written to disk. */
+	private record Saved(String lobby, long clockTicks, long savedAtMs, StructureMap map) {}
+
+	private static StructureMap map = new StructureMap();
+	private static String lobby;
+	private static long savedVersion;
+	private static long lastSaveMs;
+	private static AnchorMatcher matcher;
+	private static int ticks;
+
+	private StructureTracker() {}
+
+	public static void init() {
+		matcher = new AnchorMatcher(ConfigManager.get().structures);
+		ConfigManager.onChange(() -> matcher = new AnchorMatcher(ConfigManager.get().structures));
+		ClientTickEvents.END_CLIENT_TICK.register(StructureTracker::onTick);
+		ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> saveIfDirty());
+		ClientLifecycleEvents.CLIENT_STOPPING.register(c -> saveIfDirty());
+		WorldDraw.addLayerWhile(() -> ConfigManager.get().structures.showMarkers && LocationTracker.state().inHollows(), StructureTracker::draw);
+	}
+
+	public static StructureMap map() { return map; }
+	public static String lobby() { return lobby; }
+
+	// ------------------------------------------------------------------ client thread
+
+	private static void onTick(Minecraft client) {
+		NrConfig.Structures cfg = ConfigManager.get().structures;
+		if (++ticks % cfg.scanEveryTicks != 0) return;
+		LocationState loc = LocationTracker.state();
+		if (!loc.inHollows() || loc.serverId() == null || client.level == null || client.player == null) return;
+		switchLobby(loc);
+
+		long now = System.currentTimeMillis();
+		NrConfig.Hollows h = ConfigManager.get().hollows;
+		for (Entity e : client.level.entitiesForRendering()) {
+			if (e instanceof Player || !e.hasCustomName()) continue;
+			if (e.getX() < h.minX - 1 || e.getX() > h.maxX + 2 || e.getZ() < h.minZ - 1 || e.getZ() > h.maxZ + 2) continue;
+			Component name = e.getCustomName();
+			if (name == null) continue;
+			String text = name.getString();
+			Structure s = matcher.match(text);
+			if (s == null) continue;
+			String label = dev.nucleusrouter.core.location.LocationParser.clean(text);
+			if (map.observeNametag(s, label, e.getX(), e.getY(), e.getZ(), now)) {
+				NucleusRouterClient.LOG.info("[Nucleus Router] Structures: found {} from name tag '{}' at {} {} {}", s.displayName, label, e.getX(), e.getY(), e.getZ());
+				notice(Component.literal("Found " + s.displayName + " (" + label + ") at " + fmt(e.getX(), e.getY(), e.getZ())).withStyle(ChatFormatting.GREEN));
+			}
+		}
+
+		if (cfg.useAreaHints) {
+			Structure area = Structure.byArea(loc.scoreboardArea());
+			if (area != null) {
+				boolean hadPosition = map.locate(area) != null;
+				if (map.observeArea(area, client.player.getX(), client.player.getY(), client.player.getZ()) && !hadPosition) {
+					NucleusRouterClient.LOG.info("[Nucleus Router] Structures: in the {} area at {}", area.displayName, client.player.position());
+					notice(Component.literal("You're in the " + area.displayName + " area. Rough position noted; it becomes exact once the "
+							+ area.anchorNoun + " name tag is seen, or use /nr structure set " + area.key).withStyle(ChatFormatting.YELLOW));
+				}
+			}
+		}
+
+		if (map.version() != savedVersion && now - lastSaveMs > SAVE_EVERY_MS) saveIfDirty();
+	}
+
+	private static void switchLobby(LocationState loc) {
+		if (loc.serverId().equals(lobby)) return;
+		saveIfDirty();
+		lobby = loc.serverId();
+		map = new StructureMap();
+		savedVersion = 0;
+		lastSaveMs = System.currentTimeMillis();
+		if (!ConfigManager.get().general.saveLobbies) return;
+		Path file = fileFor(lobby);
+		if (!Files.exists(file)) return;
+		try {
+			Saved s = GSON.fromJson(Files.readString(file), Saved.class);
+			if (s != null && s.map() != null && LobbyIdentity.isSameLobby(s.clockTicks(), s.savedAtMs(), loc.clockTicks(), System.currentTimeMillis())) {
+				map = s.map();
+				NucleusRouterClient.LOG.info("[Nucleus Router] Structures: loaded {} known structures for lobby {}.", map.located().size(), lobby);
+			} else {
+				Files.move(file, file.resolveSibling(file.getFileName() + ".old"), StandardCopyOption.REPLACE_EXISTING);
+				NucleusRouterClient.LOG.info("[Nucleus Router] Structures: {} is a new lobby, old structure file moved aside.", lobby);
+			}
+		} catch (IOException | RuntimeException e) {
+			NucleusRouterClient.LOG.error("[Nucleus Router] Structures: could not read {}: {}. Starting fresh.", file, e.toString());
+		}
+	}
+
+	/** Serialises on the calling (client) thread, writes the file on a background thread. */
+	private static void saveIfDirty() {
+		if (lobby == null || map.version() == savedVersion || !ConfigManager.get().general.saveLobbies) return;
+		String json = GSON.toJson(new Saved(lobby, LocationTracker.state().clockTicks(), System.currentTimeMillis(), map));
+		Path file = fileFor(lobby);
+		savedVersion = map.version();
+		lastSaveMs = System.currentTimeMillis();
+		IO.execute(() -> {
+			try {
+				Files.createDirectories(file.getParent());
+				Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
+				Files.writeString(tmp, json);
+				Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			} catch (IOException e) {
+				NucleusRouterClient.LOG.error("[Nucleus Router] Structures: could not save {}: {}", file, e.toString());
+			}
+		});
+	}
+
+	private static Path fileFor(String serverId) {
+		String safe = serverId.replaceAll("[^A-Za-z0-9_-]", "_");
+		return FabricLoader.getInstance().getGameDir().resolve("nucleusrouter").resolve("lobbies").resolve(safe + ".structures.json");
+	}
+
+	// ------------------------------------------------------------------ commands (client thread)
+
+	/** Sets {@code s} to where the player stands. Returns false outside the Hollows. */
+	public static boolean setHere(Structure s) {
+		Minecraft client = Minecraft.getInstance();
+		LocationState loc = LocationTracker.state();
+		if (client.player == null || !loc.inHollows() || loc.serverId() == null) return false;
+		switchLobby(loc);
+		map.setManual(s, client.player.getX(), client.player.getY(), client.player.getZ());
+		saveIfDirty();
+		return true;
+	}
+
+	public static void clear(Structure s) {
+		if (s == null) map.clearAll(); else map.clear(s);
+		saveIfDirty();
+	}
+
+	// ------------------------------------------------------------------ drawing
+
+	private static final int COLOR_MANUAL = 0x55FFFF, COLOR_NPC = 0x55FF55, COLOR_AREA = 0xFFFF55;
+
+	private static void draw(WorldDraw draw) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.player == null) return;
+		Vec3 eye = new Vec3(client.player.getX(), client.player.getEyeY(), client.player.getZ());
+		for (StructureMap.Location l : map.located()) {
+			int rgb = switch (l.source()) { case MANUAL -> COLOR_MANUAL; case NPC -> COLOR_NPC; case AREA -> COLOR_AREA; };
+			Vec3 p = l.pos();
+			double dist = p.sub(eye).length();
+			// A tall beam so it can be found from far away, and a label above it
+			draw.line(WorldDraw.mc(p), WorldDraw.mc(p.add(new Vec3(0, 30, 0))), WorldDraw.argb(200, rgb), 3f, true);
+			draw.marker(WorldDraw.mc(p), 0.6, WorldDraw.argb(255, rgb), WorldDraw.argb(90, rgb), true);
+			if (l.source() == StructureMap.Source.AREA) draw.circle(WorldDraw.mc(p), (float) l.uncertainty(), WorldDraw.argb(160, rgb), true);
+			if (l.source() != StructureMap.Source.MANUAL) {
+				for (StructureMap.Npc n : map.npcs(l.structure())) {
+					draw.marker(WorldDraw.mc(n.pos()), 0.4, WorldDraw.argb(255, COLOR_NPC), WorldDraw.argb(60, COLOR_NPC), true);
+				}
+			}
+			float scale = (float) (0.6 * Math.max(1.0, dist / 10.0));
+			String label = l.structure().displayName + (l.source() == StructureMap.Source.AREA ? " (rough)" : "") + "  " + Math.round(dist) + "m";
+			draw.text(label, WorldDraw.mc(p.add(new Vec3(0, 31 + scale, 0))), WorldDraw.argb(255, rgb), scale, true);
+		}
+	}
+
+	// ------------------------------------------------------------------ helpers
+
+	private static void notice(Component c) {
+		if (ConfigManager.get().general.chatNotices) NucleusRouterClient.showLocal(c);
+	}
+
+	public static String fmt(double x, double y, double z) {
+		return Math.round(x) + " " + Math.round(y) + " " + Math.round(z);
+	}
+}

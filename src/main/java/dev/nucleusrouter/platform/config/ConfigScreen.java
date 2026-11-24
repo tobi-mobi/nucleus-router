@@ -107,9 +107,23 @@ public final class ConfigScreen {
 				.option(dblOpt("Miss recovery (s)", "Time lost when a warp lands in the wrong spot.", d.cost.missRecoverySeconds, () -> c.cost.missRecoverySeconds, v -> c.cost.missRecoverySeconds = v, 0, 30))
 				.build();
 
+		String names = " A name tag matches if it contains one of these as whole words (case and colours ignored)." + VERIFY;
+		ConfigCategory structures = ConfigCategory.createBuilder()
+				.name(Component.literal("Structures"))
+				.option(boolOpt("Show found structures", "Draw a beam and the name of each found structure, through walls.", d.structures.showMarkers, () -> c.structures.showMarkers, v -> c.structures.showMarkers = v))
+				.option(boolOpt("Rough position from area name", "When no name tag has been seen yet, use where you stood while the scoreboard showed the structure's area.", d.structures.useAreaHints, () -> c.structures.useAreaHints, v -> c.structures.useAreaHints = v))
+				.option(intOpt("Scan every (ticks)", "How often nearby name tags are checked. 20 ticks = 1 second.", d.structures.scanEveryTicks, () -> c.structures.scanEveryTicks, v -> c.structures.scanEveryTicks = v, 1, 200))
+				.option(stringList("Mines of Divan name tags", "The 4 keepers." + names, d.structures.minesOfDivanNames, () -> c.structures.minesOfDivanNames, v -> c.structures.minesOfDivanNames = v))
+				.option(stringList("Precursor City name tags", "Professor Robot." + names, d.structures.precursorCityNames, () -> c.structures.precursorCityNames, v -> c.structures.precursorCityNames = v))
+				.option(stringList("King Yolkar name tags", names, d.structures.kingYolkarNames, () -> c.structures.kingYolkarNames, v -> c.structures.kingYolkarNames = v))
+				.option(stringList("Goblin Queen's Den name tags", "The Goblin Queen." + names, d.structures.goblinQueenNames, () -> c.structures.goblinQueenNames, v -> c.structures.goblinQueenNames = v))
+				.option(stringList("Jungle Temple name tags", "The Kalhuiki Door Guardian." + names, d.structures.jungleTempleNames, () -> c.structures.jungleTempleNames, v -> c.structures.jungleTempleNames = v))
+				.option(stringList("Khazad-dum name tags", "Bal." + names, d.structures.khazadDumNames, () -> c.structures.khazadDumNames, v -> c.structures.khazadDumNames = v))
+				.build();
+
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.literal("Nucleus Router"))
-				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost)
+				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost).category(structures)
 				.save(ConfigManager::save)
 				.build()
 				.generateScreen(parent);
