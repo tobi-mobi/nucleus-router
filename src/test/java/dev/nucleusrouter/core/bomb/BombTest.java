@@ -18,8 +18,10 @@ class BombTest {
 		assertTrue(p.lands());
 		assertFalse(p.dropped());
 		assertArrayEquals(new int[]{0, 101, 20}, p.impactBlock());
-		assertEquals(new Vec3(0.5, 101.5, 20.5), p.blastCentre(NrConfig.BlastCentre.IMPACT_BLOCK_CENTRE));
-		assertEquals(20.0, p.blastCentre(NrConfig.BlastCentre.IMPACT_POINT).z(), 1e-9);
+		NrConfig.Bombs b = new NrConfig().bombs;
+		assertEquals(new Vec3(0.5, 101.5, 20.5), p.blastCentre(b));
+		b.blastCentre = NrConfig.BlastCentre.IMPACT_POINT;
+		assertEquals(20.0, p.blastCentre(b).z(), 1e-9);
 	}
 
 	@Test
@@ -29,6 +31,44 @@ class BombTest {
 		assertTrue(p.dropped());
 		assertArrayEquals(new int[]{0, 60, 45}, p.impactBlock());
 		assertFalse(BombThrow.predict(new Vec3(0.5, 101.27, 0.5), new Vec3(0, 0, 1), 45, false, floor).lands());
+	}
+
+	/**
+	 * Replays the user's real throw 5 (2026-11-24): thrown from eye (426.7, 111.62, 589.3), yaw 89.61,
+	 * pitch 0.61, down a tunnel cut by four earlier radius-7 blasts. The wall at x=387 is 39.7 blocks away,
+	 * beyond the 32-block range, so the bomb drops at about x=394.7 onto the floor of the last crater.
+	 * Measured blast centre: (394.5, 105.5, 589.5).
+	 */
+	@Test
+	void replaysTheRealDroppedThrow() {
+		double[][] craters = {{419.5, 111.5, 589.5}, {411.5, 111.5, 589.5}, {403.5, 111.5, 589.5}, {395.5, 111.5, 589.5}};
+		SolidQuery world = (x, y, z) -> {
+			if (x >= 388 && x <= 427 && (y == 111 || y == 112) && z == 589) return false; // original tunnel
+			for (double[] c : craters) {
+				double dx = x + 0.5 - c[0], dy = y + 0.5 - c[1], dz = z + 0.5 - c[2];
+				if (dx * dx + dy * dy + dz * dz <= 49) return false;
+			}
+			return true;
+		};
+		NrConfig cfg = new NrConfig();
+		BombThrow.Prediction p = BombThrow.predict(new Vec3(426.7, 111.62, 589.3), Vec3.fromYawPitch(89.6077, 0.6060), cfg, world);
+		assertTrue(p.dropped(), "39.7 blocks is beyond the 32-block range");
+		assertArrayEquals(new int[]{394, 104, 589}, p.impactBlock());
+		assertEquals(new Vec3(394.5, 105.5, 589.5), p.blastCentre(cfg.bombs), "matches the measured centre");
+
+		// And the direct hit of throw 4 (the wall at x=395 is 31.7 blocks away, inside the range)
+		SolidQuery beforeThrow4 = (x, y, z) -> {
+			if (x >= 396 && x <= 427 && (y == 111 || y == 112) && z == 589) return false;
+			for (int i = 0; i < 3; i++) {
+				double[] c = craters[i];
+				double dx = x + 0.5 - c[0], dy = y + 0.5 - c[1], dz = z + 0.5 - c[2];
+				if (dx * dx + dy * dy + dz * dz <= 49) return false;
+			}
+			return true;
+		};
+		BombThrow.Prediction p4 = BombThrow.predict(new Vec3(426.7, 111.62, 589.3), Vec3.fromYawPitch(89.6077, 0.6060), cfg, beforeThrow4);
+		assertFalse(p4.dropped());
+		assertEquals(new Vec3(395.5, 111.5, 589.5), p4.blastCentre(cfg.bombs), "matches the measured centre of throw 4");
 	}
 
 	/** A solid stone area with a few immune logs, blown up by a perfect radius-8 ball. */

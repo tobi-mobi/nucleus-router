@@ -14,11 +14,11 @@ class NrConfigTest {
 		assertEquals(61, c.etherwarp.range);
 		assertEquals(1.27, c.etherwarp.eyeHeight, "measured in-game 2026-11-24");
 		assertTrue(c.etherwarp.rayPassesThrough.containsAll(List.of("minecraft:water", "minecraft:lava", "minecraft:torch", "minecraft:wall_torch")));
-		assertEquals(45.0, c.bombs.throwRange);
-		assertEquals(8.0, c.bombs.blastRadius);
+		assertEquals(32.0, c.bombs.throwRange, "measured in-game");
+		assertEquals(7.0, c.bombs.blastRadius, "measured in-game");
 		assertEquals(List.of("minecraft:stone"), c.bombs.hardStoneBlocks);
 		assertEquals(2.5, c.hollows.warpNucleusSeconds);
-		assertFalse(c.stops.warpNucleusCountsAsLeavingDen);
+		assertTrue(c.stops.warpNucleusCountsAsLeavingDen, "confirmed in-game");
 		assertEquals(0.20, c.cost.baseWarpSeconds);
 		assertEquals(1.5, c.cost.missRecoverySeconds);
 		assertEquals(4.5, c.placing.reach);

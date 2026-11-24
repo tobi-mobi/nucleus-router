@@ -113,7 +113,7 @@ public final class BombCalibration {
 		throwEye = new Vec3(p.getX(), p.getEyeY(), p.getZ());
 		throwDir = Vec3.fromYawPitch(p.getYRot(), p.getXRot());
 		prediction = BombThrow.predict(throwEye, throwDir, cfg, new LiveSolid(mc.level, BlockRules.passThrough(cfg)));
-		modelCentre = prediction.blastCentre(cfg.bombs.blastCentre);
+		modelCentre = prediction.blastCentre(cfg.bombs);
 		before = WorldCapture.snapshot();
 		throwMs = System.currentTimeMillis();
 		state = State.THROWN;
@@ -294,7 +294,7 @@ public final class BombCalibration {
 		throwEye = eye;
 		throwDir = dir;
 		prediction = BombThrow.predict(eye, dir, cfg, new LiveSolid(mc.level, BlockRules.passThrough(cfg)));
-		modelCentre = prediction.blastCentre(cfg.bombs.blastCentre);
+		modelCentre = prediction.blastCentre(cfg.bombs);
 		before = WorldCapture.snapshot();
 		throwMs = System.currentTimeMillis();
 		state = State.THROWN;

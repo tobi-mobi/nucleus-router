@@ -14,7 +14,7 @@ import java.util.List;
  * resets that value for existing users.
  */
 public final class NrConfig {
-	public static final int CURRENT_VERSION = 3;
+	public static final int CURRENT_VERSION = 4;
 	public int configVersion = CURRENT_VERSION;
 
 	public General general = new General();
@@ -35,12 +35,17 @@ public final class NrConfig {
 
 	/** §2.1 Crystal Hollows and the run. */
 	public static final class Hollows {
-		/** [VERIFY] Hollows bounds (community value). */
+		/** Hollows bounds. Confirmed 2026-11-24: you can stand from x/z 202 to 823 and y 31 to 187. */
 		public int minX = 202, maxX = 823;
 		public int minY = 31, maxY = 188;
 		public int minZ = 202, maxZ = 823;
-		/** [VERIFY] Seconds from typing /warp nucleus until you can act again at the nucleus. */
+		/**
+		 * [VERIFY] Seconds a /warp nucleus costs, from deciding to warp until you can act at the nucleus.
+		 * Arrival itself is instant (confirmed 2026-11-24); this is mostly the time to open chat and send the command.
+		 */
 		public double warpNucleusSeconds = 2.5;
+		/** Where /warp nucleus puts you (feet position). Confirmed 2026-11-24. */
+		public double nucleusSpawnX = 513.5, nucleusSpawnY = 106, nucleusSpawnZ = 526.5;
 		/** Lobbies close after roughly this many Minecraft days (lobby day = dayTime / 24000). */
 		public int lobbyCloseDayMin = 15;
 		public int lobbyCloseDayMax = 20;
@@ -52,8 +57,8 @@ public final class NrConfig {
 		public double queenDenExitLimitSeconds = 3.0;
 		/** The planned den exit must fit inside this (margin below the limit). */
 		public double queenDenExitTargetSeconds = 2.5;
-		/** [VERIFY] Does /warp nucleus count as leaving the den in time? Default: no. */
-		public boolean warpNucleusCountsAsLeavingDen = false;
+		/** /warp nucleus right after taking the Amber crystal keeps it (confirmed 2026-11-24). */
+		public boolean warpNucleusCountsAsLeavingDen = true;
 		/** Jungle Temple parkour, done by hand (abilities don't work inside). */
 		public double templeManualSeconds = 25.0;
 		/** Bal fight at Khazad-dum. */
@@ -92,17 +97,30 @@ public final class NrConfig {
 
 	/** §2.4 Bob-ombs. */
 	public static final class Bombs {
-		/** [VERIFY] Straight-line throw distance before it drops straight down. */
-		public double throwRange = 45.0;
-		/** [VERIFY] At max range the bomb drops straight down (true) rather than vanishing. */
+		/**
+		 * Straight-line throw distance before the bomb drops straight down. Measured 2026-11-24: a wall
+		 * 31.7 blocks away was hit directly; aimed at a wall 39.7 away it dropped after about 32.2 blocks.
+		 */
+		public double throwRange = 32.0;
+		/** At max range the bomb drops straight down (confirmed 2026-11-24). */
 		public boolean dropsStraightDownAtMaxRange = true;
-		/** Fuse after impact (2.5 to 3 s). */
-		public double fuseSeconds = 3.0;
-		/** [VERIFY] Blast sphere radius. */
-		public double blastRadius = 8.0;
-		/** [VERIFY] Where the blast sphere is centred. */
+		/** Fuse after impact. Estimated 2026-11-24 from 4 throws: about 2.3 s fuse plus the flight. */
+		public double fuseSeconds = 2.3;
+		/** Bomb flight speed, estimated 2026-11-24 from 4 throws (about 25 blocks per second). */
+		public double flightBlocksPerSecond = 25.0;
+		/**
+		 * Blast radius: every breakable block whose centre is within this distance of the blast centre breaks.
+		 * Confirmed 2026-11-24: 6 throws, all a ball of radius 7.0 (100% match on clean hits).
+		 */
+		public double blastRadius = 7.0;
+		/** Where the blast is centred. Confirmed 2026-11-24 for direct hits: centre of the block hit. */
 		public BlastCentre blastCentre = BlastCentre.IMPACT_BLOCK_CENTRE;
-		/** [VERIFY] Which vanilla blocks count as Hard Stone (broken for good). */
+		/**
+		 * [VERIFY] For a bomb that dropped at max range, the blast centre is this many blocks above the block it
+		 * landed on. One throw onto a flat crater floor measured 1 exactly; one into a deeper crater suggested 2.
+		 */
+		public int dropCentreBlocksAbove = 1;
+		/** Which vanilla blocks count as Hard Stone (broken for good). Confirmed: minecraft:stone. */
 		public List<String> hardStoneBlocks = new ArrayList<>(List.of("minecraft:stone"));
 		/** Blocks bombs never break. An entry starting with '*' matches by suffix, e.g. "*_log". */
 		public List<String> bombImmuneBlocks = new ArrayList<>(List.of(
@@ -171,6 +189,19 @@ public final class NrConfig {
 			}
 			configVersion = 3;
 		}
+		if (configVersion < 4) {
+			// Bomb and /warp nucleus facts measured in-game 2026-11-24; only replace untouched old defaults
+			if (bombs != null) {
+				if (bombs.blastRadius == 8.0) { bombs.blastRadius = 7.0; notes.add("bombs.blastRadius 8 -> 7 (measured)"); }
+				if (bombs.throwRange == 45.0) { bombs.throwRange = 32.0; notes.add("bombs.throwRange 45 -> 32 (measured)"); }
+				if (bombs.fuseSeconds == 3.0) { bombs.fuseSeconds = 2.3; notes.add("bombs.fuseSeconds 3.0 -> 2.3 (measured)"); }
+			}
+			if (stops != null && !stops.warpNucleusCountsAsLeavingDen) {
+				stops.warpNucleusCountsAsLeavingDen = true;
+				notes.add("stops.warpNucleusCountsAsLeavingDen -> true (confirmed)");
+			}
+			configVersion = 4;
+		}
 		return notes;
 	}
 
@@ -210,6 +241,8 @@ public final class NrConfig {
 		bombs.throwRange = clamp(fixes, "bombs.throwRange", bombs.throwRange, 1, 100);
 		bombs.fuseSeconds = clamp(fixes, "bombs.fuseSeconds", bombs.fuseSeconds, 0, 10);
 		bombs.blastRadius = clamp(fixes, "bombs.blastRadius", bombs.blastRadius, 1, 20);
+		bombs.flightBlocksPerSecond = clamp(fixes, "bombs.flightBlocksPerSecond", bombs.flightBlocksPerSecond, 1, 200);
+		bombs.dropCentreBlocksAbove = (int) clamp(fixes, "bombs.dropCentreBlocksAbove", bombs.dropCentreBlocksAbove, 0, 3);
 		if (bombs.blastCentre == null) { bombs.blastCentre = BlastCentre.IMPACT_BLOCK_CENTRE; fixes.add("bombs.blastCentre unknown, reset"); }
 		if (bombs.hardStoneBlocks == null) { bombs.hardStoneBlocks = new Bombs().hardStoneBlocks; fixes.add("bombs.hardStoneBlocks missing, reset"); }
 		if (bombs.bombImmuneBlocks == null) { bombs.bombImmuneBlocks = new Bombs().bombImmuneBlocks; fixes.add("bombs.bombImmuneBlocks missing, reset"); }

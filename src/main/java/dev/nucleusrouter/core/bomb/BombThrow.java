@@ -6,9 +6,9 @@ import dev.nucleusrouter.core.etherwarp.VoxelRay;
 import dev.nucleusrouter.core.geom.Vec3;
 
 /**
- * Where a thrown Bob-omb lands (SPEC §2.4, [VERIFY] range and drop rule):
- * it flies in a straight line along the look direction up to {@code bombs.throwRange}. If it hits a
- * block first, it stops there. Otherwise, at max range it drops straight down until it hits something.
+ * Where a thrown Bob-omb lands (SPEC §2.4, measured in-game 2026-11-24): it flies in a straight line
+ * along the look direction up to {@code bombs.throwRange} (about 32 blocks). If it hits a block first,
+ * it stops there. Otherwise, at max range it drops straight down until it hits something.
  */
 public final class BombThrow {
 	/** How far a dropping bomb is followed down before giving up. */
@@ -22,11 +22,15 @@ public final class BombThrow {
 	public record Prediction(int[] impactBlock, Vec3 impactPoint, boolean dropped) {
 		public boolean lands() { return impactBlock != null; }
 
-		/** Blast centre under the configured rule. */
-		public Vec3 blastCentre(NrConfig.BlastCentre rule) {
+		/**
+		 * Blast centre under the configured rules. Direct hit: centre of the block hit (confirmed in-game).
+		 * Dropped at max range: {@code dropCentreBlocksAbove} blocks above the block it landed on ([VERIFY]).
+		 */
+		public Vec3 blastCentre(NrConfig.Bombs b) {
 			if (!lands()) return null;
-			return rule == NrConfig.BlastCentre.IMPACT_POINT ? impactPoint
-					: new Vec3(impactBlock[0] + 0.5, impactBlock[1] + 0.5, impactBlock[2] + 0.5);
+			if (b.blastCentre == NrConfig.BlastCentre.IMPACT_POINT) return impactPoint;
+			int up = dropped ? b.dropCentreBlocksAbove : 0;
+			return new Vec3(impactBlock[0] + 0.5, impactBlock[1] + up + 0.5, impactBlock[2] + 0.5);
 		}
 	}
 
