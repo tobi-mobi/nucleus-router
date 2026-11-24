@@ -4,6 +4,7 @@ import dev.nucleusrouter.core.NucleusRouter;
 import dev.nucleusrouter.platform.command.NrCommands;
 import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.location.LocationTracker;
+import dev.nucleusrouter.platform.world.WorldCapture;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -23,6 +24,7 @@ public final class NucleusRouterClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		ConfigManager.load();
 		LocationTracker.init();
+		WorldCapture.init();
 		NrCommands.register();
 		LOG.info("[Nucleus Router] {} loaded (render-only; never sends input, chat or packets).", NucleusRouter.VERSION_LABEL);
 	}
@@ -30,6 +32,13 @@ public final class NucleusRouterClient implements ClientModInitializer {
 	/** "[NR] " chat prefix. */
 	public static MutableComponent prefix() {
 		return Component.literal("[NR] ").withStyle(ChatFormatting.DARK_AQUA);
+	}
+
+	/** For CompletableFuture.exceptionally: log the error and show a short message in chat. */
+	public static Void reportAsyncError(Throwable t) {
+		LOG.error("[Nucleus Router] Background task failed", t);
+		showLocal(Component.literal("Something went wrong: " + t.getMessage() + " (details in the game log)").withStyle(ChatFormatting.RED));
+		return null;
 	}
 
 	/** Adds a line to your own chat window. Client-side only: nothing is sent to the server. */

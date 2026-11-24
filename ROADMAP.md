@@ -9,7 +9,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - [x] 1.1 Gradle/Loom project for MC 26.2, Java 25, Fabric API, accepts Fabric Loader 0.20.1. Module or package layout `core` / `game` / `platform`. Builds and launches in the dev client. (§1)
 - [x] 1.2 JSON config + YACL config screen + Mod Menu entry. Add every tunable from §2 now, with the spec's defaults. (§1, §2)
 - [x] 1.3 `/nr` command root. Crystal Hollows detection (Hypixel Mod API location event, with scoreboard/tab-list fallback), lobby id, lobby day (`dayTime / 24000`), and ping reading. (§1, §2.1, §2.6)
-- [ ] 1.4 World model: voxel classes, sticky "ghost solid" memory for respawning blocks, capture from chunk loads and block updates, per-lobby persistence on disk. Unit tests. (§3.1, §2.4)
+- [x] 1.4 World model: voxel classes, sticky "ghost solid" memory for respawning blocks, capture from chunk loads and block updates, per-lobby persistence on disk. Unit tests. (§3.1, §2.4)
 - [ ] 1.5 Etherwarp ray model (DDA, first hit, 2 air above, full-cube rule, configurable eye height, valid aim region). Unit tests. (§2.3)
 - [ ] 1.6 `/nr debug ray` overlay + logging of predicted vs actual landing + eye-height suggestion. Also the first world-render utility: lines, outlines and filled boxes through walls, working on OpenGL, Vulkan and Iris. (§6, §5)
 - [ ] 1.7 `/nr calibrate bomb` (snapshot → block diff → measured centre/radius/shape, impact vs predicted throw) and `/nr dump`. (§6, §2.4)
@@ -71,6 +71,9 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Tab list shows `Area: Crystal Hollows` and `Server: mini…` | Yes (`Area: Crystal Hollows`, `Server: mini89R`). No `Ping:` widget in the user's tab list | 2026-11-24 |
 | Scoreboard area names inside the Hollows (list in `game/HollowsAreas.java`) | All areas the user visited read correctly. The ⏣ marker arrives as a custom-font character, so names are matched directly. King Yolkar's area shows "Goblin Holdout" | 2026-11-24 |
 | Scoreboard "Goblin Queen's Den" vs. the 3 s Amber timer | The **whole den area** shows "Goblin Queen's Den", but the 3 s timer only applies inside **the Queen's castle in the centre**. So "scoreboard shows Goblin Holdout" (SPEC §2.2) is **not** the exit condition | 2026-11-24 |
+| Do fluids (water/lava) block the etherwarp ray? | _[VERIFY]_ (default: yes, `bombs.fluidBlocks` are solid + unbreakable) | |
+| Which block(s) the user places for +2/+1 targets | _[VERIFY]_ (default `minecraft:cobblestone`, `placing.placedBlockTypes`) | |
+| What a mined ore/gemstone turns into until it respawns (air? bedrock?) | _[VERIFY]_ (`/nr world here` on a freshly mined gemstone) | |
 | What exactly ends the 3 s timer (leaving the castle's bounds? any message?) | _[VERIFY]_ Needed before 3.3/3.6 (den exit plan and countdown) | |
 | Ping on Hypixel | 130-200 ms for this user (EU). Will be measured from real etherwarps in 1.6 instead of configured | 2026-11-24 |
 | Own tab-list latency is real ping on Hypixel | **No**: shows 1 ms for an EU player. Values <= 5 ms are ignored; `cost.fallbackPingMs` is used | 2026-11-24 |
@@ -84,6 +87,8 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24 Hypixel Mod API is used **listen-only**: the mod adds a handler but never calls `subscribeToEventPacket` or `sendPacket`, so it causes no extra packets (Hard rule). Location packets arrive only because SkyHanni already subscribes; otherwise tab list, then scoreboard, are used. Ping comes from the vanilla tab-list latency, then the SkyBlock tab "Ping:" widget, then `cost.fallbackPingMs`. The Mod API ping packet is never sent.
 - 2026-11-24 SPEC §2.2 change: the Queen's den exit is **not** "scoreboard shows Goblin Holdout". The 3 s timer covers only the Queen's castle in the centre of the den area; the exit condition will be spatial (castle bounds), settled by the [VERIFY] item above before 3.3.
 - 2026-11-24 `/nucleusrouter` is an alias of `/nr` in case another mod takes `/nr`. Added `general.chatNotices` (local-only chat lines, default on).
+- 2026-11-24 World model (1.4): each voxel stores its *original* block (sticky) and its *current* block, 2 bytes per voxel (~8 KB per 16^3 section). The "original" is upgraded to the most permanent kind ever seen there (air < Hard Stone/placed < respawning < unbreakable), so a gemstone first seen already mined becomes sticky once it respawns. A `placing.placedBlockTypes` block appearing in air is PLACED, not respawning. Fluids are a separate list (`bombs.fluidBlocks`) treated as unbreakable solid. Unseen voxels are UNKNOWN and count as solid. STRUCTURE comes from the structure overlay in milestone 2.
+- 2026-11-24 World capture runs on one background thread; the client thread only copies chunk sections. Block changes come from a read-only mixin on `ClientLevel.setBlock` (Fabric has no client block-change event). Saves go to `<game dir>/nucleusrouter/lobbies/<server>.nrw` every 2 min, on world change, disconnect and game close.
 - 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
 ## Session log
@@ -91,3 +96,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-24: 1.3 `/nr` (help, where, where raw, config, reload). Location from Mod API (listen-only) > tab list > scoreboard; lobby id canonicalised (`m123AB` -> `mini123AB`); lobby day = clock / 24000; ping with fallbacks. 10 unit tests pass. Next: 1.4 world model.
 - 2026-11-24: In-game test of 1.3: Mod API, lobby id and lobby day work. Fixed scoreboard area (custom-font marker) and fake 1 ms ping (now falls back to config). 11 tests pass. Plan: measure real warp delay passively from the user's own etherwarps in 1.6. Next: 1.4.
 - 2026-11-24: User confirmed all visited scoreboard areas. Found the den rule above. Ping (130-200 ms) left to 1.6 measurement. Next: 1.4.
+- 2026-11-24: 1.4 world model + capture + per-lobby saves. A save is only reused if the world clock advanced in line with real time (else the server name was reused by a new lobby and the old file is moved to `.old`). Lobby attaches after its id is stable for 5 s. `/nr world`, `/nr world here`, `/nr world save`. 27 unit tests pass. Next: 1.5 etherwarp ray model.

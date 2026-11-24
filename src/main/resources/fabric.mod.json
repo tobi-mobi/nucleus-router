@@ -27,5 +27,8 @@
 	"suggests": {
 		"modmenu": "*",
 		"hypixel-mod-api": "*"
-	}
+	},
+	"mixins": [
+		"nucleusrouter.mixins.json"
+	]
 }

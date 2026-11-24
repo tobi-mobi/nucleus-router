@@ -93,6 +93,8 @@ public final class NrConfig {
 				"minecraft:rooted_dirt", "minecraft:mud", "minecraft:dirt_path", "minecraft:farmland",
 				"minecraft:mycelium", "minecraft:muddy_mangrove_roots",
 				"minecraft:bedrock", "minecraft:barrier"));
+		/** [VERIFY] Fluids: treated as solid and unbreakable (they block the etherwarp ray, bombs don't remove them). */
+		public List<String> fluidBlocks = new ArrayList<>(List.of("minecraft:water", "minecraft:lava", "minecraft:bubble_column"));
 	}
 
 	public enum BlastCentre { IMPACT_BLOCK_CENTRE, IMPACT_POINT }
@@ -103,6 +105,8 @@ public final class NrConfig {
 		public double reach = 4.5;
 		/** [VERIFY] Placing allowed everywhere in the Hollows outside structure regions. */
 		public boolean allowedEverywhereOutsideStructures = true;
+		/** Block types you place. When one appears in air it counts as placed (stays), not as a respawning ore. */
+		public List<String> placedBlockTypes = new ArrayList<>(List.of("minecraft:cobblestone"));
 	}
 
 	/** §2.6 Cost model (all in seconds). */
@@ -160,6 +164,8 @@ public final class NrConfig {
 		if (bombs.hardStoneBlocks == null) { bombs.hardStoneBlocks = new Bombs().hardStoneBlocks; fixes.add("bombs.hardStoneBlocks missing, reset"); }
 		if (bombs.bombImmuneBlocks == null) { bombs.bombImmuneBlocks = new Bombs().bombImmuneBlocks; fixes.add("bombs.bombImmuneBlocks missing, reset"); }
 
+		if (bombs.fluidBlocks == null) { bombs.fluidBlocks = new Bombs().fluidBlocks; fixes.add("bombs.fluidBlocks missing, reset"); }
+		if (placing.placedBlockTypes == null) { placing.placedBlockTypes = new Placing().placedBlockTypes; fixes.add("placing.placedBlockTypes missing, reset"); }
 		placing.reach = clamp(fixes, "placing.reach", placing.reach, 1, 6);
 
 		cost.baseWarpSeconds = clamp(fixes, "cost.baseWarpSeconds", cost.baseWarpSeconds, 0, 5);

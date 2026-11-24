@@ -20,8 +20,18 @@ import java.util.List;
 public final class ConfigManager {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
 	private static volatile NrConfig current = new NrConfig();
+	private static final List<Runnable> LISTENERS = new java.util.concurrent.CopyOnWriteArrayList<>();
 
 	private ConfigManager() {}
+
+	/** Called after every load or save, e.g. to re-sort block types when the Hard Stone list changes. */
+	public static void onChange(Runnable listener) { LISTENERS.add(listener); }
+
+	private static void fireChanged() {
+		for (Runnable r : LISTENERS) {
+			try { r.run(); } catch (RuntimeException e) { NucleusRouterClient.LOG.error("[Nucleus Router] Config listener failed", e); }
+		}
+	}
 
 	public static NrConfig get() { return current; }
 
@@ -61,5 +71,6 @@ public final class ConfigManager {
 		} catch (IOException e) {
 			NucleusRouterClient.LOG.error("[Nucleus Router] Could not save config to {}: {}", file, e.getMessage());
 		}
+		fireChanged();
 	}
 }

@@ -32,6 +32,9 @@ public final class NrCommands {
 						.then(literal("help").executes(NrCommands::help))
 						.then(literal("where").executes(ctx -> where(ctx, false))
 								.then(literal("raw").executes(ctx -> where(ctx, true))))
+						.then(literal("world").executes(WorldCommands::stats)
+								.then(literal("here").executes(WorldCommands::here))
+								.then(literal("save").executes(WorldCommands::save)))
 						.then(literal("config").executes(NrCommands::openConfig))
 						.then(literal("reload").executes(NrCommands::reload));
 				dispatcher.register(cmd);
@@ -44,6 +47,9 @@ public final class NrCommands {
 		src.sendFeedback(header("Nucleus Router commands"));
 		line(src, "/nr where", "where am I: Hollows?, lobby id, lobby day, ping");
 		line(src, "/nr where raw", "same, plus the raw tab list / scoreboard text");
+		line(src, "/nr world", "remembered terrain: lobby, sections, block classes");
+		line(src, "/nr world here", "what the mod remembers about the block you look at and the one you stand on");
+		line(src, "/nr world save", "save this lobby's terrain now");
 		line(src, "/nr config", "open the settings screen");
 		line(src, "/nr reload", "reload settings from config/nucleusrouter.json");
 		return 1;

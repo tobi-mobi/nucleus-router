@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "dev.nucleusrouter.platform.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"ClientLevelMixin"
+	],
+	"injectors": {
+		"defaultRequire": 0
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

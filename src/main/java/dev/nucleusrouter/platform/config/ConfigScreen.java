@@ -79,11 +79,13 @@ public final class ConfigScreen {
 						.build())
 				.option(stringList("Hard Stone blocks", "Block ids that count as Hard Stone and stay gone when broken." + VERIFY, d.bombs.hardStoneBlocks, () -> c.bombs.hardStoneBlocks, v -> c.bombs.hardStoneBlocks = v))
 				.option(stringList("Bomb-immune blocks", "Block ids bombs never break. Start with * to match a suffix, e.g. *_log.", d.bombs.bombImmuneBlocks, () -> c.bombs.bombImmuneBlocks, v -> c.bombs.bombImmuneBlocks = v))
+				.option(stringList("Fluid blocks", "Treated as solid and unbreakable: they block the etherwarp ray and bombs don't remove them." + VERIFY, d.bombs.fluidBlocks, () -> c.bombs.fluidBlocks, v -> c.bombs.fluidBlocks = v))
 				.build();
 
 		ConfigCategory placing = ConfigCategory.createBuilder()
 				.name(Component.literal("Placing"))
 				.option(dblOpt("Reach (blocks)", "Reach used when planning block placements.", d.placing.reach, () -> c.placing.reach, v -> c.placing.reach = v, 1, 6))
+				.option(stringList("Blocks you place", "When one of these appears where there was air, it counts as a placed block that stays, not a respawning ore.", d.placing.placedBlockTypes, () -> c.placing.placedBlockTypes, v -> c.placing.placedBlockTypes = v))
 				.option(boolOpt("Allowed everywhere outside structures", "If on, the planner may place blocks anywhere outside structure regions." + VERIFY, d.placing.allowedEverywhereOutsideStructures, () -> c.placing.allowedEverywhereOutsideStructures, v -> c.placing.allowedEverywhereOutsideStructures = v))
 				.build();
 
