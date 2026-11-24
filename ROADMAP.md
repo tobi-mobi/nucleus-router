@@ -69,7 +69,10 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Wishing Compass particle behaviour | _[VERIFY]_ | |
 | Hypixel Mod API location packets arrive (via SkyHanni's subscription) and mode = `crystal_hollows` | Yes: `server=mini89R type=SKYBLOCK mode=crystal_hollows map=Crystal Hollows` | 2026-11-24 |
 | Tab list shows `Area: Crystal Hollows` and `Server: mini…` | Yes (`Area: Crystal Hollows`, `Server: mini89R`). No `Ping:` widget in the user's tab list | 2026-11-24 |
-| Scoreboard area names inside the Hollows (list in `game/HollowsAreas.java`) | "Mines of Divan" confirmed; its ⏣ marker arrives as a custom-font character, so names are matched directly. Others _[VERIFY]_ (`/nr where` in each area) | 2026-11-24 (partial) |
+| Scoreboard area names inside the Hollows (list in `game/HollowsAreas.java`) | All areas the user visited read correctly. The ⏣ marker arrives as a custom-font character, so names are matched directly. King Yolkar's area shows "Goblin Holdout" | 2026-11-24 |
+| Scoreboard "Goblin Queen's Den" vs. the 3 s Amber timer | The **whole den area** shows "Goblin Queen's Den", but the 3 s timer only applies inside **the Queen's castle in the centre**. So "scoreboard shows Goblin Holdout" (SPEC §2.2) is **not** the exit condition | 2026-11-24 |
+| What exactly ends the 3 s timer (leaving the castle's bounds? any message?) | _[VERIFY]_ Needed before 3.3/3.6 (den exit plan and countdown) | |
+| Ping on Hypixel | 130-200 ms for this user (EU). Will be measured from real etherwarps in 1.6 instead of configured | 2026-11-24 |
 | Own tab-list latency is real ping on Hypixel | **No**: shows 1 ms for an EU player. Values <= 5 ms are ignored; `cost.fallbackPingMs` is used | 2026-11-24 |
 | Lobby day from the world clock matches the real lobby day | Yes (day 14 at clock 356020 matched) | 2026-11-24 |
 
@@ -79,6 +82,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-23 YACL is a required dependency (it's in the pack). Mod Menu is optional.
 - 2026-11-23 Config tunables added beyond SPEC §2 (estimates, not game facts; user to confirm): `stops.npcInteractionSeconds` 1.0, `stops.crystalPickupSeconds` 0.5, `cost.turnExponent` 1.5 (turn time = turnSecondsAt90 x (angle/90)^exp), `cost.fallbackPingMs` 100, `bombs.fuseSeconds` 3.0 (upper end of 2.5-3 s, safer), `bombs.blastCentre` enum (default: centre of the impact block).
 - 2026-11-24 Hypixel Mod API is used **listen-only**: the mod adds a handler but never calls `subscribeToEventPacket` or `sendPacket`, so it causes no extra packets (Hard rule). Location packets arrive only because SkyHanni already subscribes; otherwise tab list, then scoreboard, are used. Ping comes from the vanilla tab-list latency, then the SkyBlock tab "Ping:" widget, then `cost.fallbackPingMs`. The Mod API ping packet is never sent.
+- 2026-11-24 SPEC §2.2 change: the Queen's den exit is **not** "scoreboard shows Goblin Holdout". The 3 s timer covers only the Queen's castle in the centre of the den area; the exit condition will be spatial (castle bounds), settled by the [VERIFY] item above before 3.3.
 - 2026-11-24 `/nucleusrouter` is an alias of `/nr` in case another mod takes `/nr`. Added `general.chatNotices` (local-only chat lines, default on).
 - 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
@@ -86,3 +90,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-23: 1.1 Gradle/Loom project builds and launches in the dev client. 1.2 JSON config (`config/nucleusrouter.json`, auto-repairs bad values, broken file moved to `.broken`) + YACL screen with 6 categories + Mod Menu entry. 3 unit tests pass. Next: 1.3 `/nr` command root, Crystal Hollows detection, lobby id/day, ping.
 - 2026-11-24: 1.3 `/nr` (help, where, where raw, config, reload). Location from Mod API (listen-only) > tab list > scoreboard; lobby id canonicalised (`m123AB` -> `mini123AB`); lobby day = clock / 24000; ping with fallbacks. 10 unit tests pass. Next: 1.4 world model.
 - 2026-11-24: In-game test of 1.3: Mod API, lobby id and lobby day work. Fixed scoreboard area (custom-font marker) and fake 1 ms ping (now falls back to config). 11 tests pass. Plan: measure real warp delay passively from the user's own etherwarps in 1.6. Next: 1.4.
+- 2026-11-24: User confirmed all visited scoreboard areas. Found the den rule above. Ping (130-200 ms) left to 1.6 measurement. Next: 1.4.

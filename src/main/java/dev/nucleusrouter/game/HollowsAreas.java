@@ -5,10 +5,14 @@ import java.util.Set;
 /**
  * Sidebar location names that only appear inside the Crystal Hollows. Used only as the last
  * fallback for "am I in the Hollows?" when neither the Mod API nor the tab list answers.
- * [VERIFY] Spelling is checked with /nr where while standing in each area.
+ * Confirmed 2026-11-24 with /nr where in the areas the user visited.
  */
 public final class HollowsAreas {
 	public static final String GOBLIN_HOLDOUT = "Goblin Holdout";
+	/**
+	 * Shown for the whole den area. NOT the same as the 3 s Amber timer zone, which is only the
+	 * Queen's castle in the centre (confirmed 2026-11-24). Don't use this name as the den-exit check.
+	 */
 	public static final String GOBLIN_QUEENS_DEN = "Goblin Queen's Den";
 
 	public static final Set<String> ALL = Set.of(
