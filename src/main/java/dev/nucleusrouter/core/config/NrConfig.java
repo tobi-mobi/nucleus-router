@@ -34,6 +34,7 @@ public final class NrConfig {
 	public Cost cost = new Cost();
 	public Structures structures = new Structures();
 	public Compass compass = new Compass();
+	public Exploration exploration = new Exploration();
 
 	/** §2.1 Crystal Hollows and the run. */
 	public static final class Hollows {
@@ -225,6 +226,15 @@ public final class NrConfig {
 		}
 	}
 
+	/** §4 Exploration coverage. */
+	public static final class Exploration {
+		/**
+		 * Columns within this many blocks of you count as explored. Estimate: about the distance at which
+		 * NPC name tags (and so structures) are found. Tune to taste.
+		 */
+		public double visitRadius = 48;
+	}
+
 	/**
 	 * §4 Wishing Compass solver. [VERIFY] how the compass trail looks in-game: which particle type, how
 	 * long it lasts, and whether every use points at the same structure. The mod picks the straightest
@@ -323,6 +333,8 @@ public final class NrConfig {
 		if (cost == null) { cost = new Cost(); fixes.add("cost section missing, reset to defaults"); }
 		if (structures == null) { structures = new Structures(); fixes.add("structures section missing, reset to defaults"); }
 		if (compass == null) { compass = new Compass(); fixes.add("compass section missing, reset to defaults"); }
+		if (exploration == null) { exploration = new Exploration(); fixes.add("exploration section missing, reset to defaults"); }
+		exploration.visitRadius = clamp(fixes, "exploration.visitRadius", exploration.visitRadius, 8, 128);
 
 		Hollows h = hollows;
 		if (h.minX > h.maxX) { int t = h.minX; h.minX = h.maxX; h.maxX = t; fixes.add("hollows minX > maxX, swapped"); }
