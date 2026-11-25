@@ -62,6 +62,11 @@ public final class NrConfig {
 		public double minThrowDistance = 9;
 		/** Bombs: at most this many throws per leg before the rest becomes mining. */
 		public int maxThrowsPerLeg = 400;
+		/**
+		 * Placing: a target left floating over a bomb crater is reached by pillaring up from the crater floor
+		 * (jump and place under yourself). Tallest pillar planned, in blocks.
+		 */
+		public int maxPillarBlocks = 16;
 	}
 
 	/** §2.1 Crystal Hollows and the run. */
@@ -544,6 +549,7 @@ public final class NrConfig {
 		setup.corridorToleranceDeg = clamp(fixes, "setup.corridorToleranceDeg", setup.corridorToleranceDeg, 0, 10);
 		setup.legTimeLimitMs = (int) clamp(fixes, "setup.legTimeLimitMs", setup.legTimeLimitMs, 50, 60000);
 		setup.maxThrowsPerLeg = (int) clamp(fixes, "setup.maxThrowsPerLeg", setup.maxThrowsPerLeg, 1, 5000);
+		setup.maxPillarBlocks = (int) clamp(fixes, "setup.maxPillarBlocks", setup.maxPillarBlocks, 0, 64);
 		run.arriveRadius = clamp(fixes, "run.arriveRadius", run.arriveRadius, 3, 100);
 		run.targetsShown = (int) clamp(fixes, "run.targetsShown", run.targetsShown, 1, 30);
 		if (run.denTimerStartMessages == null) { run.denTimerStartMessages = new Run().denTimerStartMessages; fixes.add("run.denTimerStartMessages missing, reset"); }

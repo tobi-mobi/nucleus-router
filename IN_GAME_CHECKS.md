@@ -29,6 +29,8 @@ Claude then moves it to "Confirmed game facts" in `ROADMAP.md`, updates the defa
 |---|---|---|---|
 | Q7 | Dropped Bob-omb (one that flew its full 32 blocks and fell): how far above the landing block is the blast centred? | 1 block above (`bombs.dropCentreBlocksAbove`) | Throw a bomb at nothing so it drops onto **flat** ground, with `/nr calibrate bomb` running. Send the result line. Two or three throws are enough |
 | Q8 | How far can you place a block on Hypixel? | 4.5 blocks (`placing.reach`) | Stand still, hold cobblestone and try to place against a wall while backing away one block at a time. Use `/nr where` on the farthest spot that worked and on the block you placed against |
+| Q14 | How close to a big structure can you place blocks? | Unknown; placements inside the guessed 81-block zones are only flagged ("may be refused") | Walk towards a structure placing a cobblestone every few blocks. `/nr where` at the first spot where placing is refused, and name the structure |
+| Q15 | Can you pillar up (jump and place a block under yourself) in the Hollows, also over a bomb crater? | Yes: targets left floating over craters are reached by pillaring up to 16 blocks (`setup.maxPillarBlocks`) | Stand in a crater, look straight down, jump and place cobblestone under you a few times |
 | Q9 | Structure zone bounds (where bombs fizzle) | 81 x 81 x 81 blocks around each structure; a bomb only fizzles if its centre is inside (confirmed) | Only needed if a planned bomb near a structure does nothing. Report which structure and where you threw from |
 | Q10 | Can a bomb thrown 9+ blocks away hurt you or break the block you stand on? | No: throws are planned from at least 9 blocks away (`setup.minThrowDistance`) | During a `/nr design` test, throw from the planned spot: did you take damage or lose your floor? |
 | Q11 | Does an ore or gemstone broken by a Bob-omb come back (like a mined one)? | Yes: blasted ores still count as solid when planning | Blast an ore vein, wait 5 minutes, check whether it's back |
@@ -58,4 +60,6 @@ Claude then moves it to "Confirmed game facts" in `ROADMAP.md`, updates the defa
 1. Stand somewhere open in the Hollows and type `/nr design <structure>` (divan, precursor, king, queen, temple, khazad). Chat says what was designed. In the world you see the lanes, target blocks, bomb throws and blocks to mine.
 2. Does the design look sensible? Straight lanes, few bends, nothing through ore veins or structures.
 3. Optional: do one throw exactly as shown. Is the crater roughly where the preview says? (Also answers Q10.)
-4. `/nr design clear` hides it.
+4. Placements (4.4): "P" numbers on the blocks to place, in order. For a normal one, a yellow spot to stand on and a yellow square on the face to click. Pillars show as a yellow column with "pillar up" on top. Try one of each: can you do it from the shown spot? (Also answers Q8 and Q15.)
+5. Chat lists how many target and helper blocks to place. Any it couldn't solve are magenta; tell Claude where.
+6. `/nr design clear` hides it.

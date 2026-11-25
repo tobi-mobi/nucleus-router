@@ -94,7 +94,7 @@ public final class AimRegion {
 	}
 
 	/** A face is visible when the eye is strictly on its outer side. */
-	static boolean faceVisible(Face f, Vec3 eye, int x, int y, int z) {
+	public static boolean faceVisible(Face f, Vec3 eye, int x, int y, int z) {
 		return switch (f) {
 			case WEST -> eye.x() < x;
 			case EAST -> eye.x() > x + 1;
