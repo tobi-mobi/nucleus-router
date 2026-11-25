@@ -202,6 +202,22 @@ public final class NrConfig {
 		public List<String> goblinQueenNames = new ArrayList<>(List.of("Goblin Queen"));
 		public List<String> jungleTempleNames = new ArrayList<>(List.of("Kalhuiki Door Guardian"));
 		public List<String> khazadDumNames = new ArrayList<>(List.of("Bal"));
+
+		/** Draw each found structure's no-bomb / no-placing zone as a red box. */
+		public boolean showZones = true;
+		/**
+		 * [VERIFY] No-bomb / no-placing zone per structure, as {minDx, minDy, minDz, maxDx, maxDy, maxDz}
+		 * blocks from the anchor block (NPC, keepers' centre or crystal), in the structure's own orientation.
+		 * Defaults are a generous guess; measure with /nr zone and /nr calibrate bomb near the structure.
+		 * Keys: divan, precursor, king, queen, temple, khazad.
+		 */
+		public java.util.Map<String, int[]> zones = defaultZones();
+
+		public static java.util.Map<String, int[]> defaultZones() {
+			java.util.Map<String, int[]> m = new java.util.LinkedHashMap<>();
+			for (String k : List.of("divan", "precursor", "king", "queen", "temple", "khazad")) m.put(k, new int[]{-40, -40, -40, 40, 40, 40});
+			return m;
+		}
 	}
 
 	/**
@@ -348,6 +364,12 @@ public final class NrConfig {
 		compass.minPoints = (int) clamp(fixes, "compass.minPoints", compass.minPoints, 3, 100);
 		compass.goodRadiusBlocks = clamp(fixes, "compass.goodRadiusBlocks", compass.goodRadiusBlocks, 1, 100);
 		if (structures.skyblockerWaypoints == null) { structures.skyblockerWaypoints = SkyblockerWaypoints.HIDE_RUN_STRUCTURES; fixes.add("structures.skyblockerWaypoints unknown, reset"); }
+		if (structures.zones == null) { structures.zones = Structures.defaultZones(); fixes.add("structures.zones missing, reset"); }
+		for (java.util.Map.Entry<String, int[]> z : Structures.defaultZones().entrySet()) {
+			int[] v = structures.zones.get(z.getKey());
+			if (v == null || v.length != 6) { structures.zones.put(z.getKey(), z.getValue()); fixes.add("structures.zones." + z.getKey() + " missing or not 6 numbers, reset"); continue; }
+			for (int i = 0; i < 3; i++) if (v[i] > v[i + 3]) { int t = v[i]; v[i] = v[i + 3]; v[i + 3] = t; fixes.add("structures.zones." + z.getKey() + " min > max, swapped"); }
+		}
 		structures.crystalBoxMinBarriers = (int) clamp(fixes, "structures.crystalBoxMinBarriers", structures.crystalBoxMinBarriers, 4, 10000);
 		structures.scanEveryTicks = (int) clamp(fixes, "structures.scanEveryTicks", structures.scanEveryTicks, 1, 200);
 		Structures sd = new Structures();

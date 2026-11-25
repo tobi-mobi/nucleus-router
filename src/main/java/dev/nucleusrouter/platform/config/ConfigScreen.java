@@ -113,6 +113,7 @@ public final class ConfigScreen {
 				.name(Component.literal("Structures"))
 				.option(boolOpt("Show found structures", "Draw a beam and the name of each found structure, through walls.", d.structures.showMarkers, () -> c.structures.showMarkers, v -> c.structures.showMarkers = v))
 				.option(boolOpt("Rough position from area name", "When no name tag has been seen yet, note where you stood while the scoreboard showed the structure's area (only listed in /nr structures, never drawn; it was usually wrong).", d.structures.useAreaHints, () -> c.structures.useAreaHints, v -> c.structures.useAreaHints = v))
+				.option(boolOpt("Show zones", "Draw each found structure's no-bomb / no-placing zone as a red box. Sizes: /nr zones." + VERIFY, d.structures.showZones, () -> c.structures.showZones, v -> c.structures.showZones = v))
 				.option(boolOpt("Use Skyblocker's waypoints", "Read Skyblocker's Crystal Hollows waypoints (its compass solver, chat coordinates, shared waypoints) as approximate positions until a name tag or crystal is seen. Read-only.", d.structures.useSkyblocker, () -> c.structures.useSkyblocker, v -> c.structures.useSkyblocker = v))
 				.option(Option.<NrConfig.SkyblockerWaypoints>createBuilder()
 						.name(Component.literal("Skyblocker's waypoints"))

@@ -43,6 +43,9 @@ public final class NrCommands {
 								.then(literal("cancel").executes(DebugCommands::calibrateBombCancel))))
 						.then(StructureCommands.structuresNode())
 						.then(StructureCommands.structureNode())
+						.then(ZoneCommands.captureNode())
+						.then(ZoneCommands.zonesNode())
+						.then(ZoneCommands.zoneNode())
 						.then(literal("compass").executes(ctx -> { dev.nucleusrouter.platform.compass.CompassTracker.status(); return 1; })
 								.then(literal("undo").executes(ctx -> { dev.nucleusrouter.platform.compass.CompassTracker.undoAndReport(); return 1; }))
 								.then(literal("clear").executes(ctx -> {
@@ -74,6 +77,9 @@ public final class NrCommands {
 		line(src, "/nr structures", "which run structures are found in this lobby, and where");
 		line(src, "/nr structure set <name>", "mark a structure where you stand (divan, precursor, king, queen, temple, khazad)");
 		line(src, "/nr structure clear <name|all>", "forget a structure so it's found again");
+		line(src, "/nr zones", "each found structure's no-bomb / no-placing zone, and whether you're inside");
+		line(src, "/nr zone <name> corner1 | corner2 | reset", "measure a zone by standing at two opposite corners");
+		line(src, "/nr capture <name> [radius]", "save the blocks around a structure (to learn its shape and orientation)");
 		line(src, "/nr compass", "Wishing Compass lines and the estimated target");
 		line(src, "/nr compass undo | clear", "remove the last compass line, or all of them");
 		line(src, "/nr inspect", "what the block you look at is, and every entity near it (names, items)");

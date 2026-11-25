@@ -148,6 +148,9 @@ public final class BombCalibration {
 		if (state == State.THROWN && now - throwMs > NO_BLAST_TIMEOUT_MS) {
 			say("No blast seen within 12 s. Did the bomb fizzle (too close to a structure?) or land outside the remembered area? Calibration stopped.", ChatFormatting.RED);
 			NucleusRouterClient.LOG.info("[Nucleus Router] Bomb calibration: no blast. Prediction {}", describePrediction());
+			// Near a structure, a fizzle is a data point for the zone bounds (model centre: nothing was measured)
+			for (String l : dev.nucleusrouter.platform.structure.ZoneProbes.record(modelCentre, ConfigManager.get().bombs.blastRadius, true))
+				say("Zone check: " + l + " (recorded)", ChatFormatting.GOLD);
 			reset();
 		} else if (state == State.COLLECTING && now - firstChangeMs > COLLECT_WINDOW_MS) {
 			finish();
@@ -209,6 +212,8 @@ public final class BombCalibration {
 		line("Throw to blast", fuseMs + " ms (flight + fuse)");
 		if (packet != null) line("Server explosion packet", packet);
 		line("Full report", file != null ? file.toString() : "could not be saved (see log)");
+		for (String l : dev.nucleusrouter.platform.structure.ZoneProbes.record(b.centre(), cfg.bombs.blastRadius, false))
+			say("Zone check: " + l + " (recorded)", ChatFormatting.GOLD);
 		say("Blue ring/dot = model, yellow = measured. Shown for 60 s.", ChatFormatting.GRAY);
 
 		shownModelCentre = model;

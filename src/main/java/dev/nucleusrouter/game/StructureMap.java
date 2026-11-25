@@ -52,6 +52,8 @@ public final class StructureMap {
 		public double[] areaMin, areaMax;
 		/** Barrier box around the crystal (inclusive block corners), or null. */
 		public int[] crystalMin, crystalMax;
+		/** How the structure is turned compared with the saved capture ({@link Orientation} name), or null if unknown. */
+		public String orientation;
 		/** Skyblocker's waypoint {x, y, z}, or null. */
 		public double[] skyblocker;
 		public boolean skyblockerVerified;
@@ -173,6 +175,44 @@ public final class StructureMap {
 		e.skyblockerVerified = pos != null && verified;
 		version++;
 		return true;
+	}
+
+	/** Orientation found by template matching, or {@link Orientation#R0} if not known (yet). */
+	public Orientation orientation(Structure s) {
+		Entry e = peek(s);
+		if (e == null || e.orientation == null) return Orientation.R0;
+		try { return Orientation.valueOf(e.orientation); } catch (IllegalArgumentException ex) { return Orientation.R0; }
+	}
+
+	public boolean orientationKnown(Structure s) {
+		Entry e = peek(s);
+		return e != null && e.orientation != null;
+	}
+
+	public void setOrientation(Structure s, Orientation o) {
+		Entry e = entry(s);
+		String n = o == null ? null : o.name();
+		if (java.util.Objects.equals(e.orientation, n)) return;
+		e.orientation = n;
+		version++;
+	}
+
+	/** True if the position is exact (manual, crystal or NPC), so zones and captures can use it. */
+	public static boolean exact(Location l) {
+		return l != null && (l.source() == Source.MANUAL || l.source() == Source.CRYSTAL || l.source() == Source.NPC);
+	}
+
+	/** Anchor block {x, y, z} (the block containing the best position), or null if not exactly known. */
+	public int[] anchorBlock(Structure s) {
+		Location l = locate(s);
+		if (!exact(l)) return null;
+		return new int[]{(int) Math.floor(l.pos().x()), (int) Math.floor(l.pos().y()), (int) Math.floor(l.pos().z())};
+	}
+
+	/** World box of the structure's zone, or null if its position isn't exactly known. */
+	public int[] zoneBox(Structure s, StructureZone zone) {
+		int[] a = anchorBlock(s);
+		return a == null || zone == null ? null : zone.worldBox(a[0], a[1], a[2], orientation(s));
 	}
 
 	public void setManual(Structure s, double x, double y, double z) {
