@@ -91,6 +91,22 @@ public final class RenderGameTest implements FabricClientGameTest {
 			context.waitTicks(10);
 			context.takeScreenshot("nr-7-move-structure-list");
 			context.runOnClient(mc -> mc.gui.setScreen(null));
+
+			// /nr explored map with some explored ground and two structures (made-up data)
+			context.runOnClient(mc -> {
+				dev.nucleusrouter.game.Coverage cov = dev.nucleusrouter.platform.structure.ExplorationTracker.coverage();
+				for (int i = 0; i < 40; i++) cov.visit(513 + i * 6, 526 - i * 4, 48);
+				for (int i = 0; i < 30; i++) cov.visit(513 - i * 8, 526 + i * 5, 48);
+				for (int x = 202; x < 823; x += 16) for (int z = 300; z < 700; z += 16) cov.loadChunk(x, z);
+				dev.nucleusrouter.game.StructureMap m = dev.nucleusrouter.platform.structure.StructureTracker.map();
+				m.clear(dev.nucleusrouter.game.Structure.KING_YOLKAR);
+				m.observeNametag(dev.nucleusrouter.game.Structure.KING_YOLKAR, "King Yolkar", 300, 120, 680, 0, true);
+				m.setSkyblocker(dev.nucleusrouter.game.Structure.JUNGLE_TEMPLE, new double[]{300, 100, 330}, false);
+				mc.gui.setScreen(new dev.nucleusrouter.platform.structure.ExploreMapScreen());
+			});
+			context.waitTicks(10);
+			context.takeScreenshot("nr-8-explored-map");
+			context.runOnClient(mc -> mc.gui.setScreen(null));
 			context.runOnClient(mc -> dev.nucleusrouter.platform.structure.StructureHud.forceShowForTest = false);
 		}
 	}

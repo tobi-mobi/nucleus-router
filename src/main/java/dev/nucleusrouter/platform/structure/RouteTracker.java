@@ -75,8 +75,10 @@ public final class RouteTracker {
 		var layout = KeeperLayouts.layout();
 		String lobby = StructureTracker.lobby();
 		int ping = pingMs();
+		var visited = ExplorationTracker.coverage().visitedCopy();
+		PlanWorld.Columns explored = cfg.plan.onlyExploredTerrain ? visited::test : (x, z) -> true;
 		long t0 = System.currentTimeMillis();
-		WorldCapture.snapshot().thenComposeAsync(snap -> plan(snap, map, layout, cfg, ping), POOL)
+		WorldCapture.snapshot().thenComposeAsync(snap -> plan(snap, map, layout, cfg, ping, explored), POOL)
 				.whenComplete((plan, err) -> Minecraft.getInstance().execute(() -> {
 					running = false;
 					if (err != null) { NucleusRouterClient.reportAsyncError(err); return; }
@@ -89,9 +91,11 @@ public final class RouteTracker {
 
 	private record Planned(RouteOrder.Plan plan, List<StopPlan.Stop> stops, Map<String, LegPlanner.Leg> legs, Map<String, Double> estimated) {}
 
-	private static CompletableFuture<Planned> plan(WorldSnapshot snap, StructureMap map, dev.nucleusrouter.game.KeeperLayout layout, NrConfig cfg, int ping) {
-		PlanWorld world = PlanWorld.of(snap, PlanWorld.patterns(cfg.plan.unstableTargetBlocks));
-		List<StopPlan.Stop> stops = StopPlan.build(map, layout, world, cfg);
+	private static CompletableFuture<Planned> plan(WorldSnapshot snap, StructureMap map, dev.nucleusrouter.game.KeeperLayout layout, NrConfig cfg, int ping,
+			PlanWorld.Columns explored) {
+		// Arrival spots may be anywhere near the structure; the warps on the way only land on explored ground
+		List<StopPlan.Stop> stops = StopPlan.build(map, layout, PlanWorld.of(snap, PlanWorld.patterns(cfg.plan.unstableTargetBlocks)), cfg);
+		PlanWorld world = PlanWorld.of(snap, PlanWorld.patterns(cfg.plan.unstableTargetBlocks), explored);
 		Map<String, StopPlan.Stop> byId = new HashMap<>();
 		for (StopPlan.Stop s : stops) byId.put(s.id(), s);
 		// One planner (with its own caches) per worker thread
@@ -157,7 +161,7 @@ public final class RouteTracker {
 			String from = s.viaWarpNucleus() ? "nucleus" : s.fromId();
 			LegPlanner.Leg leg = r.leg(from, s.toId());
 			boolean est = r.isEstimated(from, s.toId());
-			String warps = est ? "warps (estimated, not planned on the terrain yet)" : (leg == null ? 0 : leg.warps().size()) + " warps";
+			String warps = est ? "fly there yourself (not explored yet, time estimated)" : (leg == null ? 0 : leg.warps().size()) + " warps";
 			String how = s.viaWarpNucleus() ? "/warp nucleus" + (s.toId().equals("nucleus") ? "" : ", then " + warps)
 					: warps + (s.fromId().equals("temple.exit") ? " from the front of the temple" : "");
 			String wait = s.waitSeconds() > 0 ? String.format(" + %.0f s there", s.waitSeconds()) : "";
@@ -166,7 +170,7 @@ public final class RouteTracker {
 		}
 		NucleusRouterClient.showLocal(Component.literal(String.format("  Total: about %s", dev.nucleusrouter.game.LobbyEvaluator.mmss(p.seconds()))).withStyle(ChatFormatting.AQUA));
 		if (!r.estimated().isEmpty())
-			NucleusRouterClient.showLocal(Component.literal("  Estimated legs go through terrain the mod hasn't seen (or are too hard to plan quickly). Fly closer and run /nr route again to plan them.")
+			NucleusRouterClient.showLocal(Component.literal("  Routes are only planned over ground you've explored. Fly the unplanned moves once (see /nr explored map), then run /nr route again.")
 					.withStyle(ChatFormatting.GRAY));
 		if (!p.unreachable().isEmpty()) {
 			List<String> u = new ArrayList<>();

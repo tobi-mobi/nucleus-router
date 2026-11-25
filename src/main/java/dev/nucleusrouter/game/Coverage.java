@@ -134,6 +134,16 @@ public final class Coverage {
 		return new int[]{Math.max(0, Math.min(size - 1, mx)), Math.max(0, Math.min(size - 1, my))};
 	}
 
+	/** An unchanging copy of the visited columns, safe to use from another thread. */
+	public java.util.function.BiPredicate<Integer, Integer> visitedCopy() {
+		BitSet v = (BitSet) visited.clone();
+		int mx = minX, mz = minZ, cx = cellsX, cz = cellsZ;
+		return (x, z) -> {
+			int i = Math.floorDiv(x - mx, CELL), j = Math.floorDiv(z - mz, CELL);
+			return i >= 0 && j >= 0 && i < cx && j < cz && v.get(j * cx + i);
+		};
+	}
+
 	// ------------------------------------------------------------------ saving
 
 	public record Saved(int minX, int maxX, int minZ, int maxZ, String visited, String loaded) {}

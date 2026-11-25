@@ -24,7 +24,12 @@ final class ExploreCommands {
 
 	static LiteralArgumentBuilder<FabricClientCommandSource> node() {
 		return literal("explored").executes(ctx -> summary(ctx, false))
-				.then(literal("map").executes(ctx -> summary(ctx, true)));
+				.then(literal("map").executes(ctx -> {
+					var client = ctx.getSource().getClient();
+					// The chat screen closes after the command runs, so open the map on the next tick
+					client.schedule(() -> client.gui.setScreen(new dev.nucleusrouter.platform.structure.ExploreMapScreen()));
+					return 1;
+				}));
 	}
 
 	private static int summary(CommandContext<FabricClientCommandSource> ctx, boolean map) {
@@ -47,7 +52,7 @@ final class ExploreCommands {
 			kv(src, "Nearest unexplored stretch", "none left that is bigger than a few blocks");
 		}
 		if (map) drawMap(src, c, p.getX(), p.getZ());
-		else src.sendFeedback(Component.literal("  /nr explored map shows a map").withStyle(ChatFormatting.DARK_GRAY));
+		else src.sendFeedback(Component.literal("  /nr explored map opens a map").withStyle(ChatFormatting.DARK_GRAY));
 		return 1;
 	}
 

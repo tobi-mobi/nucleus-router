@@ -24,9 +24,24 @@ public interface PlanWorld extends SolidQuery {
 	 * stone, ...) are fine targets even though the terrain model files them under "respawning".
 	 */
 	static PlanWorld of(WorldSnapshot snap, Predicate<String> unstable) {
+		return of(snap, unstable, (x, z) -> true);
+	}
+
+	/** Which block columns the player has explored. */
+	@FunctionalInterface
+	interface Columns {
+		boolean allowed(int x, int z);
+	}
+
+	/**
+	 * Same, but targets must also lie in {@code explored} columns (user 2026-11-25: only plan where the player
+	 * has been, even though farther terrain is loaded).
+	 */
+	static PlanWorld of(WorldSnapshot snap, Predicate<String> unstable, Columns explored) {
 		return new PlanWorld() {
 			@Override public boolean solid(int x, int y, int z) { return snap.plannedSolid(x, y, z); }
 			@Override public boolean goodTarget(int x, int y, int z) {
+				if (!explored.allowed(x, z)) return false;
 				VoxelClass c = snap.classAt(x, y, z);
 				if (c == VoxelClass.UNKNOWN || !c.plannedSolid() || snap.currentlyAir(x, y, z)) return false;
 				String orig = snap.originalBlock(x, y, z);

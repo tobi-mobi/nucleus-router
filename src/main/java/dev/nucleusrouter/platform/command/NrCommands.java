@@ -94,7 +94,7 @@ public final class NrCommands {
 		line(src, "/nr route", "plan the run: order of the structures, when to /warp nucleus, total time");
 		line(src, "/nr stops", "where the route will stop at each NPC and crystal (blue blocks in the world)");
 		line(src, "/nr lobby", "is this lobby worth setting up? every check with its reason");
-		line(src, "/nr explored [map]", "how much of the Hollows you've explored, where to go next, and a map");
+		line(src, "/nr explored [map]", "how much of the Hollows you've explored and where to go next; map opens a map (hover for details)");
 		line(src, "/nr zones", "each found structure's no-bomb / no-placing zone, and whether you're inside");
 		line(src, "/nr zone <name> corner1 | corner2 | reset", "measure a zone by standing at two opposite corners");
 		line(src, "/nr capture <name> [radius]", "save the blocks around a structure (to learn its shape and orientation)");

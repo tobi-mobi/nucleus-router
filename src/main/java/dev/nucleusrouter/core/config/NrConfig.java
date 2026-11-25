@@ -293,6 +293,11 @@ public final class NrConfig {
 		 * longer; legs that still find nothing get a rough straight-line estimate.
 		 */
 		public int routeLegTimeLimitMs = 3000;
+		/**
+		 * Only plan warps onto ground you have explored (been near), even though farther terrain is loaded
+		 * (user 2026-11-25). Moves that need unexplored ground are marked "explore first".
+		 */
+		public boolean onlyExploredTerrain = true;
 		/** Rough estimate for legs that can't be planned: share of the full etherwarp range one warp covers. */
 		public double estimateWarpEfficiency = 0.5;
 	}
