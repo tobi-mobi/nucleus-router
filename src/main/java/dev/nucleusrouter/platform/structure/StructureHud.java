@@ -73,6 +73,7 @@ public final class StructureHud {
 				&& System.currentTimeMillis() - completeSinceMs > HIDE_AFTER_COMPLETE_MS) return;
 
 		if (mc.gui.screen() instanceof HudEditScreen) return; // the editor draws its own copy
+		if (RunTracker.active() && ConfigManager.get().run.showHud) return; // the run panel takes its place
 		drawList(g, cfg.x, cfg.y);
 	}
 

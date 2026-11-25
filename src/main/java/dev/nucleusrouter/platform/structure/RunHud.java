@@ -117,9 +117,8 @@ public final class RunHud {
 		if (mc.player == null || mc.getDebugOverlay().showDebugScreen()) return;
 		if (!forceShowForTest && !LocationTracker.state().inHollows()) return;
 		NrConfig cfg = ConfigManager.get();
-		drawDen(g, cfg);
-		if (!cfg.run.showHud || !RunTracker.active() || mc.gui.screen() instanceof HudEditScreen) return;
-		drawPanel(g, cfg.run.hudX, cfg.run.hudY);
+		if (cfg.run.showHud && RunTracker.active() && !(mc.gui.screen() instanceof HudEditScreen)) drawPanel(g, cfg.run.hudX, cfg.run.hudY);
+		drawDen(g, cfg); // last, so it's on top
 	}
 
 	private static void drawDen(GuiGraphicsExtractor g, NrConfig cfg) {
@@ -139,7 +138,7 @@ public final class RunHud {
 		Font font = Minecraft.getInstance().font;
 		float scale = 2.5f;
 		g.pose().pushMatrix();
-		g.pose().translate(g.guiWidth() / 2f, g.guiHeight() / 2f - 40);
+		g.pose().translate(g.guiWidth() / 2f, g.guiHeight() / 2f + 16); // just below the crosshair
 		g.pose().scale(scale, scale);
 		g.centeredText(font, Component.literal(text).withStyle(ChatFormatting.BOLD), 0, 0, color);
 		g.pose().popMatrix();

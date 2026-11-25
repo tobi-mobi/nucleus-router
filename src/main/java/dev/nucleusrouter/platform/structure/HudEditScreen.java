@@ -17,6 +17,8 @@ public final class HudEditScreen extends Screen {
 	private final int[][] pos = new int[2][2];
 	private final int[][] drawn = new int[2][4];
 	private int dragging = -1;
+	/** The run panel is only shown beside the list here; saved back in place unless it was moved. */
+	private boolean shifted;
 	private double grabX, grabY;
 
 	public HudEditScreen(Screen parent) {
@@ -25,6 +27,8 @@ public final class HudEditScreen extends Screen {
 		NrConfig c = ConfigManager.get();
 		pos[LIST] = new int[]{c.hud.x, c.hud.y};
 		pos[RUN] = new int[]{c.run.hudX, c.run.hudY};
+		// Both default to the same corner (the structure list hides while running): show them side by side here
+		if (pos[RUN][0] == pos[LIST][0] && pos[RUN][1] == pos[LIST][1]) { pos[RUN][0] += 150; shifted = true; }
 	}
 
 	@Override
@@ -56,7 +60,7 @@ public final class HudEditScreen extends Screen {
 		int panel = panelAt(e.x(), e.y());
 		if (e.button() == 1 && panel >= 0) {
 			if (panel == LIST) { NrConfig.Hud d = new NrConfig.Hud(); pos[LIST] = new int[]{d.x, d.y}; }
-			else { NrConfig.Run d = new NrConfig.Run(); pos[RUN] = new int[]{d.hudX, d.hudY}; }
+			else { NrConfig.Run d = new NrConfig.Run(); pos[RUN] = new int[]{d.hudX, d.hudY}; shifted = false; }
 			return true;
 		}
 		if (e.button() == 0 && panel >= 0) {
@@ -71,6 +75,7 @@ public final class HudEditScreen extends Screen {
 	@Override
 	public boolean mouseDragged(MouseButtonEvent e, double dx, double dy) {
 		if (dragging < 0) return super.mouseDragged(e, dx, dy);
+		if (dragging == RUN) shifted = false;
 		pos[dragging][0] = (int) Math.round(e.x() - grabX);
 		pos[dragging][1] = (int) Math.round(e.y() - grabY);
 		return true;
@@ -88,8 +93,10 @@ public final class HudEditScreen extends Screen {
 		// Store where they were actually drawn (kept on screen)
 		c.hud.x = drawn[LIST][2] > 0 ? drawn[LIST][0] : pos[LIST][0];
 		c.hud.y = drawn[LIST][3] > 0 ? drawn[LIST][1] : pos[LIST][1];
-		c.run.hudX = drawn[RUN][2] > 0 ? drawn[RUN][0] : pos[RUN][0];
-		c.run.hudY = drawn[RUN][3] > 0 ? drawn[RUN][1] : pos[RUN][1];
+		if (!shifted) {
+			c.run.hudX = drawn[RUN][2] > 0 ? drawn[RUN][0] : pos[RUN][0];
+			c.run.hudY = drawn[RUN][3] > 0 ? drawn[RUN][1] : pos[RUN][1];
+		}
 		ConfigManager.save();
 		minecraft.gui.setScreen(parent);
 	}

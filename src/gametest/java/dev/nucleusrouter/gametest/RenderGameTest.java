@@ -136,7 +136,7 @@ public final class RenderGameTest implements FabricClientGameTest {
 			context.takeScreenshot("nr-9-run-mode");
 
 			// Roadmap 3.6: run panel after reaching the stop (timer running, King split), plus the den countdown
-			server.runCommand("tp @p 0.5 100 3.5 0 12");
+			server.runCommand("tp @p 0.5 100 -3 0 12");
 			context.waitTicks(30);
 			server.runCommand("tp @p 0.5 100 32.5 0 12");
 			context.waitTicks(20);

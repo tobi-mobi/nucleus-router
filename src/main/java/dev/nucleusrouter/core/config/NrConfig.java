@@ -303,7 +303,7 @@ public final class NrConfig {
 		/** Show the planned time and how far ahead/behind each split is. */
 		public boolean showPlanDelta = true;
 		/** Top-left corner of the run panel, in GUI pixels (move it with /nr hud). */
-		public int hudX = 4, hudY = 130;
+		public int hudX = 4, hudY = 40;
 		/** Big "Leave den" countdown in the middle of the screen after taking the Amber crystal. */
 		public boolean denCountdown = true;
 		/**
