@@ -37,6 +37,7 @@ public final class NrConfig {
 	public Exploration exploration = new Exploration();
 	public Lobby lobby = new Lobby();
 	public Hud hud = new Hud();
+	public Plan plan = new Plan();
 
 	/** §2.1 Crystal Hollows and the run. */
 	public static final class Hollows {
@@ -240,6 +241,37 @@ public final class NrConfig {
 		}
 	}
 
+	/** §3.3 Route planner settings (speed vs. thoroughness). */
+	public static final class Plan {
+		/** Look directions tried from each spot, spread over all directions. */
+		public int sphereRays = 256;
+		/** Extra look directions in a cone toward the goal. */
+		public int coneRays = 192;
+		/** Half-width of that cone in degrees. */
+		public double coneDegrees = 35;
+		/** Aim-region precision when pricing a warp (grid per face). Lower is faster. */
+		public int aimSamplesPerFace = 3;
+		/** Warps whose aim margin is smaller than this (degrees) are not used. */
+		public double minAimMarginDeg = 0.3;
+		/**
+		 * [VERIFY] Blocks never used as etherwarp targets because players mine them and they respawn
+		 * (a warp onto them fails while they're gone). '*' matches anything. Structure blocks are fine targets.
+		 * Defaults: ores, gemstones (stained glass and panes), and the likely mithril blocks.
+		 */
+		public List<String> unstableTargetBlocks = new ArrayList<>(List.of("*_ore", "*stained_glass", "*stained_glass_pane",
+				"minecraft:gray_wool", "minecraft:light_blue_wool", "minecraft:prismarine", "minecraft:prismarine_bricks",
+				"minecraft:dark_prismarine", "minecraft:cyan_terracotta"));
+		/**
+		 * How far one warp typically gets you (blocks), used to guide the search. 64 = always find the cheapest
+		 * route (slow in big caves); lower = faster, may occasionally miss a slightly cheaper route.
+		 */
+		public double typicalHopBlocks = 30;
+		/** Give up on a leg after this many search steps... */
+		public int maxExpansions = 4000;
+		/** ...or this many milliseconds. */
+		public int legTimeLimitMs = 500;
+	}
+
 	/** On-screen list of structures (found / approximate / missing). */
 	public static final class Hud {
 		public boolean showStructureList = true;
@@ -385,6 +417,16 @@ public final class NrConfig {
 		if (exploration == null) { exploration = new Exploration(); fixes.add("exploration section missing, reset to defaults"); }
 		if (lobby == null) { lobby = new Lobby(); fixes.add("lobby section missing, reset to defaults"); }
 		if (hud == null) { hud = new Hud(); fixes.add("hud section missing, reset to defaults"); }
+		if (plan == null) { plan = new Plan(); fixes.add("plan section missing, reset to defaults"); }
+		plan.sphereRays = (int) clamp(fixes, "plan.sphereRays", plan.sphereRays, 16, 4096);
+		plan.coneRays = (int) clamp(fixes, "plan.coneRays", plan.coneRays, 0, 4096);
+		plan.coneDegrees = clamp(fixes, "plan.coneDegrees", plan.coneDegrees, 5, 90);
+		plan.aimSamplesPerFace = (int) clamp(fixes, "plan.aimSamplesPerFace", plan.aimSamplesPerFace, 2, 16);
+		plan.minAimMarginDeg = clamp(fixes, "plan.minAimMarginDeg", plan.minAimMarginDeg, 0, 10);
+		if (plan.unstableTargetBlocks == null) { plan.unstableTargetBlocks = new Plan().unstableTargetBlocks; fixes.add("plan.unstableTargetBlocks missing, reset"); }
+		plan.typicalHopBlocks = clamp(fixes, "plan.typicalHopBlocks", plan.typicalHopBlocks, 5, 64);
+		plan.maxExpansions = (int) clamp(fixes, "plan.maxExpansions", plan.maxExpansions, 10, 1000000);
+		plan.legTimeLimitMs = (int) clamp(fixes, "plan.legTimeLimitMs", plan.legTimeLimitMs, 10, 60000);
 		hud.x = (int) clamp(fixes, "hud.x", hud.x, 0, 4000);
 		hud.y = (int) clamp(fixes, "hud.y", hud.y, 0, 4000);
 		lobby.maxSpreadBlocks = (int) clamp(fixes, "lobby.maxSpreadBlocks", lobby.maxSpreadBlocks, 50, 1000);
