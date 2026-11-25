@@ -47,6 +47,12 @@ public final class NrCommands {
 						.then(ExploreCommands.node())
 						.then(literal("lobby").executes(NrCommands::lobby))
 						.then(literal("stops").executes(NrCommands::stops))
+						.then(literal("route").executes(ctx -> {
+							boolean started = dev.nucleusrouter.platform.structure.RouteTracker.start(dev.nucleusrouter.platform.structure.RouteTracker::report);
+							ctx.getSource().sendFeedback(Component.literal(started ? "Planning the route in the background..." : "Already planning, or not in the Crystal Hollows.")
+									.withStyle(started ? ChatFormatting.GRAY : ChatFormatting.RED));
+							return 1;
+						}))
 						.then(ZoneCommands.zonesNode())
 						.then(ZoneCommands.zoneNode())
 						.then(literal("compass").executes(ctx -> { dev.nucleusrouter.platform.compass.CompassTracker.status(); return 1; })
@@ -85,6 +91,7 @@ public final class NrCommands {
 		line(src, "/nr structures", "which run structures are found in this lobby, and where");
 		line(src, "/nr structure set <name>", "mark a structure where you stand (divan, precursor, king, queen, temple, khazad)");
 		line(src, "/nr structure clear <name|all>", "forget a structure so it's found again");
+		line(src, "/nr route", "plan the run: order of the structures, when to /warp nucleus, total time");
 		line(src, "/nr stops", "where the route will stop at each NPC and crystal (blue blocks in the world)");
 		line(src, "/nr lobby", "is this lobby worth setting up? every check with its reason");
 		line(src, "/nr explored [map]", "how much of the Hollows you've explored, where to go next, and a map");

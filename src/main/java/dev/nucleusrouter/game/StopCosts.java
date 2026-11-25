@@ -3,9 +3,9 @@ package dev.nucleusrouter.game;
 import dev.nucleusrouter.core.config.NrConfig;
 
 /**
- * Fixed time spent at each stop (SPEC §2.2, §2.6), from the config: NPC hand-ins, crystal pickups, the
- * Jungle Temple parkour (done by hand), the Bal fight and the Queen's den exit. Travel between the four
- * Mines of Divan keepers is route travel, not part of this.
+ * Time spent at each structure (SPEC §2.2, §2.6), from the config: NPC hand-ins, crystal pickups, moving
+ * around inside (the Mines' keepers, Precursor's short warp to the Sapphire), the Jungle Temple parkour
+ * (by hand), the Bal fight and the Queen's den exit. The route only plans travel between structures.
  */
 public final class StopCosts {
 	private StopCosts() {}
@@ -13,10 +13,12 @@ public final class StopCosts {
 	public static double seconds(Structure s, NrConfig cfg) {
 		NrConfig.Stops st = cfg.stops;
 		return switch (s) {
-			case MINES_OF_DIVAN -> 4 * st.npcInteractionSeconds + st.crystalPickupSeconds; // 4 keepers + the Jade crystal
-			case PRECURSOR_CITY -> st.npcInteractionSeconds + st.crystalPickupSeconds;
+			case MINES_OF_DIVAN -> 4 * st.npcInteractionSeconds + st.crystalPickupSeconds + st.divanInsideSeconds; // 4 keepers, the Jade crystal, moving inside
+			case PRECURSOR_CITY -> st.npcInteractionSeconds + st.crystalPickupSeconds + st.precursorInsideSeconds;
 			case KING_YOLKAR -> st.npcInteractionSeconds;
-			case GOBLIN_QUEENS_DEN -> st.crystalPickupSeconds + st.queenDenExitTargetSeconds;
+			// Leaving with /warp nucleus is route travel; an etherwarp exit is planned to take up to the target
+			case GOBLIN_QUEENS_DEN -> st.crystalPickupSeconds
+					+ (StopPlan.denExit(cfg) == StopPlan.DenExit.ETHERWARP_UP ? st.queenDenExitTargetSeconds : 0);
 			case JUNGLE_TEMPLE -> st.npcInteractionSeconds + st.templeManualSeconds + st.crystalPickupSeconds;
 			case KHAZAD_DUM -> st.balFightSeconds + st.crystalPickupSeconds;
 		};

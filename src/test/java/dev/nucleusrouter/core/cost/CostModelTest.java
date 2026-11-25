@@ -58,8 +58,8 @@ class CostModelTest {
 	void manualSegmentsCarryTheirConfiguredTimes() {
 		assertEquals(1.0 + 25 + 0.5, StopCosts.seconds(Structure.JUNGLE_TEMPLE, cfg), 1e-9);
 		assertEquals(20 + 0.5, StopCosts.seconds(Structure.KHAZAD_DUM, cfg), 1e-9);
-		assertEquals(0.5 + 2.5, StopCosts.seconds(Structure.GOBLIN_QUEENS_DEN, cfg), 1e-9, "pickup + planned den exit");
-		assertEquals(4 * 1.0 + 0.5, StopCosts.seconds(Structure.MINES_OF_DIVAN, cfg), 1e-9);
+		assertEquals(0.5, StopCosts.seconds(Structure.GOBLIN_QUEENS_DEN, cfg), 1e-9, "pickup; the /warp nucleus exit is route travel");
+		assertEquals(4 * 1.0 + 0.5 + 10, StopCosts.seconds(Structure.MINES_OF_DIVAN, cfg), 1e-9, "keepers, crystal, moving inside");
 		cfg.stops.templeManualSeconds = 40;
 		assertEquals(1.0 + 40 + 0.5, StopCosts.seconds(Structure.JUNGLE_TEMPLE, cfg), 1e-9);
 	}

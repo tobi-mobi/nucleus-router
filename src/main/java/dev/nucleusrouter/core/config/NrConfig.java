@@ -14,7 +14,7 @@ import java.util.List;
  * resets that value for existing users.
  */
 public final class NrConfig {
-	public static final int CURRENT_VERSION = 7;
+	public static final int CURRENT_VERSION = 8;
 	public int configVersion = CURRENT_VERSION;
 
 	public General general = new General();
@@ -87,8 +87,15 @@ public final class NrConfig {
 		 * Guardian, {x, y, z}. Default: at the Door Guardian.
 		 */
 		public double[] templeExitOffset = {0, 0, 0};
-		/** Draw the planned stop spots in the world. */
-		public boolean showStops = true;
+		/**
+		 * Moving around inside the Mines of Divan (between the 4 keepers and the crystal). Estimate; tune to
+		 * taste. The route only plans travel between structures (user 2026-11-25).
+		 */
+		public double divanInsideSeconds = 10.0;
+		/** The short warp from Professor Robot to the Sapphire, and back out. Estimate; tune to taste. */
+		public double precursorInsideSeconds = 1.5;
+		/** Draw each structure's arrival spot in the world (off: the route view shows where to warp). */
+		public boolean showStops = false;
 	}
 
 	/** §2.3 Etherwarp. */
@@ -412,6 +419,11 @@ public final class NrConfig {
 			if (stops != null && stops.crystalReach == 4.0) { stops.crystalReach = 3.0; notes.add("stops.crystalReach 4 -> 3 (confirmed)"); }
 			configVersion = 7;
 		}
+		if (configVersion < 8) {
+			// User 2026-11-25: don't micro-manage stops; the route view shows where to warp
+			if (stops != null && stops.showStops) { stops.showStops = false; notes.add("stops.showStops -> off"); }
+			configVersion = 8;
+		}
 		return notes;
 	}
 
@@ -465,6 +477,8 @@ public final class NrConfig {
 		stops.templeManualSeconds = clamp(fixes, "stops.templeManualSeconds", stops.templeManualSeconds, 0, 300);
 		stops.balFightSeconds = clamp(fixes, "stops.balFightSeconds", stops.balFightSeconds, 0, 300);
 		stops.npcInteractionSeconds = clamp(fixes, "stops.npcInteractionSeconds", stops.npcInteractionSeconds, 0, 30);
+		stops.divanInsideSeconds = clamp(fixes, "stops.divanInsideSeconds", stops.divanInsideSeconds, 0, 120);
+		stops.precursorInsideSeconds = clamp(fixes, "stops.precursorInsideSeconds", stops.precursorInsideSeconds, 0, 60);
 		stops.npcReach = clamp(fixes, "stops.npcReach", stops.npcReach, 1, 6);
 		stops.crystalReach = clamp(fixes, "stops.crystalReach", stops.crystalReach, 1, 8);
 		if (stops.templeExitOffset == null || stops.templeExitOffset.length != 3) { stops.templeExitOffset = new double[]{0, 0, 0}; fixes.add("stops.templeExitOffset reset"); }
