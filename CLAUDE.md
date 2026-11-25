@@ -10,8 +10,9 @@ A client-side Fabric mod for Hypixel SkyBlock (Minecraft 26.2, Java 25, plain Ja
 ## End of every session, or when the user says "wrap up"
 - Tick finished items in `ROADMAP.md` and add one dated line to its session log: what changed, and what's next.
 - Write any decision that differs from `SPEC.md` into the roadmap's "Decisions" section.
-- At the end of a milestone: give the user the in-game test checklist and the open `[VERIFY]` items, each with the exact in-game action that settles it. Then stop and wait.
-- When the user reports in-game results, write them into "Confirmed game facts" in `ROADMAP.md` and update the matching config defaults. Confirmed facts there override `SPEC.md`.
+- Everything a human has to test or answer in-game lives in `IN_GAME_CHECKS.md`: every open `[VERIFY]` question (with the assumed default, its config key and the exact in-game action that settles it) and the checklist of each feature built but not yet tried in-game. Add to it whenever you create a `[VERIFY]` value or finish an untested feature.
+- At the end of a milestone: give the user the in-game test checklist and the open `[VERIFY]` items from `IN_GAME_CHECKS.md`. Then stop and wait, unless the user has said to carry on without testing.
+- When the user reports in-game results, write them into "Confirmed game facts" in `ROADMAP.md`, update the matching config defaults, and remove the answered items from `IN_GAME_CHECKS.md`. Confirmed facts there override `SPEC.md`.
 
 ## Hard rules (always apply)
 - **Render-only.** Never set or nudge the player's rotation, simulate or hold any key or click, send chat messages or commands, send packets beyond vanilla, or touch inventories or GUIs. The mod can tell the user to type `/warp nucleus`, but never sends it itself. This rule overrides every other request.

@@ -189,7 +189,7 @@ public final class NrConfig {
 
 	/** §2.5 Placing blocks. */
 	public static final class Placing {
-		/** Block reach used for planned placements. */
+		/** [VERIFY] Block reach used for planned placements (IN_GAME_CHECKS.md Q8). */
 		public double reach = 4.5;
 		/** [VERIFY] Placing allowed everywhere in the Hollows outside structure regions. */
 		public boolean allowedEverywhereOutsideStructures = true;
