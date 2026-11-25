@@ -203,6 +203,11 @@ public final class NrConfig {
 		public List<String> jungleTempleNames = new ArrayList<>(List.of("Kalhuiki Door Guardian"));
 		public List<String> khazadDumNames = new ArrayList<>(List.of("Bal"));
 
+		/**
+		 * Compare captures from other lobbies to detect if a structure is rotated or mirrored. Off by default:
+		 * confirmed in-game 2026-11-25 that structures don't rotate, so a match could only be wrong.
+		 */
+		public boolean detectOrientation = false;
 		/** Draw each found structure's no-bomb / no-placing zone as a red box. */
 		public boolean showZones = true;
 		/**

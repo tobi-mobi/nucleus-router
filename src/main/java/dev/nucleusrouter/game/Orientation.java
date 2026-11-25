@@ -2,8 +2,8 @@ package dev.nucleusrouter.game;
 
 /**
  * How a structure is turned in this lobby compared with a saved capture: 4 rotations around the
- * vertical axis, each optionally mirrored (x flipped first). Whether Hypixel rotates or mirrors
- * structures at all is [VERIFY]; captures from two lobbies answer it.
+ * vertical axis, each optionally mirrored (x flipped first). Confirmed in-game 2026-11-25: structures
+ * don't rotate between lobbies, so everything uses {@link #R0} unless detection is turned on.
  * Minecraft axes: +x east, +z south; R90 turns east into south (clockwise seen from above).
  */
 public enum Orientation {

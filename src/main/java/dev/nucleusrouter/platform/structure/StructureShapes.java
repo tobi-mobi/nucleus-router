@@ -44,8 +44,8 @@ import java.util.zip.GZIPOutputStream;
  * <ul>
  *   <li>{@code /nr capture <structure>} saves the blocks around a structure's anchor to
  *       {@code nucleusrouter/templates/<structure>-<lobby>-<time>.json.gz};</li>
- *   <li>when a structure is found in a lobby and a capture from another lobby exists, the two are
- *       compared to find how the structure is turned here (orientation);</li>
+ *   <li>optionally ({@code structures.detectOrientation}, off: structures don't rotate, confirmed
+ *       2026-11-25), a capture from another lobby is compared to find how the structure is turned;</li>
  *   <li>each found structure's no-bomb / no-placing zone is drawn as a red box.</li>
  * </ul>
  * Heavy work (copying blocks, matching) runs off the client thread.
@@ -162,7 +162,7 @@ public final class StructureShapes {
 
 	/** For found structures with a capture from another lobby: find how they are turned here. */
 	private static void detectOrientations() {
-		if (matching || !LocationTracker.state().inHollows()) return;
+		if (matching || !ConfigManager.get().structures.detectOrientation || !LocationTracker.state().inHollows()) return;
 		String lobby = StructureTracker.lobby();
 		if (lobby == null) return;
 		if (!lobby.equals(triesLobby)) { tries.clear(); triesLobby = lobby; }

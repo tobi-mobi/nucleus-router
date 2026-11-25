@@ -125,9 +125,6 @@ final class ZoneCommands {
 		ConfigManager.save();
 		ctx.getSource().sendFeedback(Component.literal(String.format("Saved the %s zone: %d..%d, %d..%d, %d..%d blocks from its anchor. It is used in every lobby.",
 				s.displayName, z.min()[0], z.max()[0], z.min()[1], z.max()[1], z.min()[2], z.max()[2])).withStyle(ChatFormatting.GREEN));
-		if (!map.orientationKnown(s))
-			ctx.getSource().sendFeedback(Component.literal("Note: this structure's orientation isn't known yet. If structures turn between lobbies, capture it here (/nr capture "
-					+ s.key + ") so the zone can be turned to match later.").withStyle(ChatFormatting.GRAY));
 		return 1;
 	}
 
