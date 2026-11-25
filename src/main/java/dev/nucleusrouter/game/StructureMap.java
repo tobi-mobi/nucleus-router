@@ -214,7 +214,8 @@ public final class StructureMap {
 
 	/** True if the position is exact (manual, crystal or NPC), so zones and captures can use it. */
 	public static boolean exact(Location l) {
-		return l != null && (l.source() == Source.MANUAL || l.source() == Source.CRYSTAL || l.source() == Source.NPC || l.source() == Source.LEARNED);
+		return l != null && l.uncertainty() == 0
+				&& (l.source() == Source.MANUAL || l.source() == Source.CRYSTAL || l.source() == Source.NPC || l.source() == Source.LEARNED);
 	}
 
 	/** Anchor block {x, y, z} (the block containing the best position), or null if not exactly known. */
@@ -257,9 +258,15 @@ public final class StructureMap {
 		if (e.npcs != null && !e.npcs.isEmpty()) {
 			int k = e.npcs.size();
 			if (s.expectedAnchors > 1) {
+				// Not all keepers seen: a learned layout (or crystal) gives the real centre; otherwise the
+				// average of the seen ones is only rough
+				if (k < s.expectedAnchors && e.derived != null && e.derived.length == 3)
+					return new Location(s, new Vec3(e.derived[0], e.derived[1], e.derived[2]), Source.LEARNED, 0,
+							k + " of " + s.expectedAnchors + " " + s.anchorNoun + " seen, centre from the learned layout");
 				double x = 0, y = 0, z = 0;
 				for (Npc n : e.npcs) { x += n.x; y += n.y; z += n.z; }
-				return new Location(s, new Vec3(x / k, y / k, z / k), Source.NPC, 0, k + " of " + s.expectedAnchors + " name tags (" + s.anchorNoun + ")");
+				return new Location(s, new Vec3(x / k, y / k, z / k), Source.NPC, k < s.expectedAnchors ? 40 : 0,
+						k + " of " + s.expectedAnchors + " name tags (" + s.anchorNoun + ")" + (k < s.expectedAnchors ? ", centre is rough until all are seen" : ""));
 			}
 			// One NPC expected: use the first one found on its body (the temple has two equal Door Guardians)
 			Npc n = e.npcs.get(0);
@@ -267,7 +274,7 @@ public final class StructureMap {
 			return new Location(s, n.pos(), Source.NPC, 0, "name tag " + n.label + (k > 1 ? " (" + k + " seen)" : ""));
 		}
 		if (e.derived != null && e.derived.length == 3) {
-			return new Location(s, new Vec3(e.derived[0], e.derived[1], e.derived[2]), Source.LEARNED, 0, "from its crystal (learned offset)");
+			return new Location(s, new Vec3(e.derived[0], e.derived[1], e.derived[2]), Source.LEARNED, 0, "learned (from its crystal or keeper layout)");
 		}
 		if (e.skyblocker != null && e.skyblocker.length == 3) {
 			return new Location(s, new Vec3(e.skyblocker[0], e.skyblocker[1], e.skyblocker[2]), Source.SKYBLOCKER, 16,

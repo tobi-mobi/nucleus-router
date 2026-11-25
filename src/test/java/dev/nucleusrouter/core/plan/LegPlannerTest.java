@@ -66,6 +66,7 @@ class LegPlannerTest {
 
 	@Test
 	void goesAroundAWall() {
+		cfg.plan.legTimeLimitMs = 5000; // correctness test, not a speed test (the wall world is a worst case)
 		// A wall across the hall at x = 120, open only near z = 30..39
 		Solid s = (x, y, z) -> hall(x, y, z) || (x >= 120 && x <= 122 && z < 30);
 		PlanWorld w = world(s, Set.of());

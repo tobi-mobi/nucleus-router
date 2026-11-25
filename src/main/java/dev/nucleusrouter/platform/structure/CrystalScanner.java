@@ -74,6 +74,63 @@ public final class CrystalScanner {
 
 	public static void init() {
 		ClientTickEvents.END_CLIENT_TICK.register(c -> { if (++ticks % EVERY_TICKS == 0) scan(); });
+		java.util.concurrent.CompletableFuture.runAsync(CrystalScanner::bootstrapFromSaves);
+	}
+
+	/**
+	 * Learns structures that aren't learned yet from saved lobbies (newest first) that have what's needed:
+	 * the crystal box for the Queen's den / Khazad-dum, all 4 keepers for the Mines, an NPC for the others,
+	 * and the terrain file. Background thread; each lobby file is read at most once.
+	 */
+	private static void bootstrapFromSaves() {
+		if (!ConfigManager.get().structures.learnFromCrystals) return;
+		Path dir = FabricLoader.getInstance().getGameDir().resolve("nucleusrouter").resolve("lobbies");
+		if (!Files.isDirectory(dir)) return;
+		List<Path> files;
+		try (Stream<Path> s = Files.list(dir)) {
+			files = s.filter(p -> p.toString().endsWith(".structures.json"))
+					.sorted(java.util.Comparator.comparingLong((Path p) -> p.toFile().lastModified()).reversed()).toList();
+		} catch (IOException e) {
+			return;
+		}
+		NrConfig cfg = ConfigManager.get();
+		for (Path f : files) {
+			StructureMap map = KeeperLayouts.readMap(f);
+			if (map == null) continue;
+			List<Candidate> cands = new ArrayList<>();
+			for (Structure s : Structure.values()) {
+				if (signature(s) != null) continue;
+				StructureMap.Location l = map.locate(s);
+				if (s.markCrystal) {
+					int[][] box = map.crystalBox(s);
+					if (box != null) cands.add(new Candidate(s, null, box, false));
+				} else if (l != null && l.source() == StructureMap.Source.NPC && l.uncertainty() == 0
+						// Older saves could hold label-only positions (~2 blocks off); only learn from positions on the NPC's body
+						&& (s.expectedAnchors > 1 || map.npcs(s).stream().anyMatch(n -> n.onBody))) {
+					if (s == Structure.KING_YOLKAR) {
+						int[][] queen = map.crystalBox(Structure.GOBLIN_QUEENS_DEN);
+						if (queen != null) cands.add(new Candidate(s, l.pos(), queen, false));
+					} else {
+						cands.add(new Candidate(s, l.pos(), null, false));
+					}
+				}
+			}
+			if (cands.isEmpty()) continue;
+			String name = f.getFileName().toString().replace(".structures.json", "");
+			Path terrain = f.resolveSibling(name + ".nrw");
+			if (!Files.exists(terrain)) continue;
+			try (java.io.InputStream in = Files.newInputStream(terrain)) {
+				WorldSnapshot snap = dev.nucleusrouter.core.world.WorldStore.read(in, dev.nucleusrouter.platform.world.BlockRules.classifier()).model().snapshot();
+				Result r = work(snap, cfg.hollows, cfg.structures.crystalBoxMinBarriers, List.of(), List.of(), cands, name);
+				for (CrystalSignature sig : r.learned()) {
+					save(sig);
+					NucleusRouterClient.LOG.info("[Nucleus Router] Learned {}'s crystal from saved lobby {} (box size {}, offset {})",
+							sig.structure(), name, Arrays.toString(sig.boxSize()), Arrays.toString(sig.anchorOffset()));
+				}
+			} catch (IOException | RuntimeException e) {
+				NucleusRouterClient.LOG.warn("[Nucleus Router] Could not learn from {}: {}", terrain.getFileName(), e.toString());
+			}
+		}
 	}
 
 	public static Path dir() {
@@ -111,8 +168,9 @@ public final class CrystalScanner {
 				if (sig == null && box != null) candidates.add(new Candidate(s, null, box, false));
 				continue;
 			}
-			if (l == null || l.source() != StructureMap.Source.NPC) continue;
-			if (s.expectedAnchors > 1 && map.npcs(s).size() < s.expectedAnchors) continue; // all 4 keepers for a stable centre
+			boolean layoutCentre = s == Structure.MINES_OF_DIVAN && sig == null && l != null && l.source() == StructureMap.Source.LEARNED;
+			if (l == null || (l.source() != StructureMap.Source.NPC && !layoutCentre) || l.uncertainty() > 0) continue;
+			if (s.expectedAnchors > 1 && map.npcs(s).size() < s.expectedAnchors && !layoutCentre) continue; // all 4 keepers (or the layout) for a stable centre
 			boolean mismatch = false;
 			if (sig != null) {
 				Vec3 derived = derivedFor(s, sig, map);
