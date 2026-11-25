@@ -288,6 +288,13 @@ public final class NrConfig {
 		public int maxExpansions = 4000;
 		/** ...or this many milliseconds. */
 		public int legTimeLimitMs = 500;
+		/**
+		 * Time per leg when planning a whole route (/nr route). It runs in the background, so legs may take
+		 * longer; legs that still find nothing get a rough straight-line estimate.
+		 */
+		public int routeLegTimeLimitMs = 3000;
+		/** Rough estimate for legs that can't be planned: share of the full etherwarp range one warp covers. */
+		public double estimateWarpEfficiency = 0.5;
 	}
 
 	/** On-screen list of structures (found / approximate / missing). */
@@ -453,6 +460,8 @@ public final class NrConfig {
 		plan.minAimMarginDeg = clamp(fixes, "plan.minAimMarginDeg", plan.minAimMarginDeg, 0, 10);
 		if (plan.unstableTargetBlocks == null) { plan.unstableTargetBlocks = new Plan().unstableTargetBlocks; fixes.add("plan.unstableTargetBlocks missing, reset"); }
 		plan.typicalHopBlocks = clamp(fixes, "plan.typicalHopBlocks", plan.typicalHopBlocks, 5, 64);
+		plan.routeLegTimeLimitMs = (int) clamp(fixes, "plan.routeLegTimeLimitMs", plan.routeLegTimeLimitMs, 100, 60000);
+		plan.estimateWarpEfficiency = clamp(fixes, "plan.estimateWarpEfficiency", plan.estimateWarpEfficiency, 0.1, 1);
 		plan.maxExpansions = (int) clamp(fixes, "plan.maxExpansions", plan.maxExpansions, 10, 1000000);
 		plan.legTimeLimitMs = (int) clamp(fixes, "plan.legTimeLimitMs", plan.legTimeLimitMs, 10, 60000);
 		hud.x = (int) clamp(fixes, "hud.x", hud.x, 0, 4000);

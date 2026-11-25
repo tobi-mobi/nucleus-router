@@ -42,9 +42,14 @@ public final class LegPlanner {
 	public record Settings(int sphereRays, int coneRays, double coneDeg, int aimSamplesPerFace, double minMarginDeg,
 			int maxExpansions, long timeLimitMs, double minHopBlocks, double typicalHopBlocks) {
 		public static Settings fromConfig(NrConfig cfg) {
+			return fromConfig(cfg, cfg.plan.legTimeLimitMs);
+		}
+
+		/** From the config, with a different time limit per leg (route planning runs in the background and may take longer). */
+		public static Settings fromConfig(NrConfig cfg, long timeLimitMs) {
 			NrConfig.Plan p = cfg.plan;
 			return new Settings(p.sphereRays, p.coneRays, p.coneDegrees, p.aimSamplesPerFace, p.minAimMarginDeg,
-					p.maxExpansions, p.legTimeLimitMs, 3.0, p.typicalHopBlocks);
+					p.maxExpansions, timeLimitMs, 3.0, p.typicalHopBlocks);
 		}
 	}
 

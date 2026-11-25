@@ -141,6 +141,7 @@ class LegPlannerTest {
 			return y == h && Math.floorMod(x * 7 + z * 13, 11) < 6; // patchy platforms
 		};
 		PlanWorld w = world(cave, Set.of());
+		cfg.plan.legTimeLimitMs = 2000; // measures speed (printed), doesn't enforce it: a busy machine mustn't fail the build
 		LegPlanner p = planner(w);
 		double[][] legs = {{513.5, 41, 526.5, 700.5, 41, 700.5}, {300.5, 41, 300.5, 513.5, 41, 526.5}, {250.5, 41, 780.5, 780.5, 41, 250.5}};
 		for (double[] l : legs) {

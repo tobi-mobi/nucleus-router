@@ -93,6 +93,14 @@ class RouteOrderTest {
 		assertFalse(p.steps().stream().anyMatch(s -> s.toId().equals("khazad")), "planned around it");
 	}
 
+	@Test
+	void noReachableStopGivesNoRouteInsteadOfAnEmptyOne() {
+		List<StopPlan.Stop> stops = lobby();
+		RouteOrder.Plan p = RouteOrder.solve(stops, (a, b) -> Double.POSITIVE_INFINITY, cfg);
+		assertFalse(p.hasRoute());
+		assertEquals(6, p.unreachable().size());
+	}
+
 	/** Real lobby (bench/, git-ignored): nucleus, Mines of Divan, Precursor City with real legs. */
 	@Test
 	void realLobbyRoute() throws Exception {

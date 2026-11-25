@@ -45,6 +45,8 @@ public final class RouteOrder {
 	 * @param unreachable stop ids no order could reach on the existing terrain (they need a setup)
 	 */
 	public record Plan(List<Step> steps, double seconds, List<String> unreachable) {
+		/** True if there is an order (it may skip unreachable stops). */
+		public boolean hasRoute() { return !steps.isEmpty(); }
 		public boolean ok() { return unreachable.isEmpty() && !steps.isEmpty(); }
 	}
 
@@ -99,6 +101,7 @@ public final class RouteOrder {
 		}
 		List<String> visit = new ArrayList<>(targets);
 		visit.removeAll(unreachable);
+		if (visit.isEmpty()) return new Plan(List.of(), Double.POSITIVE_INFINITY, List.copyOf(unreachable));
 
 		List<Step> best = null;
 		double bestTotal = Double.POSITIVE_INFINITY;
