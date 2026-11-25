@@ -41,6 +41,25 @@ final class StructureCommands {
 				.then(literal("clear").then(argument("name", StringArgumentType.word()).suggests(NAMES_OR_ALL).executes(StructureCommands::clear)));
 	}
 
+	/** {@code /nr design <structure> | clear}: design the setup from here to a structure (roadmap 4.2-4.3). */
+	static LiteralArgumentBuilder<FabricClientCommandSource> designNode() {
+		return literal("design")
+				.then(literal("clear").executes(ctx -> {
+					dev.nucleusrouter.platform.structure.SetupPreview.clear();
+					ctx.getSource().sendFeedback(Component.literal("Setup preview hidden.").withStyle(ChatFormatting.GRAY));
+					return 1;
+				}))
+				.then(argument("name", StringArgumentType.word()).suggests(NAMES).executes(ctx -> {
+					Structure s = Structure.byKey(StringArgumentType.getString(ctx, "name"));
+					if (s == null) {
+						ctx.getSource().sendFeedback(Component.literal("Unknown structure. Use: divan, precursor, king, queen, temple, khazad").withStyle(ChatFormatting.RED));
+						return 0;
+					}
+					ctx.getSource().sendFeedback(Component.literal(dev.nucleusrouter.platform.structure.SetupPreview.start(s)).withStyle(ChatFormatting.GRAY));
+					return 1;
+				}));
+	}
+
 	static int list(CommandContext<FabricClientCommandSource> ctx) {
 		FabricClientCommandSource src = ctx.getSource();
 		StructureMap map = StructureTracker.map();

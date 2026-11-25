@@ -264,9 +264,11 @@ public final class Lane {
 		for (int k = 1; k <= s.warps(); k++) {
 			int[] t = s.target(k);
 			Vec3 eye = s.eye(k - 1, p.eyeHeight());
+			// Rays beside the target (aim drift) only need clearing up to about the target's distance
+			double reach = Math.min(p.range(), new Vec3(t[0] + 0.5, t[1] + 0.5, t[2] + 0.5).sub(eye).length() + 0.5);
 			for (Vec3 d : rays) {
-				// Walk the ray, recording every block until it reaches this warp's target (or leaves range)
-				VoxelRay.cast(eye, d, p.range(), (x, y, z) -> {
+				// Walk the ray, recording every block until it reaches this warp's target (or that distance)
+				VoxelRay.cast(eye, d, reach, (x, y, z) -> {
 					if (x == t[0] && y == t[1] && z == t[2]) return true;
 					long key = pack(x, y, z);
 					if (!targets.contains(key)) out.add(key);

@@ -171,6 +171,15 @@ public final class ConfigScreen {
 				.option(boolOpt("Splits in chat", "Print the run time and splits in chat (only you see it) when the route is finished.", d.run.splitsInChat, () -> c.run.splitsInChat, v -> c.run.splitsInChat = v))
 				.build();
 
+		ConfigCategory setup = ConfigCategory.createBuilder()
+				.name(Component.literal("Setup designer"))
+				.option(intOpt("Most bends per leg", "Aim changes allowed in one designed tunnel (0-3).", d.setup.maxBends, () -> c.setup.maxBends, v -> c.setup.maxBends = v, 0, 3))
+				.option(intOpt("Bend offset (blocks)", "How far a bend may go sideways or up/down from the straight line (tried at 1x and 2x).", d.setup.bendOffsetBlocks, () -> c.setup.bendOffsetBlocks, v -> c.setup.bendOffsetBlocks = v, 2, 60))
+				.option(dblOpt("Corridor aim tolerance (deg)", "Clear the tunnel wide enough for this much aim drift.", d.setup.corridorToleranceDeg, () -> c.setup.corridorToleranceDeg, v -> c.setup.corridorToleranceDeg = v, 0, 10))
+				.option(dblOpt("Min. throw distance (blocks)", "Stand at least this far from a bomb's blast centre.", d.setup.minThrowDistance, () -> c.setup.minThrowDistance, v -> c.setup.minThrowDistance = v, 7, 32))
+				.option(intOpt("Time per leg (ms)", "How long designing one leg may take.", d.setup.legTimeLimitMs, () -> c.setup.legTimeLimitMs, v -> c.setup.legTimeLimitMs = v, 50, 60000))
+				.build();
+
 		ConfigCategory compass = ConfigCategory.createBuilder()
 				.name(Component.literal("Wishing Compass"))
 				.option(boolOpt("Show in the world", "Draw compass lines, the estimated target and the suggested next spot.", d.compass.showInWorld, () -> c.compass.showInWorld, v -> c.compass.showInWorld = v))
@@ -183,7 +192,7 @@ public final class ConfigScreen {
 
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.literal("Nucleus Router"))
-				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost).category(structures).category(lobby).category(run).category(compass)
+				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost).category(structures).category(lobby).category(run).category(setup).category(compass)
 				.save(ConfigManager::save)
 				.build()
 				.generateScreen(parent);

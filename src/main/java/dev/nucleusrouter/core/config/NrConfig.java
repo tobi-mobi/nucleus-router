@@ -40,6 +40,29 @@ public final class NrConfig {
 	public Hud hud = new Hud();
 	public Plan plan = new Plan();
 	public Run run = new Run();
+	public Setup setup = new Setup();
+
+	/** §3.4 Setup designer (milestone 4): tunnels of straight lanes, cleared with Bob-ombs. */
+	public static final class Setup {
+		/** Most aim changes (bends) per designed leg. */
+		public int maxBends = 3;
+		/** How far bends may go sideways or up/down from the straight line, in blocks (tried at 1x and 2x). */
+		public int bendOffsetBlocks = 16;
+		/** Clear the corridor wide enough for this much aim drift (degrees) around the planned look direction. */
+		public double corridorToleranceDeg = 1.0;
+		/** Turn assumed before the first lane of a leg (degrees; your view on arrival isn't known). */
+		public double firstTurnDeg = 45;
+		/** Setup effort counted against run time (seconds per unit, small: the run time matters most). */
+		public double weightPerClearedBlock = 0.001;
+		public double weightPerPlacedBlock = 0.02;
+		public double weightPerMinedBlock = 0.05;
+		/** Time budget for designing one leg (ms). */
+		public int legTimeLimitMs = 2000;
+		/** Bombs: a stand spot must be at least this far from the blast centre (don't blow up your own floor). */
+		public double minThrowDistance = 9;
+		/** Bombs: at most this many throws per leg before the rest becomes mining. */
+		public int maxThrowsPerLeg = 400;
+	}
 
 	/** §2.1 Crystal Hollows and the run. */
 	public static final class Hollows {
@@ -515,6 +538,12 @@ public final class NrConfig {
 		if (hud == null) { hud = new Hud(); fixes.add("hud section missing, reset to defaults"); }
 		if (plan == null) { plan = new Plan(); fixes.add("plan section missing, reset to defaults"); }
 		if (run == null) { run = new Run(); fixes.add("run section missing, reset to defaults"); }
+		if (setup == null) { setup = new Setup(); fixes.add("setup section missing, reset to defaults"); }
+		setup.maxBends = (int) clamp(fixes, "setup.maxBends", setup.maxBends, 0, 3);
+		setup.bendOffsetBlocks = (int) clamp(fixes, "setup.bendOffsetBlocks", setup.bendOffsetBlocks, 2, 60);
+		setup.corridorToleranceDeg = clamp(fixes, "setup.corridorToleranceDeg", setup.corridorToleranceDeg, 0, 10);
+		setup.legTimeLimitMs = (int) clamp(fixes, "setup.legTimeLimitMs", setup.legTimeLimitMs, 50, 60000);
+		setup.maxThrowsPerLeg = (int) clamp(fixes, "setup.maxThrowsPerLeg", setup.maxThrowsPerLeg, 1, 5000);
 		run.arriveRadius = clamp(fixes, "run.arriveRadius", run.arriveRadius, 3, 100);
 		run.targetsShown = (int) clamp(fixes, "run.targetsShown", run.targetsShown, 1, 30);
 		if (run.denTimerStartMessages == null) { run.denTimerStartMessages = new Run().denTimerStartMessages; fixes.add("run.denTimerStartMessages missing, reset"); }
