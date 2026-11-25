@@ -72,6 +72,13 @@ public final class StructureHud {
 		if (!forceShowForTest && cfg.hideWhenAllFound && status.ready() && completeSinceMs > 0
 				&& System.currentTimeMillis() - completeSinceMs > HIDE_AFTER_COMPLETE_MS) return;
 
+		if (mc.gui.screen() instanceof HudEditScreen) return; // the editor draws its own copy
+		drawList(g, cfg.x, cfg.y);
+	}
+
+	/** Draws the list with its top-left corner at (x, y), kept on screen. Returns {x, y, width, height} as drawn. */
+	public static int[] drawList(GuiGraphicsExtractor g, int px, int py) {
+		Minecraft mc = Minecraft.getInstance();
 		Font font = mc.font;
 		StructureMap map = StructureTracker.map();
 		List<Component> lines = new ArrayList<>();
@@ -89,12 +96,13 @@ public final class StructureHud {
 		int w = 0;
 		for (Component c : lines) w = Math.max(w, font.width(c));
 		int h = lines.size() * (font.lineHeight + 1) + 3;
-		int x = Math.max(0, Math.min(cfg.x, g.guiWidth() - w - 6)), y = Math.max(0, Math.min(cfg.y, g.guiHeight() - h));
+		int x = Math.max(0, Math.min(px, g.guiWidth() - w - 6)), y = Math.max(0, Math.min(py, g.guiHeight() - h));
 		g.fill(x, y, x + w + 6, y + h, 0x90000000);
 		int ty = y + 3;
 		for (Component c : lines) {
 			g.text(font, c, x + 3, ty, 0xFFFFFFFF, true);
 			ty += font.lineHeight + 1;
 		}
+		return new int[]{x, y, w + 6, h};
 	}
 }

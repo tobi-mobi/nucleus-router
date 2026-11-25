@@ -185,6 +185,11 @@ public final class NrConfig {
 		 * the user found it wrong most of the time (2026-11-24). Never drawn in the world.
 		 */
 		public boolean useAreaHints = false;
+		/**
+		 * Learn each structure's crystal box (and the offset to its NPC) the first time it is found, then find
+		 * it from the crystal alone in later lobbies, as soon as the terrain loads.
+		 */
+		public boolean learnFromCrystals = true;
 		/** Also use Skyblocker's Crystal Hollows waypoints (read-only) as approximate positions. */
 		public boolean useSkyblocker = true;
 		/**

@@ -49,6 +49,28 @@ public final class TemplateMatcher {
 		return out;
 	}
 
+	/** Best match for just the given orientations (e.g. only {@link Orientation#R0}: structures don't rotate). */
+	public static Match matchAt(StructureTemplate t, int anchorX, int anchorY, int anchorZ, int shift, StructureTemplate.BlockLookup world, Orientation... only) {
+		List<int[]> samples = samples(t);
+		Match best = null;
+		for (Orientation o : only) {
+			for (int sx = -shift; sx <= shift; sx++) for (int sy = -shift; sy <= shift; sy++) for (int sz = -shift; sz <= shift; sz++) {
+				int matched = 0, compared = 0;
+				for (int[] s : samples) {
+					int[] xz = o.apply(s[0], s[2]);
+					String w = world.at(anchorX + sx + xz[0], anchorY + sy + s[1], anchorZ + sz + xz[1]);
+					if (w == null || w.equals(StructureTemplate.UNSEEN)) continue;
+					compared++;
+					if (w.equals(t.palette.get(s[3]))) matched++;
+				}
+				double score = compared == 0 ? 0 : matched / (double) compared;
+				if (best == null || (compared >= MIN_COMPARED && (best.compared() < MIN_COMPARED || score > best.score())))
+					best = new Match(o, score, compared, sx, sy, sz);
+			}
+		}
+		return best != null ? best : new Match(Orientation.R0, 0, 0, 0, 0, 0);
+	}
+
 	/** {dx, dy, dz, paletteIndex} of distinctive template blocks, thinned to at most {@link #MAX_SAMPLES}. */
 	static List<int[]> samples(StructureTemplate t) {
 		List<int[]> all = new ArrayList<>();

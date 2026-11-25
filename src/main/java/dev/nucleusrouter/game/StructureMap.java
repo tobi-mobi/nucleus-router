@@ -13,6 +13,8 @@ import java.util.Map;
  *   <li><b>MANUAL</b>: set by the user with {@code /nr structure set}; always wins.</li>
  *   <li><b>CRYSTAL</b>: the barrier box that holds the structure's crystal (exact; Queen's den, Khazad-dum).</li>
  *   <li><b>NPC</b>: an NPC or mob name tag such as "King Yolkar" was seen there (exact).</li>
+ *   <li><b>LEARNED</b>: worked out from the structure's crystal box and an offset learned in an earlier
+ *       lobby (structures don't rotate, so it's exact); see {@link CrystalSignature}.</li>
  *   <li><b>SKYBLOCKER</b>: Skyblocker's Crystal Hollows waypoint (its compass solver, chat coordinates or
  *       shared by other players; usually close, not exact).</li>
  *   <li><b>AREA</b>: the scoreboard showed the structure's area name while you stood there (rough).</li>
@@ -30,7 +32,7 @@ public final class StructureMap {
 	/** Running average weight cap, so a slowly moving mob (Bal) is still followed. */
 	static final int MAX_SAMPLES = 100;
 
-	public enum Source { MANUAL, CRYSTAL, NPC, SKYBLOCKER, AREA }
+	public enum Source { MANUAL, CRYSTAL, NPC, LEARNED, SKYBLOCKER, AREA }
 
 	/** One NPC name tag, averaged over every sighting. */
 	public static final class Npc {
@@ -54,6 +56,8 @@ public final class StructureMap {
 		public int[] crystalMin, crystalMax;
 		/** How the structure is turned compared with the saved capture ({@link Orientation} name), or null if unknown. */
 		public String orientation;
+		/** Anchor worked out from the crystal box and a learned offset {x, y, z}, or null. */
+		public double[] derived;
 		/** Skyblocker's waypoint {x, y, z}, or null. */
 		public double[] skyblocker;
 		public boolean skyblockerVerified;
@@ -166,6 +170,17 @@ public final class StructureMap {
 		return e == null || e.crystalMin == null || e.crystalMax == null ? null : new int[][]{e.crystalMin.clone(), e.crystalMax.clone()};
 	}
 
+	/** Records the anchor worked out from the crystal box. Returns true the first time. */
+	public boolean setDerived(Structure s, Vec3 pos) {
+		Entry e = entry(s);
+		double[] v = {pos.x(), pos.y(), pos.z()};
+		if (java.util.Arrays.equals(e.derived, v)) return false;
+		boolean first = e.derived == null;
+		e.derived = v;
+		version++;
+		return first;
+	}
+
 	/** Records Skyblocker's waypoint for {@code s} (null removes it). Returns true if it changed. */
 	public boolean setSkyblocker(Structure s, double[] pos, boolean verified) {
 		Entry e = pos == null ? peek(s) : entry(s);
@@ -199,7 +214,7 @@ public final class StructureMap {
 
 	/** True if the position is exact (manual, crystal or NPC), so zones and captures can use it. */
 	public static boolean exact(Location l) {
-		return l != null && (l.source() == Source.MANUAL || l.source() == Source.CRYSTAL || l.source() == Source.NPC);
+		return l != null && (l.source() == Source.MANUAL || l.source() == Source.CRYSTAL || l.source() == Source.NPC || l.source() == Source.LEARNED);
 	}
 
 	/** Anchor block {x, y, z} (the block containing the best position), or null if not exactly known. */
@@ -235,7 +250,7 @@ public final class StructureMap {
 		if (e == null) return null;
 		if (e.manual != null && e.manual.length == 3)
 			return new Location(s, new Vec3(e.manual[0], e.manual[1], e.manual[2]), Source.MANUAL, 0, "set by you");
-		if (e.crystalMin != null && e.crystalMax != null) {
+		if (s.markCrystal && e.crystalMin != null && e.crystalMax != null) {
 			Vec3 c = new Vec3((e.crystalMin[0] + e.crystalMax[0] + 1) / 2.0, (e.crystalMin[1] + e.crystalMax[1] + 1) / 2.0, (e.crystalMin[2] + e.crystalMax[2] + 1) / 2.0);
 			return new Location(s, c, Source.CRYSTAL, 0, "crystal (barrier box)");
 		}
@@ -250,6 +265,9 @@ public final class StructureMap {
 			Npc n = e.npcs.get(0);
 			for (Npc o : e.npcs) if (o.onBody) { n = o; break; }
 			return new Location(s, n.pos(), Source.NPC, 0, "name tag " + n.label + (k > 1 ? " (" + k + " seen)" : ""));
+		}
+		if (e.derived != null && e.derived.length == 3) {
+			return new Location(s, new Vec3(e.derived[0], e.derived[1], e.derived[2]), Source.LEARNED, 0, "from its crystal (learned offset)");
 		}
 		if (e.skyblocker != null && e.skyblocker.length == 3) {
 			return new Location(s, new Vec3(e.skyblocker[0], e.skyblocker[1], e.skyblocker[2]), Source.SKYBLOCKER, 16,

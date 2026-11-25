@@ -57,6 +57,11 @@ public final class NrCommands {
 								})))
 						.then(literal("inspect").executes(InspectCommand::run))
 						.then(literal("dump").executes(DebugCommands::dump))
+						.then(literal("hud").executes(ctx -> {
+							Minecraft client = ctx.getSource().getClient();
+							client.schedule(() -> client.gui.setScreen(new dev.nucleusrouter.platform.structure.HudEditScreen(null)));
+							return 1;
+						}))
 						.then(literal("config").executes(NrCommands::openConfig))
 						.then(literal("reload").executes(NrCommands::reload));
 				dispatcher.register(cmd);
@@ -88,6 +93,7 @@ public final class NrCommands {
 		line(src, "/nr compass undo | clear", "remove the last compass line, or all of them");
 		line(src, "/nr inspect", "what the block you look at is, and every entity near it (names, items)");
 		line(src, "/nr dump", "save this lobby's terrain + settings to a file for offline testing");
+		line(src, "/nr hud", "drag the on-screen structure list to where you want it");
 		line(src, "/nr config", "open the settings screen");
 		line(src, "/nr reload", "reload settings from config/nucleusrouter.json");
 		return 1;

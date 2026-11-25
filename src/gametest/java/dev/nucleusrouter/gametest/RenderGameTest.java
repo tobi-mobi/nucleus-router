@@ -87,6 +87,10 @@ public final class RenderGameTest implements FabricClientGameTest {
 			});
 			context.waitTicks(20);
 			context.takeScreenshot("nr-6-structure-list");
+			context.runOnClient(mc -> mc.gui.setScreen(new dev.nucleusrouter.platform.structure.HudEditScreen(null)));
+			context.waitTicks(10);
+			context.takeScreenshot("nr-7-move-structure-list");
+			context.runOnClient(mc -> mc.gui.setScreen(null));
 			context.runOnClient(mc -> dev.nucleusrouter.platform.structure.StructureHud.forceShowForTest = false);
 		}
 	}

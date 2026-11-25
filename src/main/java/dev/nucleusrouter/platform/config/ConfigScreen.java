@@ -119,6 +119,7 @@ public final class ConfigScreen {
 				.option(intOpt("List position Y", "Distance from the top edge of the screen (GUI pixels).", d.hud.y, () -> c.hud.y, v -> c.hud.y = v, 0, 4000))
 				.option(dblOpt("Explored radius (blocks)", "Columns within this distance of you count as explored (roughly how far NPC name tags are seen).", d.exploration.visitRadius, () -> c.exploration.visitRadius, v -> c.exploration.visitRadius = v, 8, 128))
 				.option(boolOpt("Show zones", "Draw each found structure's no-bomb / no-placing zone as a red box. Sizes: /nr zones." + VERIFY, d.structures.showZones, () -> c.structures.showZones, v -> c.structures.showZones = v))
+				.option(boolOpt("Find structures from their crystals", "Learn each structure's crystal box the first time you find the structure, then find it from the crystal alone in later lobbies (no need to visit the NPCs).", d.structures.learnFromCrystals, () -> c.structures.learnFromCrystals, v -> c.structures.learnFromCrystals = v))
 				.option(boolOpt("Use Skyblocker's waypoints", "Read Skyblocker's Crystal Hollows waypoints (its compass solver, chat coordinates, shared waypoints) as approximate positions until a name tag or crystal is seen. Read-only.", d.structures.useSkyblocker, () -> c.structures.useSkyblocker, v -> c.structures.useSkyblocker = v))
 				.option(Option.<NrConfig.SkyblockerWaypoints>createBuilder()
 						.name(Component.literal("Skyblocker's waypoints"))
