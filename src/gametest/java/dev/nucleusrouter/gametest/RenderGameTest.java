@@ -77,6 +77,17 @@ public final class RenderGameTest implements FabricClientGameTest {
 			context.takeScreenshot("nr-5-fence-with-soul-torch");
 
 			context.runOnClient(mc -> DebugRay.toggle());
+
+			// Roadmap 2.6: the on-screen structure list (forced on, since this world isn't the Crystal Hollows)
+			context.runOnClient(mc -> {
+				dev.nucleusrouter.game.StructureMap m = dev.nucleusrouter.platform.structure.StructureTracker.map();
+				m.observeNametag(dev.nucleusrouter.game.Structure.KING_YOLKAR, "King Yolkar", 10, 100, 10, 0, true);
+				m.setSkyblocker(dev.nucleusrouter.game.Structure.JUNGLE_TEMPLE, new double[]{60, 100, 60}, false);
+				dev.nucleusrouter.platform.structure.StructureHud.forceShowForTest = true;
+			});
+			context.waitTicks(20);
+			context.takeScreenshot("nr-6-structure-list");
+			context.runOnClient(mc -> dev.nucleusrouter.platform.structure.StructureHud.forceShowForTest = false);
 		}
 	}
 }

@@ -36,6 +36,7 @@ public final class NrConfig {
 	public Compass compass = new Compass();
 	public Exploration exploration = new Exploration();
 	public Lobby lobby = new Lobby();
+	public Hud hud = new Hud();
 
 	/** §2.1 Crystal Hollows and the run. */
 	public static final class Hollows {
@@ -227,6 +228,15 @@ public final class NrConfig {
 		}
 	}
 
+	/** On-screen list of structures (found / approximate / missing). */
+	public static final class Hud {
+		public boolean showStructureList = true;
+		/** Hide the list 10 s after every structure is found. */
+		public boolean hideWhenAllFound = true;
+		/** Top-left corner of the list, in GUI pixels. */
+		public int x = 4, y = 40;
+	}
+
 	/** §4 Lobby evaluation: when to suggest another lobby. Each rule can be turned off. */
 	public static final class Lobby {
 		/** Show a chat notice when a rule starts saying "consider another lobby". */
@@ -359,6 +369,9 @@ public final class NrConfig {
 		if (compass == null) { compass = new Compass(); fixes.add("compass section missing, reset to defaults"); }
 		if (exploration == null) { exploration = new Exploration(); fixes.add("exploration section missing, reset to defaults"); }
 		if (lobby == null) { lobby = new Lobby(); fixes.add("lobby section missing, reset to defaults"); }
+		if (hud == null) { hud = new Hud(); fixes.add("hud section missing, reset to defaults"); }
+		hud.x = (int) clamp(fixes, "hud.x", hud.x, 0, 4000);
+		hud.y = (int) clamp(fixes, "hud.y", hud.y, 0, 4000);
 		lobby.maxSpreadBlocks = (int) clamp(fixes, "lobby.maxSpreadBlocks", lobby.maxSpreadBlocks, 50, 1000);
 		lobby.warnAfterDay = (int) clamp(fixes, "lobby.warnAfterDay", lobby.warnAfterDay, 0, 30);
 		lobby.coverageWarnFraction = clamp(fixes, "lobby.coverageWarnFraction", lobby.coverageWarnFraction, 0.1, 1);

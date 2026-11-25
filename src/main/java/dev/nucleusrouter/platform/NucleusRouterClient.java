@@ -36,6 +36,7 @@ public final class NucleusRouterClient implements ClientModInitializer {
 		dev.nucleusrouter.platform.structure.StructureShapes.init();
 		dev.nucleusrouter.platform.structure.ExplorationTracker.init();
 		dev.nucleusrouter.platform.structure.LobbyWatcher.init();
+		dev.nucleusrouter.platform.structure.StructureHud.init();
 		NrCommands.register();
 		LOG.info("[Nucleus Router] {} loaded (render-only; never sends input, chat or packets).", NucleusRouter.VERSION_LABEL);
 	}
