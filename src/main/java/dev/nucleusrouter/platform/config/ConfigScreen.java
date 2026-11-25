@@ -132,6 +132,20 @@ public final class ConfigScreen {
 				.option(stringList("Khazad-dum name tags", "Bal." + names, d.structures.khazadDumNames, () -> c.structures.khazadDumNames, v -> c.structures.khazadDumNames = v))
 				.build();
 
+		ConfigCategory lobby = ConfigCategory.createBuilder()
+				.name(Component.literal("Lobby check"))
+				.option(boolOpt("Chat notices", "Say in chat when a rule starts suggesting another lobby, with the reason. /nr lobby shows all rules any time.", d.lobby.notify, () -> c.lobby.notify, v -> c.lobby.notify = v))
+				.option(boolOpt("Rule: structures too spread out", "Warn if two structures are further apart than the limit below.", d.lobby.spreadRule, () -> c.lobby.spreadRule, v -> c.lobby.spreadRule = v))
+				.option(intOpt("Max spread (blocks)", "Largest allowed distance between two structures.", d.lobby.maxSpreadBlocks, () -> c.lobby.maxSpreadBlocks, v -> c.lobby.maxSpreadBlocks = v, 50, 1000))
+				.option(boolOpt("Rule: lobby day too high", "Warn if the lobby is older than the day below (lobbies close around day 15-20, so a setup pays back less).", d.lobby.dayRule, () -> c.lobby.dayRule, v -> c.lobby.dayRule = v))
+				.option(intOpt("Warn after day", "Lobby day above which to warn.", d.lobby.warnAfterDay, () -> c.lobby.warnAfterDay, v -> c.lobby.warnAfterDay = v, 0, 30))
+				.option(boolOpt("Rule: explored but structures missing", "Warn if most of the Hollows is explored and structures are still missing.", d.lobby.coverageRule, () -> c.lobby.coverageRule, v -> c.lobby.coverageRule = v))
+				.option(dblOpt("Explored share to warn at (0-1)", "0.75 = warn once 75% is explored with structures still missing.", d.lobby.coverageWarnFraction, () -> c.lobby.coverageWarnFraction, v -> c.lobby.coverageWarnFraction = v, 0.1, 1))
+				.option(boolOpt("Rule: run too slow", "Warn if the estimated run time is above the limit below. Rough estimate until the route planner exists.", d.lobby.runTimeRule, () -> c.lobby.runTimeRule, v -> c.lobby.runTimeRule = v))
+				.option(intOpt("Max run time (s)", "240 = 4 minutes.", d.lobby.warnRunSeconds, () -> c.lobby.warnRunSeconds, v -> c.lobby.warnRunSeconds = v, 30, 1800))
+				.option(dblOpt("Rough estimate: warp efficiency", "Share of the full etherwarp range an average warp covers. Only used by the rough estimate.", d.lobby.legEfficiency, () -> c.lobby.legEfficiency, v -> c.lobby.legEfficiency = v, 0.2, 1))
+				.build();
+
 		ConfigCategory compass = ConfigCategory.createBuilder()
 				.name(Component.literal("Wishing Compass"))
 				.option(boolOpt("Show in the world", "Draw compass lines, the estimated target and the suggested next spot.", d.compass.showInWorld, () -> c.compass.showInWorld, v -> c.compass.showInWorld = v))
@@ -144,7 +158,7 @@ public final class ConfigScreen {
 
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.literal("Nucleus Router"))
-				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost).category(structures).category(compass)
+				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost).category(structures).category(lobby).category(compass)
 				.save(ConfigManager::save)
 				.build()
 				.generateScreen(parent);

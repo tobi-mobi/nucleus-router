@@ -45,6 +45,7 @@ public final class NrCommands {
 						.then(StructureCommands.structureNode())
 						.then(ZoneCommands.captureNode())
 						.then(ExploreCommands.node())
+						.then(literal("lobby").executes(NrCommands::lobby))
 						.then(ZoneCommands.zonesNode())
 						.then(ZoneCommands.zoneNode())
 						.then(literal("compass").executes(ctx -> { dev.nucleusrouter.platform.compass.CompassTracker.status(); return 1; })
@@ -78,6 +79,7 @@ public final class NrCommands {
 		line(src, "/nr structures", "which run structures are found in this lobby, and where");
 		line(src, "/nr structure set <name>", "mark a structure where you stand (divan, precursor, king, queen, temple, khazad)");
 		line(src, "/nr structure clear <name|all>", "forget a structure so it's found again");
+		line(src, "/nr lobby", "is this lobby worth setting up? every check with its reason");
 		line(src, "/nr explored [map]", "how much of the Hollows you've explored, where to go next, and a map");
 		line(src, "/nr zones", "each found structure's no-bomb / no-placing zone, and whether you're inside");
 		line(src, "/nr zone <name> corner1 | corner2 | reset", "measure a zone by standing at two opposite corners");
@@ -113,6 +115,26 @@ public final class NrCommands {
 			dev.nucleusrouter.platform.NucleusRouterClient.LOG.info("[Nucleus Router] /nr where raw: state={} modApi={} sbTitle={} sb={} tab={}",
 					s, LocationTracker.modApiRaw(), LocationTracker.lastScoreboardTitle(), LocationTracker.lastScoreboardLines(), LocationTracker.lastTabLines());
 		}
+		return 1;
+	}
+
+	private static int lobby(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource src = ctx.getSource();
+		LocationState s = LocationTracker.state();
+		src.sendFeedback(header("Lobby check" + (s.serverId() != null ? " (" + s.serverId() + ", day " + s.lobbyDay() + ")" : "")));
+		if (!s.inHollows()) {
+			src.sendFeedback(Component.literal("  Not in the Crystal Hollows.").withStyle(ChatFormatting.GRAY));
+			return 1;
+		}
+		var reasons = dev.nucleusrouter.platform.structure.LobbyWatcher.evaluate();
+		for (var r : reasons) {
+			String mark = !r.checked() ? "-" : r.warn() ? "!" : "ok";
+			ChatFormatting col = !r.checked() ? ChatFormatting.DARK_GRAY : r.warn() ? ChatFormatting.GOLD : ChatFormatting.GREEN;
+			src.sendFeedback(Component.literal("  [" + mark + "] ").withStyle(col).append(Component.literal(r.message()).withStyle(r.checked() ? ChatFormatting.WHITE : ChatFormatting.GRAY)));
+		}
+		src.sendFeedback(Component.literal(dev.nucleusrouter.game.LobbyEvaluator.anyWarning(reasons)
+				? "  Verdict: consider another lobby (see the [!] lines)." : "  Verdict: nothing against this lobby so far.").withStyle(ChatFormatting.AQUA));
+		src.sendFeedback(Component.literal("  The run time is a rough straight-line estimate until the route planner exists.").withStyle(ChatFormatting.DARK_GRAY));
 		return 1;
 	}
 

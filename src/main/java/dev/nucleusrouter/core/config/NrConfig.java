@@ -35,6 +35,7 @@ public final class NrConfig {
 	public Structures structures = new Structures();
 	public Compass compass = new Compass();
 	public Exploration exploration = new Exploration();
+	public Lobby lobby = new Lobby();
 
 	/** §2.1 Crystal Hollows and the run. */
 	public static final class Hollows {
@@ -226,6 +227,29 @@ public final class NrConfig {
 		}
 	}
 
+	/** §4 Lobby evaluation: when to suggest another lobby. Each rule can be turned off. */
+	public static final class Lobby {
+		/** Show a chat notice when a rule starts saying "consider another lobby". */
+		public boolean notify = true;
+		public boolean spreadRule = true;
+		/** Warn if two structures are further apart than this (blocks). */
+		public int maxSpreadBlocks = 250;
+		public boolean dayRule = true;
+		/** Warn if the lobby day is above this (lobbies close around day 15-20). */
+		public int warnAfterDay = 6;
+		public boolean coverageRule = true;
+		/** Warn if this share of the Hollows is explored and structures are still missing (0..1). */
+		public double coverageWarnFraction = 0.75;
+		public boolean runTimeRule = true;
+		/** Warn if the rough run estimate is above this (seconds). Target is 2-4 minutes. */
+		public int warnRunSeconds = 240;
+		/**
+		 * Rough estimate only: average share of the full etherwarp range one warp covers along a leg.
+		 * Replaced by the real planner in milestone 3.
+		 */
+		public double legEfficiency = 0.7;
+	}
+
 	/** §4 Exploration coverage. */
 	public static final class Exploration {
 		/**
@@ -334,6 +358,12 @@ public final class NrConfig {
 		if (structures == null) { structures = new Structures(); fixes.add("structures section missing, reset to defaults"); }
 		if (compass == null) { compass = new Compass(); fixes.add("compass section missing, reset to defaults"); }
 		if (exploration == null) { exploration = new Exploration(); fixes.add("exploration section missing, reset to defaults"); }
+		if (lobby == null) { lobby = new Lobby(); fixes.add("lobby section missing, reset to defaults"); }
+		lobby.maxSpreadBlocks = (int) clamp(fixes, "lobby.maxSpreadBlocks", lobby.maxSpreadBlocks, 50, 1000);
+		lobby.warnAfterDay = (int) clamp(fixes, "lobby.warnAfterDay", lobby.warnAfterDay, 0, 30);
+		lobby.coverageWarnFraction = clamp(fixes, "lobby.coverageWarnFraction", lobby.coverageWarnFraction, 0.1, 1);
+		lobby.warnRunSeconds = (int) clamp(fixes, "lobby.warnRunSeconds", lobby.warnRunSeconds, 30, 1800);
+		lobby.legEfficiency = clamp(fixes, "lobby.legEfficiency", lobby.legEfficiency, 0.2, 1);
 		exploration.visitRadius = clamp(fixes, "exploration.visitRadius", exploration.visitRadius, 8, 128);
 
 		Hollows h = hollows;
