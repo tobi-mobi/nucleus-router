@@ -107,6 +107,33 @@ public final class RenderGameTest implements FabricClientGameTest {
 			context.waitTicks(10);
 			context.takeScreenshot("nr-8-explored-map");
 			context.runOnClient(mc -> mc.gui.setScreen(null));
+
+			// Run mode: a made-up route of 4 warps over the floor to a stop, then /warp nucleus
+			server.runCommand("fill -12 100 -4 12 110 40 minecraft:air");
+			server.runCommand("tp @p 0.5 100 0.5 0 12");
+			context.waitTicks(20);
+			context.runOnClient(mc -> {
+				if (DebugRay.enabled()) DebugRay.toggle();
+				showTestShapes = false;
+				java.util.function.BiFunction<Integer, Integer, dev.nucleusrouter.core.plan.LegPlanner.Warp> w = (x, z) -> {
+					dev.nucleusrouter.core.geom.Vec3 land = new dev.nucleusrouter.core.geom.Vec3(x + 0.5, 100, z + 0.5);
+					return new dev.nucleusrouter.core.plan.LegPlanner.Warp(null, x, 99, z, land.add(new dev.nucleusrouter.core.geom.Vec3(0, 0, 0)), null, land, 2, 0, 0, 0.3);
+				};
+				dev.nucleusrouter.core.geom.Vec3 n0 = new dev.nucleusrouter.core.geom.Vec3(0.5, 100, 0.5), end = new dev.nucleusrouter.core.geom.Vec3(0.5, 100, 32.5);
+				var stops = java.util.List.of(
+						new dev.nucleusrouter.game.StopPlan.Stop("nucleus", "Crystal Nucleus", null, dev.nucleusrouter.game.StopPlan.Kind.NUCLEUS, n0, n0, 1, 0, false, ""),
+						new dev.nucleusrouter.game.StopPlan.Stop("king", "King Yolkar", dev.nucleusrouter.game.Structure.KING_YOLKAR, dev.nucleusrouter.game.StopPlan.Kind.STRUCTURE, end, end, 1, 1, false, ""));
+				var plan = new dev.nucleusrouter.game.RouteOrder.Plan(java.util.List.of(
+						new dev.nucleusrouter.game.RouteOrder.Step("nucleus", "king", false, 2, 1),
+						new dev.nucleusrouter.game.RouteOrder.Step("king", "nucleus", true, 1, 0)), 4, java.util.List.of());
+				var leg = new dev.nucleusrouter.core.plan.LegPlanner.Leg(dev.nucleusrouter.core.plan.LegPlanner.Status.FOUND,
+						java.util.List.of(w.apply(0, 8), w.apply(-3, 16), w.apply(2, 24), w.apply(0, 32)), 2, 0, 0, 0, 0);
+				dev.nucleusrouter.platform.structure.RunTracker.forceShowForTest = true;
+				dev.nucleusrouter.platform.structure.RunTracker.startForTest(dev.nucleusrouter.game.RunPath.build(plan, stops, java.util.Map.of("nucleus>king", leg), java.util.Set.of()));
+			});
+			context.waitTicks(20);
+			context.takeScreenshot("nr-9-run-mode");
+			context.runOnClient(mc -> { dev.nucleusrouter.platform.structure.RunTracker.stop(); dev.nucleusrouter.platform.structure.RunTracker.forceShowForTest = false; });
 			context.runOnClient(mc -> dev.nucleusrouter.platform.structure.StructureHud.forceShowForTest = false);
 		}
 	}

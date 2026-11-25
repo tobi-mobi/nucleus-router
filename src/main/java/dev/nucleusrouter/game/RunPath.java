@@ -1,0 +1,138 @@
+package dev.nucleusrouter.game;
+
+import dev.nucleusrouter.core.geom.Vec3;
+import dev.nucleusrouter.core.plan.LegPlanner;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * A planned run flattened into what you do, in order (SPEC §5 run mode): etherwarps, /warp nucleus,
+ * the temple teleport, stretches you fly yourself (not explored yet), and arriving at structures.
+ * {@link #advance} moves along it as you land on planned spots; it never re-plans.
+ */
+public final class RunPath {
+	public enum Kind { WARP, WARP_NUCLEUS, TEMPLE_TELEPORT, FLY, STOP }
+
+	/**
+	 * One thing to do.
+	 *
+	 * @param leg        which move of the run (for colouring), 0-based
+	 * @param pos        WARP: landing feet; STOP/FLY: where to go; WARP_NUCLEUS: nucleus spawn; TEMPLE_TELEPORT: front of the temple
+	 * @param block      WARP: the target block {x, y, z}, else null
+	 * @param aimPoint   WARP: the most forgiving point to aim at, else null
+	 * @param label      STOP: structure name; others: short instruction
+	 */
+	public record Node(Kind kind, int leg, Vec3 pos, int[] block, Vec3 aimPoint, String label) {}
+
+	private final List<Node> nodes;
+
+	private RunPath(List<Node> nodes) { this.nodes = List.copyOf(nodes); }
+
+	public List<Node> nodes() { return nodes; }
+	public int size() { return nodes.size(); }
+
+	/**
+	 * @param legs      planned legs by "from>to"
+	 * @param estimated legs that weren't planned on the terrain ("from>to"): you fly those yourself
+	 */
+	public static RunPath build(RouteOrder.Plan plan, List<StopPlan.Stop> stops, Map<String, LegPlanner.Leg> legs, Set<String> estimated) {
+		Map<String, StopPlan.Stop> byId = new HashMap<>();
+		for (StopPlan.Stop s : stops) byId.put(s.id(), s);
+		StopPlan.Stop nucleus = byId.get("nucleus");
+		List<Node> out = new ArrayList<>();
+		int legIndex = 0;
+		for (RouteOrder.Step step : plan.steps()) {
+			StopPlan.Stop to = byId.get(step.toId());
+			String from = step.fromId();
+			if (step.viaWarpNucleus()) {
+				out.add(new Node(Kind.WARP_NUCLEUS, legIndex, nucleus.standFeet(), null, null, "/warp nucleus"));
+				from = "nucleus";
+			} else if (from.equals("temple.exit")) {
+				StopPlan.Stop exit = byId.get("temple.exit");
+				out.add(new Node(Kind.TEMPLE_TELEPORT, legIndex, exit.standFeet(), null, null, "take the teleport to the front of the temple"));
+			}
+			if (to != null && !step.toId().equals("nucleus")) {
+				String key = from + ">" + step.toId();
+				LegPlanner.Leg leg = legs.get(key);
+				if (leg != null && leg.ok() && !estimated.contains(key)) {
+					for (LegPlanner.Warp w : leg.warps())
+						out.add(new Node(Kind.WARP, legIndex, w.landingFeet(), new int[]{w.tx(), w.ty(), w.tz()}, w.aimPoint(), null));
+				} else {
+					out.add(new Node(Kind.FLY, legIndex, to.standFeet() != null ? to.standFeet() : to.target(), null, null,
+							"fly to " + to.label() + " yourself (not explored yet)"));
+				}
+				out.add(new Node(Kind.STOP, legIndex, to.standFeet() != null ? to.standFeet() : to.target(), null, null, to.label()));
+			}
+			legIndex++;
+		}
+		return new RunPath(out);
+	}
+
+	/** Landing within this distance of a planned spot counts as having warped there. */
+	public static final double LANDED = 1.2;
+	/** Being within this distance of a structure stop or fly-to point counts as arrived. */
+	public static final double ARRIVED = 6;
+	/** How far ahead an arrival is looked for before searching the whole route. */
+	public static final int LOOKAHEAD = 15;
+
+	/**
+	 * The new position in the route after the player is at {@code feet}: past the furthest node (within the
+	 * look-ahead) the player has reached. If none matches but the player stands exactly on another planned
+	 * landing anywhere on the route, jump there (SPEC: "if they land on a different route node, jump to it").
+	 * Otherwise unchanged: off-route never re-plans.
+	 */
+	public int advance(int index, Vec3 feet) {
+		int best = -1;
+		for (int i = index; i < Math.min(nodes.size(), index + LOOKAHEAD); i++) {
+			Node n = nodes.get(i);
+			// A /warp nucleus or the temple teleport only counts when it's the very next thing to do
+			// (at the start of a run you're already standing at the nucleus)
+			boolean teleport = n.kind() == Kind.WARP_NUCLEUS || n.kind() == Kind.TEMPLE_TELEPORT;
+			if (teleport && i != index) break;
+			if (reached(n, feet)) best = i;
+		}
+		if (best >= 0) return best + 1;
+		for (int i = 0; i < nodes.size(); i++) {
+			Node n = nodes.get(i);
+			if (n.kind() == Kind.WARP && n.pos().sub(feet).length() <= LANDED) return i + 1;
+		}
+		return index;
+	}
+
+	private static boolean reached(Node n, Vec3 feet) {
+		double d = n.pos().sub(feet).length();
+		return switch (n.kind()) {
+			case WARP -> d <= LANDED;
+			case WARP_NUCLEUS, TEMPLE_TELEPORT -> d <= 3;
+			case FLY, STOP -> d <= ARRIVED;
+		};
+	}
+
+	/** The next {@code n} warp nodes from {@code index} (their positions in the list). */
+	public List<Integer> nextWarps(int index, int n) {
+		List<Integer> out = new ArrayList<>();
+		for (int i = index; i < nodes.size() && out.size() < n; i++) if (nodes.get(i).kind() == Kind.WARP) out.add(i);
+		return out;
+	}
+
+	/** The first node at or after {@code index} that isn't a plain warp (the next instruction), or null. */
+	public Node nextInstruction(int index) {
+		for (int i = index; i < nodes.size(); i++) if (nodes.get(i).kind() != Kind.WARP) return nodes.get(i);
+		return null;
+	}
+
+	/** Index of the node nearest to {@code feet} (for "you're off the route: get back here"). */
+	public int nearest(Vec3 feet) {
+		int best = -1;
+		double bd = Double.MAX_VALUE;
+		for (int i = 0; i < nodes.size(); i++) {
+			double d = nodes.get(i).pos().sub(feet).length();
+			if (d < bd) { bd = d; best = i; }
+		}
+		return best;
+	}
+}

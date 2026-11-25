@@ -158,6 +158,13 @@ public final class ConfigScreen {
 				.option(dblOpt("Rough estimate: warp efficiency", "Share of the full etherwarp range an average warp covers. Only used by the rough estimate.", d.lobby.legEfficiency, () -> c.lobby.legEfficiency, v -> c.lobby.legEfficiency = v, 0.2, 1))
 				.build();
 
+		ConfigCategory run = ConfigCategory.createBuilder()
+				.name(Component.literal("Run mode"))
+				.option(boolOpt("Route line", "A thin line along the route (dashed where you fly yourself).", d.run.showLine, () -> c.run.showLine, v -> c.run.showLine = v))
+				.option(intOpt("Warp targets shown", "How many of the next warp target blocks are highlighted and numbered.", d.run.targetsShown, () -> c.run.targetsShown, v -> c.run.targetsShown = v, 1, 30))
+				.option(boolOpt("Aim dot", "A dot on the most forgiving spot to aim at, on the next target.", d.run.aimDot, () -> c.run.aimDot, v -> c.run.aimDot = v))
+				.build();
+
 		ConfigCategory compass = ConfigCategory.createBuilder()
 				.name(Component.literal("Wishing Compass"))
 				.option(boolOpt("Show in the world", "Draw compass lines, the estimated target and the suggested next spot.", d.compass.showInWorld, () -> c.compass.showInWorld, v -> c.compass.showInWorld = v))
@@ -170,7 +177,7 @@ public final class ConfigScreen {
 
 		return YetAnotherConfigLib.createBuilder()
 				.title(Component.literal("Nucleus Router"))
-				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost).category(structures).category(lobby).category(compass)
+				.category(general).category(hollows).category(stops).category(etherwarp).category(bombs).category(placing).category(cost).category(structures).category(lobby).category(run).category(compass)
 				.save(ConfigManager::save)
 				.build()
 				.generateScreen(parent);

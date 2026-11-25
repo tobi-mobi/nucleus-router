@@ -102,6 +102,7 @@ class LegPlannerTest {
 
 	@Test
 	void turnsArePriced() {
+		cfg.plan.legTimeLimitMs = 3000; // correctness, not speed
 		PlanWorld w = world(LegPlannerTest::hall, Set.of());
 		Vec3 start = new Vec3(5.5, 101, 0.5), goal = new Vec3(60.5, 101, 0.5);
 		LegPlanner.Leg facing = planner(w).plan(start, new Vec3(1, -0.1, 0), goal, 3);

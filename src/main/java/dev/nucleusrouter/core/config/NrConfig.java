@@ -38,6 +38,7 @@ public final class NrConfig {
 	public Lobby lobby = new Lobby();
 	public Hud hud = new Hud();
 	public Plan plan = new Plan();
+	public Run run = new Run();
 
 	/** §2.1 Crystal Hollows and the run. */
 	public static final class Hollows {
@@ -259,6 +260,16 @@ public final class NrConfig {
 		}
 	}
 
+	/** §5 Run mode: what's drawn while running a planned route. */
+	public static final class Run {
+		/** Thin line along the route. */
+		public boolean showLine = true;
+		/** How many of the next warp targets are highlighted (numbered, fading). */
+		public int targetsShown = 10;
+		/** A dot on the most forgiving point to aim at, on the next target. */
+		public boolean aimDot = false;
+	}
+
 	/** §3.3 Route planner settings (speed vs. thoroughness). */
 	public static final class Plan {
 		/** Look directions tried from each spot, spread over all directions. */
@@ -458,6 +469,8 @@ public final class NrConfig {
 		if (lobby == null) { lobby = new Lobby(); fixes.add("lobby section missing, reset to defaults"); }
 		if (hud == null) { hud = new Hud(); fixes.add("hud section missing, reset to defaults"); }
 		if (plan == null) { plan = new Plan(); fixes.add("plan section missing, reset to defaults"); }
+		if (run == null) { run = new Run(); fixes.add("run section missing, reset to defaults"); }
+		run.targetsShown = (int) clamp(fixes, "run.targetsShown", run.targetsShown, 1, 30);
 		plan.sphereRays = (int) clamp(fixes, "plan.sphereRays", plan.sphereRays, 16, 4096);
 		plan.coneRays = (int) clamp(fixes, "plan.coneRays", plan.coneRays, 0, 4096);
 		plan.coneDegrees = clamp(fixes, "plan.coneDegrees", plan.coneDegrees, 5, 90);
