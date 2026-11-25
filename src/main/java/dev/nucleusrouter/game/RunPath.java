@@ -35,12 +35,59 @@ public final class RunPath {
 		public boolean isMove() { return kind == Kind.WARP || kind == Kind.TELEPORT; }
 	}
 
-	private final List<Node> nodes;
+	/**
+	 * What a structure stop is about, for the run HUD (roadmap 3.6).
+	 *
+	 * @param id            stop id ("divan", "king", ...)
+	 * @param split         name of its split ("Jade", "King", ...)
+	 * @param action        what to do there, in words
+	 * @param plannedArrive planned seconds from the start of the run when you get there
+	 * @param plannedLeave  planned seconds when you're done there
+	 */
+	public record StopInfo(String id, String split, String action, double plannedArrive, double plannedLeave) {}
 
-	private RunPath(List<Node> nodes) { this.nodes = List.copyOf(nodes); }
+	private final List<Node> nodes;
+	private final Map<Integer, StopInfo> stopInfo;
+	private final double plannedSeconds;
+
+	private RunPath(List<Node> nodes, Map<Integer, StopInfo> stopInfo, double plannedSeconds) {
+		this.nodes = List.copyOf(nodes);
+		this.stopInfo = Map.copyOf(stopInfo);
+		this.plannedSeconds = plannedSeconds;
+	}
 
 	public List<Node> nodes() { return nodes; }
 	public int size() { return nodes.size(); }
+	/** Info for the STOP node at {@code index}, or null. */
+	public StopInfo stopInfo(int index) { return stopInfo.get(index); }
+	/** The planner's estimate for the whole run, in seconds. */
+	public double plannedSeconds() { return plannedSeconds; }
+
+	/** The split name for a stop: the crystal you have once you leave it (King Yolkar gives none). */
+	public static String splitName(String stopId) {
+		return switch (stopId) {
+			case "divan" -> "Jade";
+			case "precursor" -> "Sapphire";
+			case "king" -> "King";
+			case "queen" -> "Amber";
+			case "temple" -> "Amethyst";
+			case "khazad" -> "Topaz";
+			default -> stopId;
+		};
+	}
+
+	/** What to do at a stop, in words (SPEC §2.2). */
+	public static String action(StopPlan.Stop s) {
+		return switch (s.id()) {
+			case "divan" -> "Give the 4 keepers their tools, take the Jade crystal";
+			case "precursor" -> "Give Professor Robot the Apparatus, take the Sapphire";
+			case "king" -> "Give the Goblin Egg to King Yolkar (left-click)";
+			case "queen" -> "Take the Amber crystal, then leave within 3 s";
+			case "temple" -> "Give the Jungle Key to the Door Guardian, parkour, crystal";
+			case "khazad" -> "Stand on the Topaz crystal and kill Bal";
+			default -> s.note();
+		};
+	}
 
 	/**
 	 * @param legs      planned legs by "from>to"
@@ -51,8 +98,12 @@ public final class RunPath {
 		for (StopPlan.Stop s : stops) byId.put(s.id(), s);
 		StopPlan.Stop nucleus = byId.get("nucleus");
 		List<Node> out = new ArrayList<>();
+		Map<Integer, StopInfo> info = new HashMap<>();
+		double t = 0;
 		int legIndex = 0;
 		for (RouteOrder.Step step : plan.steps()) {
+			double arrive = t + step.travelSeconds();
+			t = arrive + step.waitSeconds();
 			StopPlan.Stop to = byId.get(step.toId());
 			String from = step.fromId();
 			if (step.viaWarpNucleus()) {
@@ -76,11 +127,12 @@ public final class RunPath {
 					out.add(new Node(Kind.FLY, legIndex, to.standFeet() != null ? to.standFeet() : to.target(), null, null,
 							"fly to " + to.label() + " yourself (not explored yet)"));
 				}
+				info.put(out.size(), new StopInfo(to.id(), splitName(to.id()), action(to), arrive, t));
 				out.add(new Node(Kind.STOP, legIndex, to.standFeet() != null ? to.standFeet() : to.target(), null, null, to.label()));
 			}
 			legIndex++;
 		}
-		return new RunPath(out);
+		return new RunPath(out, info, plan.seconds());
 	}
 
 	/** Landing within this distance of a planned spot counts as having warped there. */

@@ -55,6 +55,11 @@ public final class NrCommands {
 									dev.nucleusrouter.platform.structure.RunTracker.stop();
 									ctx.getSource().sendFeedback(Component.literal("Run mode off.").withStyle(ChatFormatting.GRAY));
 									return 1;
+								}))
+								.then(literal("den").executes(ctx -> {
+									dev.nucleusrouter.platform.structure.RunHud.startDenForTest();
+									ctx.getSource().sendFeedback(Component.literal("Test: Queen's den countdown started (leave the den area, fly 30 blocks above the crystal or /warp nucleus to stop it).").withStyle(ChatFormatting.GRAY));
+									return 1;
 								})))
 						.then(literal("route").executes(ctx -> {
 							boolean started = dev.nucleusrouter.platform.structure.RouteTracker.start(dev.nucleusrouter.platform.structure.RouteTracker::report);
@@ -100,7 +105,8 @@ public final class NrCommands {
 		line(src, "/nr structures", "which run structures are found in this lobby, and where");
 		line(src, "/nr structure set <name>", "mark a structure where you stand (divan, precursor, king, queen, temple, khazad)");
 		line(src, "/nr structure clear <name|all>", "forget a structure so it's found again");
-		line(src, "/nr run | run stop", "show the planned route while you run it (numbered warp targets)");
+		line(src, "/nr run | run stop", "show the planned route while you run it: numbered warp targets, timer, splits");
+		line(src, "/nr run den", "try the Queen's den countdown (it starts by itself after taking the Amber crystal)");
 		line(src, "/nr route", "plan the run: order of the structures, when to /warp nucleus, total time");
 		line(src, "/nr stops", "where the route will stop at each NPC and crystal (blue blocks in the world)");
 		line(src, "/nr lobby", "is this lobby worth setting up? every check with its reason");
@@ -112,7 +118,7 @@ public final class NrCommands {
 		line(src, "/nr compass undo | clear", "remove the last compass line, or all of them");
 		line(src, "/nr inspect", "what the block you look at is, and every entity near it (names, items)");
 		line(src, "/nr dump", "save this lobby's terrain + settings to a file for offline testing");
-		line(src, "/nr hud", "drag the on-screen structure list to where you want it");
+		line(src, "/nr hud", "drag the on-screen panels (structure list, run panel) where you want them");
 		line(src, "/nr config", "open the settings screen");
 		line(src, "/nr reload", "reload settings from config/nucleusrouter.json");
 		return 1;

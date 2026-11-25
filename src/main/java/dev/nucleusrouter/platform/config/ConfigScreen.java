@@ -164,6 +164,11 @@ public final class ConfigScreen {
 				.option(intOpt("Warp targets shown", "How many of the next warp target blocks are highlighted and numbered.", d.run.targetsShown, () -> c.run.targetsShown, v -> c.run.targetsShown = v, 1, 30))
 				.option(dblOpt("Arrived within (blocks)", "Being this close to a structure counts as arrived there (structures are big).", d.run.arriveRadius, () -> c.run.arriveRadius, v -> c.run.arriveRadius = v, 3, 100))
 				.option(boolOpt("Aim dot", "A dot on the most forgiving spot to aim at, on the next target.", d.run.aimDot, () -> c.run.aimDot, v -> c.run.aimDot = v))
+				.option(boolOpt("Run panel", "On-screen panel while running: timer, splits per crystal, warp count, what to do now. Move it with /nr hud.", d.run.showHud, () -> c.run.showHud, v -> c.run.showHud = v))
+				.option(boolOpt("Compare with the plan", "Show the planned run time and how far ahead (-) or behind (+) each split is.", d.run.showPlanDelta, () -> c.run.showPlanDelta, v -> c.run.showPlanDelta = v))
+				.option(boolOpt("Queen's den countdown", "A big 3 s 'Leave den' countdown after taking the Amber crystal.", d.run.denCountdown, () -> c.run.denCountdown, v -> c.run.denCountdown = v))
+				.option(stringList("Den countdown starts on", "Chat lines that mean you just took the Amber crystal (part of the line is enough, colours ignored)." + VERIFY, d.run.denTimerStartMessages, () -> c.run.denTimerStartMessages, v -> c.run.denTimerStartMessages = v))
+				.option(boolOpt("Splits in chat", "Print the run time and splits in chat (only you see it) when the route is finished.", d.run.splitsInChat, () -> c.run.splitsInChat, v -> c.run.splitsInChat = v))
 				.build();
 
 		ConfigCategory compass = ConfigCategory.createBuilder()

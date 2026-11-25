@@ -298,6 +298,21 @@ public final class NrConfig {
 		public boolean aimDot = false;
 		/** Being this close (blocks) to a structure counts as arrived there. */
 		public double arriveRadius = 30;
+		/** On-screen run panel: timer, splits, warp count, what to do now (roadmap 3.6). */
+		public boolean showHud = true;
+		/** Show the planned time and how far ahead/behind each split is. */
+		public boolean showPlanDelta = true;
+		/** Top-left corner of the run panel, in GUI pixels (move it with /nr hud). */
+		public int hudX = 4, hudY = 130;
+		/** Big "Leave den" countdown in the middle of the screen after taking the Amber crystal. */
+		public boolean denCountdown = true;
+		/**
+		 * [VERIFY] Chat lines that mean you just took the Amber crystal (starts the 3 s countdown). Matched as
+		 * "contains", colours ignored. Default from the user's report (2026-11-24).
+		 */
+		public List<String> denTimerStartMessages = new ArrayList<>(List.of("The Goblin King's foul stench has dissipated"));
+		/** Print the splits in chat when the route is finished. */
+		public boolean splitsInChat = true;
 	}
 
 	/** §3.3 Route planner settings (speed vs. thoroughness). */
@@ -502,6 +517,7 @@ public final class NrConfig {
 		if (run == null) { run = new Run(); fixes.add("run section missing, reset to defaults"); }
 		run.arriveRadius = clamp(fixes, "run.arriveRadius", run.arriveRadius, 3, 100);
 		run.targetsShown = (int) clamp(fixes, "run.targetsShown", run.targetsShown, 1, 30);
+		if (run.denTimerStartMessages == null) { run.denTimerStartMessages = new Run().denTimerStartMessages; fixes.add("run.denTimerStartMessages missing, reset"); }
 		plan.sphereRays = (int) clamp(fixes, "plan.sphereRays", plan.sphereRays, 16, 4096);
 		plan.coneRays = (int) clamp(fixes, "plan.coneRays", plan.coneRays, 0, 4096);
 		plan.coneDegrees = clamp(fixes, "plan.coneDegrees", plan.coneDegrees, 5, 90);

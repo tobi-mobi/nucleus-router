@@ -26,6 +26,7 @@ public final class RunTracker {
 	private static final int[] PALETTE = {0x4FC3F7, 0xFFB74D, 0xBA68C8, 0x81C784, 0xF06292, 0xFFF176, 0x4DD0E1};
 	private static volatile RunPath path;
 	private static volatile int index;
+	private static volatile dev.nucleusrouter.game.RunClock clock;
 	private static boolean finishedSaid;
 	/** Gametests only: draw even outside the Hollows. */
 	public static volatile boolean forceShowForTest;
@@ -40,6 +41,13 @@ public final class RunTracker {
 	public static boolean active() { return path != null; }
 	public static RunPath path() { return path; }
 	public static int index() { return index; }
+	/** Timer, splits and warp count of the current run (null when run mode is off). */
+	public static dev.nucleusrouter.game.RunClock clock() { return clock; }
+
+	private static Vec3 playerFeet() {
+		Minecraft mc = Minecraft.getInstance();
+		return mc.player == null ? new Vec3(0, 0, 0) : new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ());
+	}
 
 	/** Starts run mode on the last planned route. Returns a message for the player. */
 	public static String start() {
@@ -49,20 +57,23 @@ public final class RunTracker {
 		RunPath p = RunPath.build(r.plan(), r.stops(), r.legs(), r.estimated().keySet());
 		path = p;
 		index = 0;
+		clock = new dev.nucleusrouter.game.RunClock(p, playerFeet());
 		finishedSaid = false;
 		long warps = p.nodes().stream().filter(n -> n.kind() == RunPath.Kind.WARP).count();
-		return "Run mode on: " + warps + " planned warps. Follow the numbered blocks; /nr run stop to stop.";
+		return "Run mode on: " + warps + " planned warps. The timer starts when you move. Follow the numbered blocks; /nr run stop to stop.";
 	}
 
 	/** Gametests only: run a given path. */
 	public static void startForTest(RunPath p) {
 		path = p;
 		index = 0;
+		clock = new dev.nucleusrouter.game.RunClock(p, playerFeet());
 		finishedSaid = false;
 	}
 
 	public static void stop() {
 		path = null;
+		clock = null;
 	}
 
 	private static void tick(Minecraft mc) {
@@ -70,9 +81,12 @@ public final class RunTracker {
 		if (p == null || mc.player == null) return;
 		Vec3 feet = new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ());
 		int next = p.advance(index, feet, ConfigManager.get().run.arriveRadius);
+		dev.nucleusrouter.game.RunClock c = clock;
+		if (c != null) c.update(System.currentTimeMillis(), feet, index, next);
 		if (next != index) index = next;
 		if (index >= p.size() && !finishedSaid) {
 			finishedSaid = true;
+			RunHud.announceFinish(c);
 			NucleusRouterClient.showLocal(Component.literal("Route finished. /nr run to go again, /nr run stop to hide it.").withStyle(ChatFormatting.GREEN));
 		}
 	}

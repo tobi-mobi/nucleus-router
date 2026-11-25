@@ -129,10 +129,21 @@ public final class RenderGameTest implements FabricClientGameTest {
 				var leg = new dev.nucleusrouter.core.plan.LegPlanner.Leg(dev.nucleusrouter.core.plan.LegPlanner.Status.FOUND,
 						java.util.List.of(w.apply(0, 8), w.apply(-3, 16), w.apply(2, 24), w.apply(0, 32)), 2, 0, 0, 0, 0);
 				dev.nucleusrouter.platform.structure.RunTracker.forceShowForTest = true;
+				dev.nucleusrouter.platform.structure.RunHud.forceShowForTest = true;
 				dev.nucleusrouter.platform.structure.RunTracker.startForTest(dev.nucleusrouter.game.RunPath.build(plan, stops, java.util.Map.of("nucleus>king", leg), java.util.Set.of()));
 			});
 			context.waitTicks(20);
 			context.takeScreenshot("nr-9-run-mode");
+
+			// Roadmap 3.6: run panel after reaching the stop (timer running, King split), plus the den countdown
+			server.runCommand("tp @p 0.5 100 3.5 0 12");
+			context.waitTicks(30);
+			server.runCommand("tp @p 0.5 100 32.5 0 12");
+			context.waitTicks(20);
+			context.runOnClient(mc -> dev.nucleusrouter.platform.structure.RunHud.startDenForTest());
+			context.waitTicks(10);
+			context.takeScreenshot("nr-10-run-hud");
+			context.runOnClient(mc -> dev.nucleusrouter.platform.structure.RunHud.forceShowForTest = false);
 			context.runOnClient(mc -> { dev.nucleusrouter.platform.structure.RunTracker.stop(); dev.nucleusrouter.platform.structure.RunTracker.forceShowForTest = false; });
 			context.runOnClient(mc -> dev.nucleusrouter.platform.structure.StructureHud.forceShowForTest = false);
 		}

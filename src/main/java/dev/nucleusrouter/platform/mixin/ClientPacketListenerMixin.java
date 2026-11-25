@@ -19,6 +19,7 @@ public abstract class ClientPacketListenerMixin {
 	@Inject(method = "handleMovePlayer", at = @At("TAIL"))
 	private void nucleusrouter$afterTeleport(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
 		DebugRay.onServerTeleport();
+		dev.nucleusrouter.platform.structure.RunHud.onServerTeleport();
 	}
 
 	/** If the server sends a vanilla explosion packet, /nr calibrate bomb records its centre and radius. */

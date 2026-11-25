@@ -8,48 +8,61 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 /**
- * {@code /nr hud}: drag the on-screen structure list to where you want it. Esc saves.
- * Right-click puts it back in the default spot.
+ * {@code /nr hud}: drag the on-screen panels (structure list, run panel) to where you want them. Esc saves.
+ * Right-click on a panel puts it back in its default spot.
  */
 public final class HudEditScreen extends Screen {
+	private static final int LIST = 0, RUN = 1;
 	private final Screen parent;
-	private int x, y;
-	private int[] drawn = {0, 0, 0, 0};
-	private boolean dragging;
+	private final int[][] pos = new int[2][2];
+	private final int[][] drawn = new int[2][4];
+	private int dragging = -1;
 	private double grabX, grabY;
 
 	public HudEditScreen(Screen parent) {
-		super(Component.literal("Move the structure list"));
+		super(Component.literal("Move the on-screen panels"));
 		this.parent = parent;
-		NrConfig.Hud h = ConfigManager.get().hud;
-		this.x = h.x;
-		this.y = h.y;
+		NrConfig c = ConfigManager.get();
+		pos[LIST] = new int[]{c.hud.x, c.hud.y};
+		pos[RUN] = new int[]{c.run.hudX, c.run.hudY};
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(g, mouseX, mouseY, delta);
-		drawn = StructureHud.drawList(g, x, y);
-		g.fill(drawn[0] - 1, drawn[1] - 1, drawn[0] + drawn[2] + 1, drawn[1], 0xFFFFFF55);
-		g.fill(drawn[0] - 1, drawn[1] + drawn[3], drawn[0] + drawn[2] + 1, drawn[1] + drawn[3] + 1, 0xFFFFFF55);
-		g.fill(drawn[0] - 1, drawn[1], drawn[0], drawn[1] + drawn[3], 0xFFFFFF55);
-		g.fill(drawn[0] + drawn[2], drawn[1], drawn[0] + drawn[2] + 1, drawn[1] + drawn[3], 0xFFFFFF55);
-		g.centeredText(font, "Drag the list to move it. Right-click: default spot. Esc: save and close.", width / 2, height - 20, 0xFFFFFFFF);
+		drawn[LIST] = StructureHud.drawList(g, pos[LIST][0], pos[LIST][1]);
+		drawn[RUN] = RunHud.drawPanel(g, pos[RUN][0], pos[RUN][1]);
+		for (int[] d : drawn) frame(g, d);
+		g.centeredText(font, "Drag a panel to move it. Right-click a panel: default spot. Esc: save and close.", width / 2, height - 20, 0xFFFFFFFF);
+	}
+
+	private static void frame(GuiGraphicsExtractor g, int[] d) {
+		g.fill(d[0] - 1, d[1] - 1, d[0] + d[2] + 1, d[1], 0xFFFFFF55);
+		g.fill(d[0] - 1, d[1] + d[3], d[0] + d[2] + 1, d[1] + d[3] + 1, 0xFFFFFF55);
+		g.fill(d[0] - 1, d[1], d[0], d[1] + d[3], 0xFFFFFF55);
+		g.fill(d[0] + d[2], d[1], d[0] + d[2] + 1, d[1] + d[3], 0xFFFFFF55);
+	}
+
+	private int panelAt(double x, double y) {
+		for (int i = drawn.length - 1; i >= 0; i--) {
+			int[] d = drawn[i];
+			if (x >= d[0] && x <= d[0] + d[2] && y >= d[1] && y <= d[1] + d[3]) return i;
+		}
+		return -1;
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
-		boolean inside = e.x() >= drawn[0] && e.x() <= drawn[0] + drawn[2] && e.y() >= drawn[1] && e.y() <= drawn[1] + drawn[3];
-		if (e.button() == 1) {
-			NrConfig.Hud d = new NrConfig.Hud();
-			x = d.x;
-			y = d.y;
+		int panel = panelAt(e.x(), e.y());
+		if (e.button() == 1 && panel >= 0) {
+			if (panel == LIST) { NrConfig.Hud d = new NrConfig.Hud(); pos[LIST] = new int[]{d.x, d.y}; }
+			else { NrConfig.Run d = new NrConfig.Run(); pos[RUN] = new int[]{d.hudX, d.hudY}; }
 			return true;
 		}
-		if (e.button() == 0 && inside) {
-			dragging = true;
-			grabX = e.x() - drawn[0];
-			grabY = e.y() - drawn[1];
+		if (e.button() == 0 && panel >= 0) {
+			dragging = panel;
+			grabX = e.x() - drawn[panel][0];
+			grabY = e.y() - drawn[panel][1];
 			return true;
 		}
 		return super.mouseClicked(e, doubleClick);
@@ -57,24 +70,26 @@ public final class HudEditScreen extends Screen {
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent e, double dx, double dy) {
-		if (!dragging) return super.mouseDragged(e, dx, dy);
-		x = (int) Math.round(e.x() - grabX);
-		y = (int) Math.round(e.y() - grabY);
+		if (dragging < 0) return super.mouseDragged(e, dx, dy);
+		pos[dragging][0] = (int) Math.round(e.x() - grabX);
+		pos[dragging][1] = (int) Math.round(e.y() - grabY);
 		return true;
 	}
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent e) {
-		dragging = false;
+		dragging = -1;
 		return super.mouseReleased(e);
 	}
 
 	@Override
 	public void onClose() {
-		NrConfig.Hud h = ConfigManager.get().hud;
-		// Store where it was actually drawn (kept on screen)
-		h.x = drawn[2] > 0 ? drawn[0] : x;
-		h.y = drawn[3] > 0 ? drawn[1] : y;
+		NrConfig c = ConfigManager.get();
+		// Store where they were actually drawn (kept on screen)
+		c.hud.x = drawn[LIST][2] > 0 ? drawn[LIST][0] : pos[LIST][0];
+		c.hud.y = drawn[LIST][3] > 0 ? drawn[LIST][1] : pos[LIST][1];
+		c.run.hudX = drawn[RUN][2] > 0 ? drawn[RUN][0] : pos[RUN][0];
+		c.run.hudY = drawn[RUN][3] > 0 ? drawn[RUN][1] : pos[RUN][1];
 		ConfigManager.save();
 		minecraft.gui.setScreen(parent);
 	}
