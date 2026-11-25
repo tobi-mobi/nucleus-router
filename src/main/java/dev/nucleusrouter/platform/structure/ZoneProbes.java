@@ -42,7 +42,7 @@ public final class ZoneProbes {
 			if (box == null || a == null) continue;
 			double gap = StructureZone.distance(box, centre.x(), centre.y(), centre.z()) - radius;
 			if (gap > REPORT_DISTANCE) continue;
-			boolean predictedFizzle = StructureZone.ballTouches(box, centre.x(), centre.y(), centre.z(), radius);
+			boolean predictedFizzle = StructureZone.fizzles(box, centre.x(), centre.y(), centre.z());
 			String verdict = predictedFizzle == fizzled ? "zone guess agrees"
 					: fizzled ? "zone guess is too SMALL here (bomb fizzled outside it)"
 					: "zone guess is too BIG here (bomb worked inside it)";

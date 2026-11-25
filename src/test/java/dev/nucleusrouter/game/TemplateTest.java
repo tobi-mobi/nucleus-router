@@ -101,6 +101,9 @@ class TemplateTest {
 		assertTrue(StructureZone.ballTouches(box, 117.5, 55.5, 205.5, 7));
 		assertFalse(StructureZone.ballTouches(box, 118.5, 55.5, 205.5, 7));
 		assertEquals(0, StructureZone.distance(box, 105, 55, 205));
+		// The fizzle rule is about the centre only (in-game 2026-11-25)
+		assertTrue(StructureZone.fizzles(box, 110.9, 55.5, 205.5));
+		assertFalse(StructureZone.fizzles(box, 111.5, 55.5, 205.5), "centred just outside: explodes, even into the zone");
 		assertEquals(8, StructureZone.distance(box, 119, 55, 205), 1e-9);
 	}
 
