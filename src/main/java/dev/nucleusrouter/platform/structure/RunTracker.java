@@ -69,7 +69,7 @@ public final class RunTracker {
 		RunPath p = path;
 		if (p == null || mc.player == null) return;
 		Vec3 feet = new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ());
-		int next = p.advance(index, feet);
+		int next = p.advance(index, feet, ConfigManager.get().run.arriveRadius);
 		if (next != index) index = next;
 		if (index >= p.size() && !finishedSaid) {
 			finishedSaid = true;

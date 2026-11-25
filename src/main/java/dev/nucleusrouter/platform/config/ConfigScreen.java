@@ -162,6 +162,7 @@ public final class ConfigScreen {
 				.name(Component.literal("Run mode"))
 				.option(boolOpt("Route line", "A thin line along the route (dashed where you fly yourself).", d.run.showLine, () -> c.run.showLine, v -> c.run.showLine = v))
 				.option(intOpt("Warp targets shown", "How many of the next warp target blocks are highlighted and numbered.", d.run.targetsShown, () -> c.run.targetsShown, v -> c.run.targetsShown = v, 1, 30))
+				.option(dblOpt("Arrived within (blocks)", "Being this close to a structure counts as arrived there (structures are big).", d.run.arriveRadius, () -> c.run.arriveRadius, v -> c.run.arriveRadius = v, 3, 100))
 				.option(boolOpt("Aim dot", "A dot on the most forgiving spot to aim at, on the next target.", d.run.aimDot, () -> c.run.aimDot, v -> c.run.aimDot = v))
 				.build();
 

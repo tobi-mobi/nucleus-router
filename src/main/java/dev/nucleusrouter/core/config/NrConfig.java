@@ -268,6 +268,8 @@ public final class NrConfig {
 		public int targetsShown = 10;
 		/** A dot on the most forgiving point to aim at, on the next target. */
 		public boolean aimDot = false;
+		/** Being this close (blocks) to a structure counts as arrived there. */
+		public double arriveRadius = 30;
 	}
 
 	/** §3.3 Route planner settings (speed vs. thoroughness). */
@@ -470,6 +472,7 @@ public final class NrConfig {
 		if (hud == null) { hud = new Hud(); fixes.add("hud section missing, reset to defaults"); }
 		if (plan == null) { plan = new Plan(); fixes.add("plan section missing, reset to defaults"); }
 		if (run == null) { run = new Run(); fixes.add("run section missing, reset to defaults"); }
+		run.arriveRadius = clamp(fixes, "run.arriveRadius", run.arriveRadius, 3, 100);
 		run.targetsShown = (int) clamp(fixes, "run.targetsShown", run.targetsShown, 1, 30);
 		plan.sphereRays = (int) clamp(fixes, "plan.sphereRays", plan.sphereRays, 16, 4096);
 		plan.coneRays = (int) clamp(fixes, "plan.coneRays", plan.coneRays, 0, 4096);

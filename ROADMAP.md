@@ -200,3 +200,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-25: In-game /nr route returned nothing (2 of 37 legs found). Fixed: estimated legs, longer per-leg budget, clearer report. 117 tests pass.
 - 2026-11-25: User: map screen with hover and live player; routes only over explored ground (and later bombs). Both done; 118 tests + gametest screenshots pass. Untested in-game. Next: 3.5 run-mode renderer.
 - 2026-11-25: Map keybind (M). 3.5 run mode: numbered next targets, route line, instructions, advance on landing, no re-planning. 125 tests + gametest screenshots pass. Untested in-game. Next: 3.6 run HUD (timer, splits, den countdown).
+- 2026-11-25: In-game: run mode said "fly to Mines of Divan" while standing in it (28 m from the stop spot on the crystal box). Arriving at a structure or fly-to point now counts within `run.arriveRadius` (30). 126 tests pass.

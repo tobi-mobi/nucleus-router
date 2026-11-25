@@ -74,8 +74,11 @@ public final class RunPath {
 
 	/** Landing within this distance of a planned spot counts as having warped there. */
 	public static final double LANDED = 1.2;
-	/** Being within this distance of a structure stop or fly-to point counts as arrived. */
-	public static final double ARRIVED = 6;
+	/**
+	 * Default: being within this distance of a structure stop or fly-to point counts as arrived. Structures
+	 * are big (in-game 2026-11-25: standing in the Mines of Divan, 28 m from its stop spot, still said "fly there").
+	 */
+	public static final double ARRIVED = 30;
 	/** How far ahead an arrival is looked for before searching the whole route. */
 	public static final int LOOKAHEAD = 15;
 
@@ -86,6 +89,11 @@ public final class RunPath {
 	 * Otherwise unchanged: off-route never re-plans.
 	 */
 	public int advance(int index, Vec3 feet) {
+		return advance(index, feet, ARRIVED);
+	}
+
+	/** Same, with the arrival distance for structures and fly-to points. */
+	public int advance(int index, Vec3 feet, double arrived) {
 		int best = -1;
 		for (int i = index; i < Math.min(nodes.size(), index + LOOKAHEAD); i++) {
 			Node n = nodes.get(i);
@@ -93,7 +101,7 @@ public final class RunPath {
 			// (at the start of a run you're already standing at the nucleus)
 			boolean teleport = n.kind() == Kind.WARP_NUCLEUS || n.kind() == Kind.TEMPLE_TELEPORT;
 			if (teleport && i != index) break;
-			if (reached(n, feet)) best = i;
+			if (reached(n, feet, arrived)) best = i;
 		}
 		if (best >= 0) return best + 1;
 		for (int i = 0; i < nodes.size(); i++) {
@@ -103,12 +111,12 @@ public final class RunPath {
 		return index;
 	}
 
-	private static boolean reached(Node n, Vec3 feet) {
+	private static boolean reached(Node n, Vec3 feet, double arrived) {
 		double d = n.pos().sub(feet).length();
 		return switch (n.kind()) {
 			case WARP -> d <= LANDED;
 			case WARP_NUCLEUS, TEMPLE_TELEPORT -> d <= 3;
-			case FLY, STOP -> d <= ARRIVED;
+			case FLY, STOP -> d <= arrived;
 		};
 	}
 
