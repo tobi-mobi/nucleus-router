@@ -5,10 +5,13 @@ import dev.nucleusrouter.core.config.NrConfig;
 /**
  * What a warp costs in seconds (SPEC §2.6). All constants come from the config.
  * <pre>
- * cost(warp) = baseWarp + ping / 2
- *            + turnTime(angle)                      = turnSecondsAt90 * (angle / 90) ^ turnExponent
- *            + P(miss | angle, margin) * missRecovery
+ * cost(etherwarp) = baseWarp + ping / 2
+ *                 + [aim changed] (reaim + turnTime(angle))   turnTime = turnSecondsAt90 * (angle / 90) ^ turnExponent
+ *                 + P(miss | angle, margin) * missRecovery
+ * cost(normal teleport stretch) = turnTime(angle) + clicks / clicksPerSecond
  * </pre>
+ * Confirmed 2026-11-25: with any aim change, spamming the normal Aspect of the Void teleport beats an
+ * etherwarp; at exactly the same aim an etherwarp chain is faster. Hence the fixed re-aim cost.
  * <b>Miss model</b> (documented choice, constants are estimates): after turning by {@code angle} degrees,
  * where you actually aim is off by a random amount with a round (2D normal) spread whose size is
  * {@code sigma = aimErrorBaseDeg + aimErrorPerDeg * angle}. The warp misses if that error is larger than
@@ -18,7 +21,9 @@ import dev.nucleusrouter.core.config.NrConfig;
  * never misses.
  */
 public final class CostModel {
-	private final double baseWarp, halfPing, turnAt90, turnExp, missRecovery, errBase, errPerDeg, warpNucleus;
+	private final double baseWarp, halfPing, turnAt90, turnExp, missRecovery, errBase, errPerDeg, warpNucleus, reaim, clickSeconds;
+	/** Aim changes smaller than this count as "the same aim" (a chain without touching the mouse). */
+	public static final double SAME_AIM_DEG = 0.05;
 
 	/** @param pingMs the player's ping (measured, or the config fallback) */
 	public CostModel(NrConfig cfg, int pingMs) {
@@ -32,6 +37,8 @@ public final class CostModel {
 		this.errBase = c.aimErrorBaseDeg;
 		this.errPerDeg = c.aimErrorPerDeg;
 		this.warpNucleus = cfg.hollows.warpNucleusSeconds;
+		this.reaim = c.etherwarpReaimSeconds;
+		this.clickSeconds = 1.0 / Math.max(1, cfg.teleport.clicksPerSecond);
 	}
 
 	/** Base cost of one warp with no turn and no miss risk: base + ping / 2. */
@@ -59,10 +66,24 @@ public final class CostModel {
 		return Math.exp(-(marginDeg * marginDeg) / (2 * s * s));
 	}
 
-	/** Expected seconds for one warp: base + ping/2 + turn + P(miss) * miss recovery. */
+	/**
+	 * Expected seconds for one etherwarp: base + ping/2 + P(miss) * miss recovery, plus (if the aim changes at
+	 * all) the turn and the fixed precise re-aim cost (confirmed: any aim change makes the normal teleport faster).
+	 */
 	public double warpSeconds(double angleDeg, double marginDeg) {
-		return baseSeconds() + turnSeconds(angleDeg) + missProbability(angleDeg, marginDeg) * missRecovery;
+		double aim = Math.abs(angleDeg) > SAME_AIM_DEG ? reaim + turnSeconds(angleDeg) : 0;
+		return baseSeconds() + aim + missProbability(angleDeg, marginDeg) * missRecovery;
 	}
+
+	/**
+	 * Seconds for a stretch of {@code clicks} normal teleports in one direction after turning by
+	 * {@code angleDeg}: a rough turn (no precision needed, so no re-aim cost and no miss risk) plus the clicks.
+	 */
+	public double teleportSeconds(double angleDeg, int clicks) {
+		return turnSeconds(angleDeg) + clicks * clickSeconds;
+	}
+
+	public double clickSeconds() { return clickSeconds; }
 
 	/** {@code /warp nucleus} from anywhere in the Hollows. */
 	public double warpNucleusSeconds() { return warpNucleus; }

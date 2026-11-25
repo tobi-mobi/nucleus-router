@@ -15,7 +15,7 @@ import java.util.Set;
  * {@link #advance} moves along it as you land on planned spots; it never re-plans.
  */
 public final class RunPath {
-	public enum Kind { WARP, WARP_NUCLEUS, TEMPLE_TELEPORT, FLY, STOP }
+	public enum Kind { WARP, TELEPORT, WARP_NUCLEUS, TEMPLE_TELEPORT, FLY, STOP }
 
 	/**
 	 * One thing to do.
@@ -26,7 +26,14 @@ public final class RunPath {
 	 * @param aimPoint   WARP: the most forgiving point to aim at, else null
 	 * @param label      STOP: structure name; others: short instruction
 	 */
-	public record Node(Kind kind, int leg, Vec3 pos, int[] block, Vec3 aimPoint, String label) {}
+	public record Node(Kind kind, int leg, Vec3 pos, int[] block, Vec3 aimPoint, String label, Vec3 dir, int clicks) {
+		public Node(Kind kind, int leg, Vec3 pos, int[] block, Vec3 aimPoint, String label) {
+			this(kind, leg, pos, block, aimPoint, label, null, 0);
+		}
+
+		/** An etherwarp or a teleport stretch: something you do with the Aspect of the Void. */
+		public boolean isMove() { return kind == Kind.WARP || kind == Kind.TELEPORT; }
+	}
 
 	private final List<Node> nodes;
 
@@ -59,8 +66,12 @@ public final class RunPath {
 				String key = from + ">" + step.toId();
 				LegPlanner.Leg leg = legs.get(key);
 				if (leg != null && leg.ok() && !estimated.contains(key)) {
-					for (LegPlanner.Warp w : leg.warps())
-						out.add(new Node(Kind.WARP, legIndex, w.landingFeet(), new int[]{w.tx(), w.ty(), w.tz()}, w.aimPoint(), null));
+					for (LegPlanner.Warp w : leg.warps()) {
+						if (w.isTeleport())
+							out.add(new Node(Kind.TELEPORT, legIndex, w.landingFeet(), null, null, "teleport x" + w.clicks(), w.aimDir(), w.clicks()));
+						else
+							out.add(new Node(Kind.WARP, legIndex, w.landingFeet(), new int[]{w.tx(), w.ty(), w.tz()}, w.aimPoint(), null, w.aimDir(), 0));
+					}
 				} else {
 					out.add(new Node(Kind.FLY, legIndex, to.standFeet() != null ? to.standFeet() : to.target(), null, null,
 							"fly to " + to.label() + " yourself (not explored yet)"));
@@ -74,6 +85,8 @@ public final class RunPath {
 
 	/** Landing within this distance of a planned spot counts as having warped there. */
 	public static final double LANDED = 1.2;
+	/** Teleport stretches end less exactly (clicks are spammed): within this counts. */
+	public static final double TELEPORT_LANDED = 3;
 	/**
 	 * Default: being within this distance of a structure stop or fly-to point counts as arrived. Structures
 	 * are big (in-game 2026-11-25: standing in the Mines of Divan, 28 m from its stop spot, still said "fly there").
@@ -126,21 +139,22 @@ public final class RunPath {
 		double d = n.pos().sub(feet).length();
 		return switch (n.kind()) {
 			case WARP -> d <= LANDED;
+			case TELEPORT -> d <= TELEPORT_LANDED;
 			case WARP_NUCLEUS, TEMPLE_TELEPORT -> d <= 3;
 			case FLY, STOP -> d <= arrived;
 		};
 	}
 
-	/** The next {@code n} warp nodes from {@code index} (their positions in the list). */
+	/** The next {@code n} moves (etherwarps and teleport stretches) from {@code index} (their positions in the list). */
 	public List<Integer> nextWarps(int index, int n) {
 		List<Integer> out = new ArrayList<>();
-		for (int i = index; i < nodes.size() && out.size() < n; i++) if (nodes.get(i).kind() == Kind.WARP) out.add(i);
+		for (int i = index; i < nodes.size() && out.size() < n; i++) if (nodes.get(i).isMove()) out.add(i);
 		return out;
 	}
 
-	/** The first node at or after {@code index} that isn't a plain warp (the next instruction), or null. */
+	/** The first node at or after {@code index} that isn't a move (the next instruction), or null. */
 	public Node nextInstruction(int index) {
-		for (int i = index; i < nodes.size(); i++) if (nodes.get(i).kind() != Kind.WARP) return nodes.get(i);
+		for (int i = index; i < nodes.size(); i++) if (!nodes.get(i).isMove()) return nodes.get(i);
 		return null;
 	}
 

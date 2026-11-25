@@ -102,12 +102,25 @@ public final class RunTracker {
 			}
 		}
 
-		// The next warp targets, numbered, the first one strongest
+		// The next moves, numbered, the first one strongest: etherwarp targets as blocks, teleport stretches as arrows
 		List<Integer> next = p.nextWarps(at, cfg.targetsShown);
 		for (int k = next.size() - 1; k >= 0; k--) {
 			RunPath.Node n = nodes.get(next.get(k));
 			int rgb = PALETTE[n.leg() % PALETTE.length];
 			double fade = 1.0 - k / (double) Math.max(1, cfg.targetsShown);
+			if (n.kind() == RunPath.Kind.TELEPORT) {
+				int idx = next.get(k);
+				Vec3 from = idx > 0 ? nodes.get(idx - 1).pos() : feet;
+				Vec3 a = from.add(new Vec3(0, 1.0, 0)), b2 = n.pos().add(new Vec3(0, 1.0, 0));
+				int argb = WorldDraw.argb((int) (120 + 135 * fade), rgb);
+				draw.line(WorldDraw.mc(a), WorldDraw.mc(b2), argb, k == 0 ? 5f : 3f, true);
+				draw.marker(WorldDraw.mc(b2), 0.5, argb, WorldDraw.argb((int) (30 + 70 * fade), rgb), true);
+				Vec3 label = a.add(b2.sub(a).scale(0.25)).add(new Vec3(0, 0.6, 0));
+				double dist = label.sub(feet).length();
+				float scale = (float) (0.5 * Math.max(1.0, dist / 12.0));
+				draw.text((k + 1) + ": teleport x" + n.clicks(), WorldDraw.mc(label), WorldDraw.argb((int) (140 + 115 * fade), 0xFFFFFF), scale, true);
+				continue;
+			}
 			int[] b = n.block();
 			draw.block(b[0], b[1], b[2], WorldDraw.argb((int) (90 + 165 * fade), rgb), k == 0 ? 3f : 2f, WorldDraw.argb((int) (20 + 80 * fade), rgb), true);
 			double dist = n.pos().sub(feet).length();

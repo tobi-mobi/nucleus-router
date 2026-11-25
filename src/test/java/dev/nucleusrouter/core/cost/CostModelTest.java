@@ -48,9 +48,12 @@ class CostModelTest {
 	@Test
 	void warpCostAddsItAllUp() {
 		CostModel m = new CostModel(cfg, 100);
-		double expected = 0.25 + 0.40 + m.missProbability(90, 2) * 1.5;
+		double expected = 0.25 + 0.6 + 0.40 + m.missProbability(90, 2) * 1.5; // base + re-aim + turn + miss
 		assertEquals(expected, m.warpSeconds(90, 2), 1e-9);
 		assertTrue(m.warpSeconds(0, 3) < m.warpSeconds(30, 3), "straight lines are king");
+		// Confirmed 2026-11-25: with any aim change, spamming the normal teleport beats an etherwarp
+		assertTrue(m.teleportSeconds(0.1, 5) < m.warpSeconds(0.1, 5), "60 blocks by teleport after a 0.1 degree change");
+		assertTrue(m.warpSeconds(0, 5) < m.teleportSeconds(0, 5), "same aim: an etherwarp beats 5 teleports");
 		assertEquals(1.0, m.warpNucleusSeconds(), 1e-9, "confirmed: under a second");
 	}
 

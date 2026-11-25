@@ -29,6 +29,7 @@ public final class NrConfig {
 		public boolean saveLobbies = true;
 	}
 	public Etherwarp etherwarp = new Etherwarp();
+	public Teleport teleport = new Teleport();
 	public Bombs bombs = new Bombs();
 	public Placing placing = new Placing();
 	public Cost cost = new Cost();
@@ -177,6 +178,27 @@ public final class NrConfig {
 		public List<String> placedBlockTypes = new ArrayList<>(List.of("minecraft:cobblestone"));
 	}
 
+	/**
+	 * The normal Aspect of the Void teleport (right-click without sneaking). Confirmed 2026-11-25: spamming it
+	 * beats etherwarping whenever the aim has to change; 12 blocks per click (with the user's tuners); about
+	 * 10 clicks per second; mana doesn't matter.
+	 */
+	public static final class Teleport {
+		/** Plan with the normal teleport as well as etherwarp. */
+		public boolean enabled = true;
+		/** Blocks per click (depends on your tuners). Confirmed 2026-11-25: 12. */
+		public double blocksPerClick = 12;
+		/** How fast you can spam it. Confirmed 2026-11-25: about 10 per second. */
+		public double clicksPerSecond = 10;
+		/** Longest teleport stretch planned in one go (clicks in the same direction). */
+		public int maxClicks = 10;
+		/**
+		 * [VERIFY] What happens at a block in the way: the teleport is assumed to stop just in front of it
+		 * (works in every direction, up and down too).
+		 */
+		public boolean stopsAtBlocks = true;
+	}
+
 	/** §2.6 Cost model (all in seconds). */
 	public static final class Cost {
 		/** Sneak + click + server round trip, before ping. */
@@ -198,6 +220,12 @@ public final class NrConfig {
 		public double aimErrorBaseDeg = 0.3;
 		/** ...plus this much per degree turned (0.02: about 2.1 degrees of spread after a 90 degree turn). */
 		public double aimErrorPerDeg = 0.02;
+		/**
+		 * Extra time to aim an etherwarp precisely whenever the aim has to change at all (estimate, tune to taste).
+		 * Confirmed 2026-11-25: with any aim change, spamming the normal teleport is faster than etherwarping, so
+		 * this is a fixed cost on top of the turn. A chain of etherwarps at exactly the same aim doesn't pay it.
+		 */
+		public double etherwarpReaimSeconds = 0.6;
 	}
 
 	/**
@@ -539,6 +567,11 @@ public final class NrConfig {
 		cost.missRecoverySeconds = clamp(fixes, "cost.missRecoverySeconds", cost.missRecoverySeconds, 0, 30);
 		cost.aimErrorBaseDeg = clamp(fixes, "cost.aimErrorBaseDeg", cost.aimErrorBaseDeg, 0, 10);
 		cost.aimErrorPerDeg = clamp(fixes, "cost.aimErrorPerDeg", cost.aimErrorPerDeg, 0, 1);
+		cost.etherwarpReaimSeconds = clamp(fixes, "cost.etherwarpReaimSeconds", cost.etherwarpReaimSeconds, 0, 5);
+		if (teleport == null) { teleport = new Teleport(); fixes.add("teleport section missing, reset to defaults"); }
+		teleport.blocksPerClick = clamp(fixes, "teleport.blocksPerClick", teleport.blocksPerClick, 1, 64);
+		teleport.clicksPerSecond = clamp(fixes, "teleport.clicksPerSecond", teleport.clicksPerSecond, 1, 30);
+		teleport.maxClicks = (int) clamp(fixes, "teleport.maxClicks", teleport.maxClicks, 1, 40);
 		if (compass.itemName == null || compass.itemName.isBlank()) { compass.itemName = "Wishing Compass"; fixes.add("compass.itemName empty, reset"); }
 		if (compass.particleTypes == null) { compass.particleTypes = new ArrayList<>(); fixes.add("compass.particleTypes missing, reset"); }
 		compass.captureSeconds = clamp(fixes, "compass.captureSeconds", compass.captureSeconds, 0.5, 15);

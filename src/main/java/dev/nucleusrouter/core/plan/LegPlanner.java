@@ -36,11 +36,16 @@ import java.util.Set;
  *       16x16x16 sections its rays read; {@link #invalidate} drops only the entries that read the changed
  *       block's section.</li>
  * </ul>
+ * Second kind of move (user 2026-11-25): a stretch of normal Aspect of the Void teleports (turn roughly, then
+ * spam clicks along one direction), priced by {@link CostModel#teleportSeconds}. It needs no aim precision, so
+ * it wins whenever the aim has to change; constant-aim etherwarp chains still win when they exist.
+ * <p>
  * One planner instance is used by one thread at a time (a worker thread, never the client thread).
  */
 public final class LegPlanner {
 	public record Settings(int sphereRays, int coneRays, double coneDeg, int aimSamplesPerFace, double minMarginDeg,
-			int maxExpansions, long timeLimitMs, double minHopBlocks, double typicalHopBlocks) {
+			int maxExpansions, long timeLimitMs, double minHopBlocks, double typicalHopBlocks,
+			boolean teleport, double teleportBlocks, int teleportMaxClicks) {
 		public static Settings fromConfig(NrConfig cfg) {
 			return fromConfig(cfg, cfg.plan.legTimeLimitMs);
 		}
@@ -49,7 +54,8 @@ public final class LegPlanner {
 		public static Settings fromConfig(NrConfig cfg, long timeLimitMs) {
 			NrConfig.Plan p = cfg.plan;
 			return new Settings(p.sphereRays, p.coneRays, p.coneDegrees, p.aimSamplesPerFace, p.minAimMarginDeg,
-					p.maxExpansions, timeLimitMs, 3.0, p.typicalHopBlocks);
+					p.maxExpansions, timeLimitMs, 3.0, p.typicalHopBlocks,
+					cfg.teleport.enabled, cfg.teleport.blocksPerClick, cfg.teleport.maxClicks);
 		}
 	}
 
@@ -62,7 +68,21 @@ public final class LegPlanner {
 	 * @param turnDeg   turn from the previous look direction (0 for the first warp if no start look given)
 	 */
 	public record Warp(Vec3 fromFeet, int tx, int ty, int tz, Vec3 aimPoint, Vec3 aimDir, Vec3 landingFeet,
-			double marginDeg, double turnDeg, double missChance, double seconds) {}
+			double marginDeg, double turnDeg, double missChance, double seconds, Move move, int clicks) {
+		/** An etherwarp. */
+		public Warp(Vec3 fromFeet, int tx, int ty, int tz, Vec3 aimPoint, Vec3 aimDir, Vec3 landingFeet,
+				double marginDeg, double turnDeg, double missChance, double seconds) {
+			this(fromFeet, tx, ty, tz, aimPoint, aimDir, landingFeet, marginDeg, turnDeg, missChance, seconds, Move.ETHERWARP, 0);
+		}
+
+		public boolean isTeleport() { return move == Move.TELEPORT; }
+	}
+
+	/**
+	 * How a move is made: an etherwarp onto a target block, or a stretch of normal Aspect of the Void teleports
+	 * ({@code clicks} times along {@code aimDir}; {@code tx..tz} is then the block your feet end in).
+	 */
+	public enum Move { ETHERWARP, TELEPORT }
 
 	public enum Status { FOUND, ALREADY_THERE, NO_PATH, GAVE_UP }
 
@@ -80,7 +100,7 @@ public final class LegPlanner {
 	private final Etherwarp.Params params;
 	private final CostModel cost;
 	private final Settings settings;
-	private final Vec3[] sphere, cone;
+	private final Vec3[] sphere, cone, tpSphere, tpCone;
 	/** Max distance the feet can move in one warp: range plus eye height plus standing on top. */
 	private final double reach;
 
@@ -91,6 +111,8 @@ public final class LegPlanner {
 		this.settings = settings;
 		this.sphere = Directions.sphere(settings.sphereRays());
 		this.cone = Directions.cone(settings.coneRays(), settings.coneDeg());
+		this.tpSphere = Directions.sphere(48);
+		this.tpCone = Directions.cone(32, 25);
 		this.reach = params.range() + params.eyeHeight() + 2;
 	}
 
@@ -103,6 +125,9 @@ public final class LegPlanner {
 	private record ConeKey(long node, long goal) {}
 	private record AimKey(long node, long target) {}
 	private record Candidate(int x, int y, int z, Vec3 dir) {}
+	private record TpKey(long node, long goal) {}
+	/** One reachable point of a teleport stretch: {@code clicks} clicks along {@code dir}. */
+	private record Hop(Vec3 feet, Vec3 dir, int clicks) {}
 
 	private final Map<Object, Object> cache = new HashMap<>();
 	private final Map<Long, Set<Object>> bySection = new HashMap<>();
@@ -187,6 +212,40 @@ public final class LegPlanner {
 		cache.put(key, out);
 		rec.index(key);
 		return out;
+	}
+
+	/** Teleport nodes are told apart from etherwarp landing blocks in the search state. */
+	private static final long TP_NODE_SALT = 0x5A5A_0000_0000_0000L;
+	/** Clicks along one direction that become search nodes (plus the last one). */
+	private static final int[] HOP_CLICKS = {1, 2, 3, 4, 6, 8, 10, 14, 20};
+
+	/** Points reachable by normal teleport stretches from {@code feet} (cached per spot and goal). */
+	@SuppressWarnings("unchecked")
+	private List<Hop> hops(long node, long goalKey, Vec3 feet, Vec3 toGoal) {
+		TpKey key = new TpKey(node, goalKey);
+		Object hit = cache.get(key);
+		if (hit != null) { cacheHits++; return (List<Hop>) hit; }
+		cacheMisses++;
+		Recorder rec = new Recorder();
+		List<Vec3> dirs = new ArrayList<>(List.of(tpSphere));
+		if (toGoal.length() > 1e-6) {
+			Vec3 axis = toGoal.normalize();
+			dirs.add(axis);
+			for (Vec3 d : tpCone) dirs.add(Directions.rotateTo(d, axis));
+		}
+		List<Hop> out = new ArrayList<>();
+		for (Vec3 d : dirs) {
+			List<Vec3> pts = dev.nucleusrouter.core.etherwarp.NormalTeleport.stretch(feet, d, settings.teleportBlocks(), settings.teleportMaxClicks(), rec);
+			for (int k = 1; k <= pts.size(); k++) {
+				boolean keep = k == pts.size();
+				for (int c : HOP_CLICKS) if (c == k) keep = true;
+				if (keep && pts.get(k - 1).sub(feet).length() >= settings.minHopBlocks()) out.add(new Hop(pts.get(k - 1), d, k));
+			}
+		}
+		List<Hop> copy = List.copyOf(out);
+		cache.put(key, copy);
+		rec.index(key);
+		return copy;
 	}
 
 	private AimRegion.Result aim(long node, Vec3 eye, int tx, int ty, int tz) {
@@ -357,8 +416,25 @@ public final class LegPlanner {
 				Vec3 land = Etherwarp.landingFeet(c.x(), c.y(), c.z());
 				if (land.sub(e.feet).length() < settings.minHopBlocks()) continue;
 				// Lower bound: no miss risk, and the real aim point may be a few degrees closer than this ray
-				double optimistic = e.g + cost.baseSeconds() + cost.turnSeconds(Math.max(0, turn(e.look, c.dir()) - OPTIMISTIC_TURN_SLACK_DEG));
+				double lowTurn = Math.max(0, turn(e.look, c.dir()) - OPTIMISTIC_TURN_SLACK_DEG);
+				double optimistic = e.g + (lowTurn > 0 ? cost.warpSeconds(lowTurn, 180) : cost.baseSeconds());
 				open.add(new Entry(optimistic + heuristic(land, goal, goalRadius, hop), optimistic, land.sub(goal).length(), null, e, null, false, c, null, null));
+			}
+
+			// Normal teleport stretches: priced exactly right away (no aim region needed)
+			if (settings.teleport()) {
+				Set<Long> seenTp = new HashSet<>();
+				for (Hop h : hops(node, goalKey, e.feet, toGoal)) {
+					Vec3 f = h.feet();
+					if (!seenTp.add(blockKey((int) Math.floor(f.x()) >> 1, (int) Math.floor(f.y()) >> 1, (int) Math.floor(f.z()) >> 1))) continue;
+					double turnDeg = turn(e.look, h.dir());
+					double secs = cost.teleportSeconds(turnDeg, h.clicks());
+					int fx = (int) Math.floor(f.x()), fy = (int) Math.floor(f.y()), fz = (int) Math.floor(f.z());
+					Warp w = new Warp(e.feet, fx, fy, fz, null, h.dir(), f, 0, turnDeg, 0, secs, Move.TELEPORT, h.clicks());
+					double g = e.g + secs;
+					open.add(new Entry(g + heuristic(f, goal, goalRadius, hop), g, f.sub(goal).length(),
+							new State(blockKey(fx, fy, fz) ^ TP_NODE_SALT, Directions.bucket(h.dir())), e, w, true, null, f, h.dir()));
+				}
 			}
 		}
 		return new Leg(Status.NO_PATH, List.of(), 0, expansions, priced, (System.nanoTime() - t0) / 1000, -1);

@@ -7,6 +7,7 @@ import dev.nucleusrouter.core.geom.Vec3;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,10 +45,17 @@ class LegPlannerTest {
 		Vec3 at = start;
 		for (LegPlanner.Warp warp : leg.warps()) {
 			assertEquals(at, warp.fromFeet(), "warps chain up");
-			// Replaying the planned aim with the real etherwarp model lands exactly there
-			Etherwarp.Result real = Etherwarp.warp(Etherwarp.eye(at, cfg.etherwarp.eyeHeight), warp.aimDir(), Etherwarp.Params.fromConfig(cfg), w);
-			assertTrue(real.valid());
-			assertEquals(warp.landingFeet(), real.landingFeet());
+			if (warp.isTeleport()) {
+				// Replaying the clicks with the teleport model ends exactly there
+				List<Vec3> pts = dev.nucleusrouter.core.etherwarp.NormalTeleport.stretch(at, warp.aimDir(), cfg.teleport.blocksPerClick, warp.clicks(), w);
+				assertEquals(warp.clicks(), pts.size());
+				assertEquals(warp.landingFeet(), pts.get(pts.size() - 1));
+			} else {
+				// Replaying the planned aim with the real etherwarp model lands exactly there
+				Etherwarp.Result real = Etherwarp.warp(Etherwarp.eye(at, cfg.etherwarp.eyeHeight), warp.aimDir(), Etherwarp.Params.fromConfig(cfg), w);
+				assertTrue(real.valid());
+				assertEquals(warp.landingFeet(), real.landingFeet());
+			}
 			at = warp.landingFeet();
 		}
 		assertTrue(at.sub(goal).length() <= r, "ends within the goal radius");
@@ -59,7 +67,7 @@ class LegPlannerTest {
 		Vec3 start = new Vec3(5.5, 101, 0.5), goal = new Vec3(250.5, 101, 0.5);
 		LegPlanner.Leg leg = planner(w).plan(start, null, goal, 3);
 		checkChain(leg, start, goal, 3, cfg, w);
-		assertTrue(leg.warps().size() >= 4 && leg.warps().size() <= 9, "warps " + leg.warps().size());
+		assertTrue(leg.seconds() < 5, "245 blocks in under 5 s: " + leg.seconds());
 		System.out.printf("[bench] hall 245 blocks: %d warps, %.2f s, %d expansions, %d priced, first route %.1f ms, total %.1f ms%n",
 				leg.warps().size(), leg.seconds(), leg.expansions(), leg.edgesPriced(), leg.firstMicros() / 1000.0, leg.micros() / 1000.0);
 	}

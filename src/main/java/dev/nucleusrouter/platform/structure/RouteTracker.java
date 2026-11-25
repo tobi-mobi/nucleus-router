@@ -140,6 +140,17 @@ public final class RouteTracker {
 		});
 	}
 
+	/** "3 etherwarps + 2 teleport stretches (12 clicks)" */
+	static String describe(LegPlanner.Leg leg) {
+		if (leg == null) return "0 moves";
+		long ew = leg.warps().stream().filter(w -> !w.isTeleport()).count();
+		long tp = leg.warps().stream().filter(LegPlanner.Warp::isTeleport).count();
+		int clicks = leg.warps().stream().filter(LegPlanner.Warp::isTeleport).mapToInt(LegPlanner.Warp::clicks).sum();
+		if (tp == 0) return ew + " etherwarps";
+		if (ew == 0) return clicks + " teleports (" + tp + " directions)";
+		return ew + " etherwarps + " + clicks + " teleports";
+	}
+
 	/** Chat summary of a planned route. */
 	public static void report(Route r) {
 		Map<String, String> names = new HashMap<>();
@@ -161,7 +172,7 @@ public final class RouteTracker {
 			String from = s.viaWarpNucleus() ? "nucleus" : s.fromId();
 			LegPlanner.Leg leg = r.leg(from, s.toId());
 			boolean est = r.isEstimated(from, s.toId());
-			String warps = est ? "fly there yourself (not explored yet, time estimated)" : (leg == null ? 0 : leg.warps().size()) + " warps";
+			String warps = est ? "fly there yourself (not explored yet, time estimated)" : describe(leg);
 			String how = s.viaWarpNucleus() ? "/warp nucleus" + (s.toId().equals("nucleus") ? "" : ", then " + warps)
 					: warps + (s.fromId().equals("temple.exit") ? " from the front of the temple" : "");
 			String wait = s.waitSeconds() > 0 ? String.format(" + %.0f s there", s.waitSeconds()) : "";
