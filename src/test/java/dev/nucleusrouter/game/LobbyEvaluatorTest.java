@@ -50,6 +50,25 @@ class LobbyEvaluatorTest {
 		assertTrue(rule(rs, LobbyEvaluator.Rule.COVERAGE).message().contains("Jungle Temple"));
 	}
 
+	/** User 2026-11-25: Mines of Divan and King Yolkar 533 apart is fine when /warp nucleus covers the gap. */
+	@Test
+	void farApartStructuresAreFineWhenTheNucleusIsAShortcut() {
+		NrConfig cfg = new NrConfig();
+		Map<Structure, Vec3> m = new EnumMap<>(Structure.class);
+		m.put(Structure.MINES_OF_DIVAN, new Vec3(700, 60, 700));   // ~280 from the nucleus, NE-ish corner
+		m.put(Structure.PRECURSOR_CITY, new Vec3(690, 60, 520));
+		m.put(Structure.KING_YOLKAR, new Vec3(330, 120, 340));     // ~260 from the nucleus, opposite corner
+		m.put(Structure.GOBLIN_QUEENS_DEN, new Vec3(340, 110, 380));
+		m.put(Structure.JUNGLE_TEMPLE, new Vec3(360, 100, 520));
+		m.put(Structure.KHAZAD_DUM, new Vec3(560, 40, 700));
+		assertTrue(m.get(Structure.MINES_OF_DIVAN).sub(m.get(Structure.KING_YOLKAR)).length() > 500);
+		var rs = LobbyEvaluator.evaluate(new LobbyEvaluator.Facts(m, Map.of(), List.of(), 3, 0.5, 150), cfg);
+		LobbyEvaluator.Reason spread = rule(rs, LobbyEvaluator.Rule.SPREAD);
+		assertFalse(spread.warn(), spread.message());
+		LobbyEvaluator.Leg leg = LobbyEvaluator.longestLeg(m, new Vec3(513.5, 106, 526.5));
+		assertTrue(leg.blocks() < 250, leg.toString());
+	}
+
 	@Test
 	void rulesCanBeTurnedOff() {
 		NrConfig cfg = new NrConfig();

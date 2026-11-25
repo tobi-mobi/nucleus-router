@@ -247,7 +247,10 @@ public final class NrConfig {
 		/** Show a chat notice when a rule starts saying "consider another lobby". */
 		public boolean notify = true;
 		public boolean spreadRule = true;
-		/** Warn if two structures are further apart than this (blocks). */
+		/**
+		 * Warn if reaching some structure needs a leg longer than this (blocks), counting /warp nucleus as a
+		 * shortcut: each structure is reached from the nearest other structure or from the nucleus.
+		 */
 		public int maxSpreadBlocks = 250;
 		public boolean dayRule = true;
 		/** Warn if the lobby day is above this (lobbies close around day 15-20). */

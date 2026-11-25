@@ -40,20 +40,16 @@ public final class LobbyEvaluator {
 		NrConfig.Lobby l = cfg.lobby;
 		List<Reason> out = new ArrayList<>();
 
-		// Spread: largest distance between two known structures
+		// Spread: the longest leg you'd have to travel, where /warp nucleus can shorten any leg
+		// (user 2026-11-25: the route doesn't have to go straight from one structure to the next)
+		Vec3 nucleusSpawn = new Vec3(cfg.hollows.nucleusSpawnX, cfg.hollows.nucleusSpawnY, cfg.hollows.nucleusSpawnZ);
 		if (!l.spreadRule) out.add(new Reason(Rule.SPREAD, false, false, "Spread rule is off"));
-		else if (f.positions().size() < 2) out.add(new Reason(Rule.SPREAD, false, false, "Spread: needs at least 2 structures found"));
+		else if (f.positions().isEmpty()) out.add(new Reason(Rule.SPREAD, false, false, "Spread: needs a structure found"));
 		else {
-			double max = 0;
-			String pair = "";
-			List<Map.Entry<Structure, Vec3>> e = new ArrayList<>(f.positions().entrySet());
-			for (int i = 0; i < e.size(); i++) for (int j = i + 1; j < e.size(); j++) {
-				double d = e.get(i).getValue().sub(e.get(j).getValue()).length();
-				if (d > max) { max = d; pair = e.get(i).getKey().displayName + " to " + e.get(j).getKey().displayName; }
-			}
-			boolean warn = max > l.maxSpreadBlocks;
-			out.add(new Reason(Rule.SPREAD, warn, true, String.format("Spread: %s is %d blocks (%s %d)%s", pair, Math.round(max),
-					warn ? "over" : "within", l.maxSpreadBlocks, f.missing().isEmpty() ? "" : ", not all structures found yet")));
+			Leg worst = longestLeg(f.positions(), nucleusSpawn);
+			boolean warn = worst.blocks() > l.maxSpreadBlocks;
+			out.add(new Reason(Rule.SPREAD, warn, true, String.format("Spread: longest leg is %s, %d blocks (%s %d)%s", worst.describe(),
+					Math.round(worst.blocks()), warn ? "over" : "within", l.maxSpreadBlocks, f.missing().isEmpty() ? "" : ", not all structures found yet")));
 		}
 
 		// Day: high-day lobbies close soon after the setup is done
@@ -90,6 +86,33 @@ public final class LobbyEvaluator {
 			}
 		}
 		return out;
+	}
+
+	/** A leg of the route: from a structure (or the nucleus) to a structure. */
+	public record Leg(Structure from, Structure to, boolean viaNucleus, double blocks) {
+		public String describe() {
+			return viaNucleus ? "/warp nucleus to " + to.displayName : from.displayName + " to " + to.displayName;
+		}
+	}
+
+	/**
+	 * The longest unavoidable leg: for every structure, the shortest way to reach it from any other structure
+	 * (straight, or /warp nucleus then from the nucleus); the worst of those. With one structure it is the
+	 * distance from the nucleus. This is what decides how far you must travel, not the straight distance
+	 * between the two furthest structures.
+	 */
+	public static Leg longestLeg(Map<Structure, Vec3> positions, Vec3 nucleus) {
+		Leg worst = null;
+		for (Map.Entry<Structure, Vec3> to : positions.entrySet()) {
+			Leg best = new Leg(null, to.getKey(), true, to.getValue().sub(nucleus).length());
+			for (Map.Entry<Structure, Vec3> from : positions.entrySet()) {
+				if (from.getKey() == to.getKey()) continue;
+				double d = from.getValue().sub(to.getValue()).length();
+				if (d < best.blocks()) best = new Leg(from.getKey(), to.getKey(), false, d);
+			}
+			if (worst == null || best.blocks() > worst.blocks()) worst = best;
+		}
+		return worst;
 	}
 
 	public static boolean anyWarning(List<Reason> reasons) {
