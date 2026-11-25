@@ -82,8 +82,13 @@ public final class LegDesigner {
 	 * Both are the blocks under your feet.
 	 */
 	public Result design(int[] start, int[] goal) {
+		return design(start, goal, cfg.legTimeLimitMs);
+	}
+
+	/** Same, with its own time limit (the whole-lobby plan shares one budget between all legs). */
+	public Result design(int[] start, int[] goal, long timeLimitMs) {
 		long t0 = System.nanoTime();
-		long deadline = t0 + cfg.legTimeLimitMs * 1_000_000L;
+		long deadline = t0 + Math.max(1, timeLimitMs) * 1_000_000L;
 		List<List<int[]>> paths = paths(start, goal, cfg.maxBends, cfg.bendOffsetBlocks);
 		List<Design> out = new ArrayList<>();
 		int tried = 0, blocked = 0;

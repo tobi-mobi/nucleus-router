@@ -56,8 +56,10 @@ public final class NrConfig {
 		public double weightPerClearedBlock = 0.001;
 		public double weightPerPlacedBlock = 0.02;
 		public double weightPerMinedBlock = 0.05;
-		/** Time budget for designing one leg (ms). */
+		/** Time budget for designing one leg (ms), for a single leg (/nr design). */
 		public int legTimeLimitMs = 2000;
+		/** Time budget for the whole lobby's setup plan (ms), shared by all legs (SPEC §3.4 target: 5 s). */
+		public int lobbyTimeLimitMs = 5000;
 		/** Bombs: a stand spot must be at least this far from the blast centre (don't blow up your own floor). */
 		public double minThrowDistance = 9;
 		/** Bombs: at most this many throws per leg before the rest becomes mining. */
@@ -550,6 +552,7 @@ public final class NrConfig {
 		setup.legTimeLimitMs = (int) clamp(fixes, "setup.legTimeLimitMs", setup.legTimeLimitMs, 50, 60000);
 		setup.maxThrowsPerLeg = (int) clamp(fixes, "setup.maxThrowsPerLeg", setup.maxThrowsPerLeg, 1, 5000);
 		setup.maxPillarBlocks = (int) clamp(fixes, "setup.maxPillarBlocks", setup.maxPillarBlocks, 0, 64);
+		setup.lobbyTimeLimitMs = (int) clamp(fixes, "setup.lobbyTimeLimitMs", setup.lobbyTimeLimitMs, 500, 60000);
 		run.arriveRadius = clamp(fixes, "run.arriveRadius", run.arriveRadius, 3, 100);
 		run.targetsShown = (int) clamp(fixes, "run.targetsShown", run.targetsShown, 1, 30);
 		if (run.denTimerStartMessages == null) { run.denTimerStartMessages = new Run().denTimerStartMessages; fixes.add("run.denTimerStartMessages missing, reset"); }

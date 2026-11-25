@@ -31,6 +31,7 @@ Claude then moves it to "Confirmed game facts" in `ROADMAP.md`, updates the defa
 | Q8 | How far can you place a block on Hypixel? | 4.5 blocks (`placing.reach`) | Stand still, hold cobblestone and try to place against a wall while backing away one block at a time. Use `/nr where` on the farthest spot that worked and on the block you placed against |
 | Q14 | How close to a big structure can you place blocks? | Unknown; placements inside the guessed 81-block zones are only flagged ("may be refused") | Walk towards a structure placing a cobblestone every few blocks. `/nr where` at the first spot where placing is refused, and name the structure |
 | Q15 | Can you pillar up (jump and place a block under yourself) in the Hollows, also over a bomb crater? | Yes: targets left floating over craters are reached by pillaring up to 16 blocks (`setup.maxPillarBlocks`) | Stand in a crater, look straight down, jump and place cobblestone under you a few times |
+| Q16 | Sneaking to the edge of a block: can you place a block against the side of the block you're standing on? | Yes, with your body up to 0.7 blocks past its middle | Pillar up 3 blocks, sneak to an edge, look down at the pillar's side and place cobblestone there |
 | Q9 | Structure zone bounds (where bombs fizzle) | 81 x 81 x 81 blocks around each structure; a bomb only fizzles if its centre is inside (confirmed) | Only needed if a planned bomb near a structure does nothing. Report which structure and where you threw from |
 | Q10 | Can a bomb thrown 9+ blocks away hurt you or break the block you stand on? | No: throws are planned from at least 9 blocks away (`setup.minThrowDistance`) | During a `/nr design` test, throw from the planned spot: did you take damage or lose your floor? |
 | Q11 | Does an ore or gemstone broken by a Bob-omb come back (like a mined one)? | Yes: blasted ores still count as solid when planning | Blast an ore vein, wait 5 minutes, check whether it's back |
@@ -63,3 +64,10 @@ Claude then moves it to "Confirmed game facts" in `ROADMAP.md`, updates the defa
 4. Placements (4.4): "P" numbers on the blocks to place, in order. For a normal one, a yellow spot to stand on and a yellow square on the face to click. Pillars show as a yellow column with "pillar up" on top. Try one of each: can you do it from the shown spot? (Also answers Q8 and Q15.)
 5. Chat lists how many target and helper blocks to place. Any it couldn't solve are magenta; tell Claude where.
 6. `/nr design clear` hides it.
+
+### Milestone 4: whole-lobby setup plan (4.5)
+1. In a lobby where all structures are found: `/nr route` first (so tunnels are only planned where they beat the terrain), then `/nr setup`.
+2. A yellow line at the top of the screen shows progress ("designing legs 12/30", "bombs", "placing"). The game should not stutter while it runs.
+3. Chat: "Lobby setup planned in X s". **Please send that line**: it is the real-lobby speed measurement (target: under 5 s). Then the run order with, per structure, "existing terrain" or "tunnel: N warps; B bombs, M mined, P placed", the run time after the setup, and any "Problem:" lines.
+4. In the world: all legs at once. Bombs are numbered B1, B2... across the whole lobby (do all of them first), then placements P1, P2... "edge" on a P number means: stand on the pillar top and sneak towards the block before placing it.
+5. Optional, also very useful: `/nr dump` in that lobby and send the file it writes, so the planner can be tested on your real terrain.

@@ -58,6 +58,24 @@ public interface SetupWorld {
 		};
 	}
 
+	/**
+	 * This world after setup work: {@code cleared} blocks gone (only those that are clearable), {@code placed}
+	 * blocks added. Everything else (zones, explored, the planners' rules) stays the same.
+	 */
+	default SetupWorld changed(Set<Long> cleared, Set<Long> placed) {
+		SetupWorld base = this;
+		return new SetupWorld() {
+			@Override public VoxelClass classAt(int x, int y, int z) {
+				long k = Lane.pack(x, y, z);
+				if (placed.contains(k)) return VoxelClass.PLACED;
+				if (cleared.contains(k) && base.clearable(x, y, z)) return VoxelClass.AIR;
+				return base.classAt(x, y, z);
+			}
+			@Override public boolean inZone(int x, int y, int z) { return base.inZone(x, y, z); }
+			@Override public boolean explored(int x, int z) { return base.explored(x, z); }
+		};
+	}
+
 	/** Zone boxes as {minX, minY, minZ, maxX, maxY, maxZ} (inclusive). */
 	static boolean inAny(List<int[]> zones, int x, int y, int z) {
 		for (int[] b : zones)

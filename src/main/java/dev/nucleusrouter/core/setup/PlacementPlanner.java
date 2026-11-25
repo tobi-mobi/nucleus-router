@@ -34,6 +34,8 @@ import java.util.function.Predicate;
  *       straight up from the ground under it: stand on the ground, jump and place under yourself until the
  *       top block, the target, is in place (at most {@code setup.maxPillarBlocks}), again only if every lane
  *       still works with the pillar. You end up standing on the target.</li>
+ *   <li>if a pillar under it would get in a lane's way: a pillar <b>beside</b> it up to the same height; on top,
+ *       sneak to the edge and place the target against the pillar's side.</li>
  * </ol>
  * Blocks with no way to place them are reported, not guessed. Placing near large structures is refused in-game
  * (confirmed 2026-11-24, exact distance unknown), so placements inside a structure zone are flagged.
@@ -60,9 +62,10 @@ public final class PlacementPlanner {
 	 * @param nearStructure inside a structure's zone: the game may refuse it
 	 * @param pillar        placed by pillaring: jump and place under yourself ({@code standFeet} is then the
 	 *                      block's own cell: where your feet are when it goes in)
+	 * @param edge          placed from the edge of a pillar's top: sneak towards it ({@code standFeet} is off-centre)
 	 */
 	public record Step(int[] block, int[] support, Face face, Vec3 standFeet, Vec3 clickPoint, Vec3 look, boolean helper,
-			boolean nearStructure, boolean pillar) {}
+			boolean nearStructure, boolean pillar, boolean edge) {}
 
 	/**
 	 * @param steps      placements in order (helpers just before the block they hold)
@@ -73,6 +76,12 @@ public final class PlacementPlanner {
 		public int targets() { return steps.size() - helpers(); }
 		public int nearStructure() { return (int) steps.stream().filter(Step::nearStructure).count(); }
 		public int pillarBlocks() { return (int) steps.stream().filter(Step::pillar).count(); }
+	}
+
+	/** Checks the lanes in a world with blocks added ({@code added}: the helper or pillar blocks being tried). */
+	@FunctionalInterface
+	public interface LanesWork {
+		boolean test(SolidQuery post, Set<Long> added);
 	}
 
 	private final SetupWorld world;
@@ -94,6 +103,11 @@ public final class PlacementPlanner {
 	 * @param lanesWork  checks a world with helper blocks added: true if every lane still works in it
 	 */
 	public Plan plan(List<int[]> path, Set<Long> placements, Set<Long> cleared, Predicate<SolidQuery> lanesWork) {
+		return plan(path, placements, cleared, (post, added) -> lanesWork.test(post));
+	}
+
+	/** Same; the lane check also gets the blocks being added, so it can skip lanes far from them. */
+	public Plan plan(List<int[]> path, Set<Long> placements, Set<Long> cleared, LanesWork lanesWork) {
 		long t0 = System.nanoTime();
 		Set<Long> placed = new HashSet<>();
 		SolidQuery now = (x, y, z) -> {
@@ -130,10 +144,12 @@ public final class PlacementPlanner {
 	 * up the chain, not placed yet, counted when checking the lanes.
 	 */
 	private List<Step> place(int[] b, SolidQuery now, Set<Long> targets, Vec3 last, int depth, Set<Long> placed,
-			Set<Long> reserved, Predicate<SolidQuery> lanesWork, Set<Long> cleared) {
+			Set<Long> reserved, LanesWork lanesWork, Set<Long> cleared) {
 		Step direct = directStep(b, now, last, depth > 0);
 		if (direct != null) return new ArrayList<>(List.of(direct));
 		if (depth >= MAX_HELPERS) return null;
+		// Helpers only help next to something solid; a target floating in the open goes straight to a pillar
+		if (depth == 0 && !solidNear(b, MAX_HELPERS, now)) return null;
 		// No neighbour to click on: try a helper under it, then beside it (never above: landing room)
 		for (Face f : HELPER_FACES) {
 			int[] h = {b[0] + f.dx, b[1] + f.dy, b[2] + f.dz};
@@ -148,7 +164,9 @@ public final class PlacementPlanner {
 				long k = Lane.pack(x, y, z);
 				return trial.contains(k) || targets.contains(k) || (!cleared.contains(k) && world.solid(x, y, z));
 			};
-			if (!lanesWork.test(withHelper)) continue;
+			Set<Long> added = new HashSet<>(reserved);
+			added.add(hk);
+			if (!lanesWork.test(withHelper, added)) continue;
 			// Deeper helpers are checked with this one (and those above it) counted too
 			Set<Long> reservedWithH = new HashSet<>(reserved);
 			reservedWithH.add(hk);
@@ -182,20 +200,21 @@ public final class PlacementPlanner {
 				for (int dy = -r - 2; dy <= r; dy++)
 					for (int dz = -r; dz <= r; dz++) {
 						int fx = b[0] + dx, fy = b[1] + dy, fz = b[2] + dz;
-						if (!standable(fx, fy, fz, now, b)) continue;
+						// Cheap tests first: reach and which side you're on, then the world
 						Vec3 feet = new Vec3(fx + 0.5, fy, fz + 0.5);
 						Vec3 eye = feet.add(new Vec3(0, STANDING_EYE, 0));
-						if (!AimRegion.faceVisible(clicked, eye, s[0], s[1], s[2])) continue;
 						Vec3 to = click.sub(eye);
 						double d = to.length();
 						if (d > reach || d < 1e-6) continue;
+						if (!AimRegion.faceVisible(clicked, eye, s[0], s[1], s[2])) continue;
+						if (!standable(fx, fy, fz, now, b)) continue;
 						Vec3 dir = to.scale(1 / d);
 						VoxelRay.Hit hit = VoxelRay.cast(eye, dir, d + 0.5, now);
 						if (hit == null || !hit.isBlock(s[0], s[1], s[2])) continue;
 						double score = (last == null ? 0 : feet.sub(last).length()) + d * 0.1;
 						if (score < bestScore) {
 							bestScore = score;
-							best = new Step(b.clone(), s, clicked, feet, click, dir, helper, world.inZone(b[0], b[1], b[2]), false);
+							best = new Step(b.clone(), s, clicked, feet, click, dir, helper, world.inZone(b[0], b[1], b[2]), false, false);
 						}
 					}
 		}
@@ -206,29 +225,80 @@ public final class PlacementPlanner {
 	 * A pillar from the ground straight under {@code b} up to {@code b}, or null: every cell between must be
 	 * empty, the ground cell must have room for you to stand, and the lanes must still work with the pillar.
 	 */
-	private List<Step> pillar(int[] b, SolidQuery now, Set<Long> targets, Set<Long> placed, Predicate<SolidQuery> lanesWork, Set<Long> cleared) {
-		int ground = b[1] - 1;
-		while (ground >= b[1] - maxPillar - 1 && !now.solid(b[0], ground, b[2])) ground--;
-		if (!now.solid(b[0], ground, b[2])) return null;
-		int height = b[1] - ground; // blocks to place, the target included
+	private List<Step> pillar(int[] b, SolidQuery now, Set<Long> targets, Set<Long> placed, LanesWork lanesWork, Set<Long> cleared) {
+		List<Step> under = column(b, 0, 0, now, targets, placed, lanesWork, cleared);
+		if (under != null) return under;
+		// Straight under it would get in a lane's way: pillar up beside it, sneak to the edge and place it against
+		// the pillar's side
+		for (Face f : SIDES) {
+			List<Step> side = column(b, f.dx, f.dz, now, targets, placed, lanesWork, cleared);
+			if (side != null) return side;
+		}
+		return null;
+	}
+
+	private static final Face[] SIDES = {Face.NORTH, Face.SOUTH, Face.WEST, Face.EAST};
+	/** Sneaking at an edge, your centre can be this far past the middle of the block you stand on. */
+	static final double EDGE_OFFSET = 0.7;
+
+	/**
+	 * A pillar in column (b.x + sx, b.z + sz) from the ground up to b's height. Under b (sx = sz = 0) its top block
+	 * is b itself; beside b, b is then placed against the pillar's side, sneaking at the edge on top of it.
+	 */
+	private List<Step> column(int[] b, int sx, int sz, SolidQuery now, Set<Long> targets, Set<Long> placed, LanesWork lanesWork, Set<Long> cleared) {
+		boolean under = sx == 0 && sz == 0;
+		int cx = b[0] + sx, cz = b[2] + sz, top = b[1];
+		if (!world.explored(cx, cz)) return null;
+		if (!under && (now.solid(cx, top, cz) || now.solid(cx, top + 1, cz) || now.solid(cx, top + 2, cz)
+				|| targets.contains(Lane.pack(cx, top, cz)))) return null;
+		int ground = top - 1;
+		while (ground >= top - maxPillar - 1 && !now.solid(cx, ground, cz)) ground--;
+		if (!now.solid(cx, ground, cz)) return null;
+		int height = top - ground; // column blocks (b included when under)
 		if (height < 1 || height > maxPillar) return null;
-		if (!world.explored(b[0], b[2])) return null;
-		// Room to stand on the ground before you start: 2 empty blocks (the pillar cells themselves are empty)
+		Set<Long> added = new HashSet<>();
+		for (int y = ground + 1; y <= top; y++) if (!(under && y == top)) added.add(Lane.pack(cx, y, cz));
 		Set<Long> trial = new HashSet<>(placed);
-		for (int y = ground + 1; y < b[1]; y++) trial.add(Lane.pack(b[0], y, b[2]));
+		trial.addAll(added);
 		SolidQuery withPillar = (x, y, z) -> {
 			long k = Lane.pack(x, y, z);
 			return trial.contains(k) || targets.contains(k) || (!cleared.contains(k) && world.solid(x, y, z));
 		};
-		if (!lanesWork.test(withPillar)) return null;
+		if (!added.isEmpty() && !lanesWork.test(withPillar, added)) return null;
 		List<Step> out = new ArrayList<>();
-		for (int y = ground + 1; y <= b[1]; y++) {
-			int[] blk = {b[0], y, b[2]};
-			int[] sup = {b[0], y - 1, b[2]};
-			Vec3 feet = new Vec3(b[0] + 0.5, y, b[2] + 0.5);
-			out.add(new Step(blk, sup, Face.UP, feet, feet, new Vec3(0, -1, 0), y != b[1], world.inZone(b[0], y, b[2]), true));
+		for (int y = ground + 1; y <= top; y++) {
+			int[] blk = {cx, y, cz};
+			int[] sup = {cx, y - 1, cz};
+			Vec3 feet = new Vec3(cx + 0.5, y, cz + 0.5);
+			boolean isTarget = under && y == top;
+			out.add(new Step(blk, sup, Face.UP, feet, feet, new Vec3(0, -1, 0), !isTarget, world.inZone(cx, y, cz), true, false));
+		}
+		if (!under) {
+			// On top of the pillar, sneak towards b and click the pillar's side face that faces b
+			Face clicked = faceOf(-sx, -sz);
+			Vec3 feet = new Vec3(cx + 0.5 - EDGE_OFFSET * sx, top + 1, cz + 0.5 - EDGE_OFFSET * sz);
+			Vec3 click = new Vec3(b[0] + 0.5 + sx * 0.5, b[1] + 0.5, b[2] + 0.5 + sz * 0.5);
+			Vec3 eye = feet.add(new Vec3(0, STANDING_EYE, 0));
+			if (click.sub(eye).length() > reach) return null;
+			out.add(new Step(b.clone(), new int[]{cx, top, cz}, clicked, feet, click, click.sub(eye).normalize(), false,
+					world.inZone(b[0], b[1], b[2]), false, true));
 		}
 		return out;
+	}
+
+	private static Face faceOf(int dx, int dz) {
+		for (Face f : Face.values()) if (f.dx == dx && f.dy == 0 && f.dz == dz) return f;
+		throw new IllegalArgumentException(dx + "," + dz);
+	}
+
+
+	/** Something solid within {@code r} blocks of {@code b} (not above it). */
+	private static boolean solidNear(int[] b, int r, SolidQuery now) {
+		for (int dx = -r; dx <= r; dx++)
+			for (int dy = -r; dy <= 0; dy++)
+				for (int dz = -r; dz <= r; dz++)
+					if ((dx | dy | dz) != 0 && now.solid(b[0] + dx, b[1] + dy, b[2] + dz)) return true;
+		return false;
 	}
 
 	/** Feet in (x, y, z): floor under, room for the body, explored, and not where the block goes. */

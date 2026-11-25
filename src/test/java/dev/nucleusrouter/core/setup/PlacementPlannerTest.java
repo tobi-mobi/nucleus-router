@@ -52,6 +52,15 @@ class PlacementPlannerTest {
 				placed.add(Lane.pack(b[0], b[1], b[2]));
 				continue;
 			}
+			if (s.edge()) {
+				// Sneaking at the edge of the pillar top: the pillar is under your feet's block
+				int px = s.support()[0], py = s.support()[1], pz = s.support()[2];
+				assertEquals(py + 1, (int) Math.floor(s.standFeet().y()), "standing on the pillar top");
+				assertTrue(Math.abs(s.standFeet().x() - (px + 0.5)) <= 0.8 && Math.abs(s.standFeet().z() - (pz + 0.5)) <= 0.8, "still on the pillar");
+				assertTrue(s.standFeet().add(new dev.nucleusrouter.core.geom.Vec3(0, PlacementPlanner.STANDING_EYE, 0)).sub(s.clickPoint()).length() <= cfg.placing.reach);
+				placed.add(Lane.pack(b[0], b[1], b[2]));
+				continue;
+			}
 			var eye = s.standFeet().add(new dev.nucleusrouter.core.geom.Vec3(0, PlacementPlanner.STANDING_EYE, 0));
 			assertTrue(eye.sub(s.clickPoint()).length() <= cfg.placing.reach + 1e-9, "within reach");
 			VoxelRay.Hit hit = VoxelRay.cast(eye, s.look(), cfg.placing.reach + 0.5, now);
@@ -103,6 +112,19 @@ class PlacementPlannerTest {
 		assertDoable(w, p, Set.of());
 	}
 
+	/** A pillar under the target would block a lane: build it beside the target and place from the edge. */
+	@Test
+	void pillarBesideWhenUnderIsInTheWay() {
+		SetupWorld w = LegDesignerTest.world(PlacementPlannerTest::hall, List.of());
+		PlacementPlanner.Plan p = plan(w, set(new int[]{0, 106, 0}), q -> !q.solid(0, 103, 0));
+		assertTrue(p.impossible().isEmpty());
+		PlacementPlanner.Step last = p.steps().get(p.steps().size() - 1);
+		assertTrue(last.edge());
+		assertArrayEquals(new int[]{0, 106, 0}, last.block());
+		for (PlacementPlanner.Step s : p.steps()) assertFalse(s.block()[0] == 0 && s.block()[2] == 0 && s.block()[1] < 106, "nothing under the target");
+		assertDoable(w, p, Set.of());
+	}
+
 	@Test
 	void tooHighForAPillarIsReportedNotGuessed() {
 		SetupWorld w = LegDesignerTest.world(PlacementPlannerTest::hall, List.of());
@@ -114,7 +136,11 @@ class PlacementPlannerTest {
 	@Test
 	void noPillarThatBreaksALane() {
 		SetupWorld w = LegDesignerTest.world(PlacementPlannerTest::hall, List.of());
-		PlacementPlanner.Plan p = plan(w, set(new int[]{0, 108, 0}), q -> !q.solid(0, 104, 0));
+		// Anything at height 104 within 1 block of the target breaks the lane: no pillar under or beside works
+		PlacementPlanner.Plan p = plan(w, set(new int[]{0, 108, 0}), q -> {
+			for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) if (q.solid(dx, 104, dz)) return false;
+			return true;
+		});
 		assertEquals(1, p.impossible().size());
 	}
 
