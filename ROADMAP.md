@@ -25,7 +25,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - [x] 2.7 Milestone report. **Stop.**
 
 ## Milestone 3: Run routes on existing terrain
-- [ ] 3.1 Cost model (base warp + ping, turn time, miss probability × recovery, manual segment times, `/warp nucleus` edge). Unit tests. (§2.6)
+- [x] 3.1 Cost model (base warp + ping, turn time, miss probability × recovery, manual segment times, `/warp nucleus` edge). Unit tests. (§2.6)
 - [ ] 3.2 Leg planner A: landing nodes, lazy edges, A* over (node, aim bucket), ray cache + voxel→edge invalidation. Unit tests + benchmark. (§3.3)
 - [ ] 3.3 Default stop points guessed from anchors (keepers, Robot/crystal, King, Queen crystal + den exit ≤ 2.5 s, temple door → temple steps, Bal spot, nucleus). (§2.2, §3.5)
 - [ ] 3.4 Route ordering: precedence (King before Queen), direct vs `/warp nucleus` per transition, keeper sub-order, branch-and-bound. (§3.2)
@@ -135,6 +135,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-25 On-screen list is movable: `/nr hud` opens a drag editor (right-click = default spot, Esc saves).
 - 2026-11-25 SPEC §4 change (user): the spread rule no longer uses the straight distance between the two furthest structures. /warp nucleus is a shortcut, so it now measures the **longest leg**: each structure is reached from the closest other structure or from the nucleus spawn, and the worst of those is compared with `lobby.maxSpreadBlocks` (250).
 - 2026-11-25 SPEC §2.4 change (confirmed in-game): a bomb fizzles only if its blast **centre** is inside a structure's zone, not when the blast sphere touches the zone. Planners must keep bomb centres out of zones; blasts may reach into them. `StructureZone.fizzles` is the rule; zone-probe reports use it.
+- 2026-11-25 Cost model (3.1, `core/cost/CostModel`): warp = base + ping/2 + turnSecondsAt90 x (angle/90)^turnExponent + P(miss) x missRecovery. **Miss model:** aim after a turn is off by a round normal error with spread sigma = `cost.aimErrorBaseDeg` (0.3) + `cost.aimErrorPerDeg` (0.02) x angle; the warp misses if the error exceeds the target's aim margin (from `AimRegion`), so P(miss) = exp(-margin^2 / (2 sigma^2)). Both constants are estimates to tune (planner later can fit them from `/nr debug ray` misses). Stop times in `game/StopCosts` (temple and Bal are manual segments). Ping: the measured click-to-teleport delay from `/nr debug ray` is the best ping source on Hypixel (tab list says 1 ms); the planner will prefer it, then `cost.fallbackPingMs`.
 - 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
 ## Session log
@@ -163,3 +164,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-25: User: all Milestone 2 checks work. Added `/nr hud` drag editor and finding structures from learned crystal boxes (no NPC visits after the first lobby). 90 unit tests + 2 client gametests pass (screenshots of list and editor). Untested in-game. Open: zone bounds. Next: Milestone 3 once the user says go.
 - 2026-11-25: Spread rule made /warp-nucleus aware (user: Mines of Divan to King Yolkar 533 blocks was flagged). 91 unit tests pass. User measuring zone corners now.
 - 2026-11-25: User: zone corners too inconsistent to measure; bombs centred outside still blast into the zone, centred inside do nothing. Fizzle rule changed to centre-inside, default zone guess kept. 91 unit tests pass. Next: Milestone 3 when the user says go.
+- 2026-11-25: 3.1 cost model (turn time, documented miss model from turn angle and aim margin, /warp nucleus, stop times) + 2 new Cost settings. 96 unit tests pass. Next: 3.2 leg planner.

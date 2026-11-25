@@ -171,6 +171,13 @@ public final class NrConfig {
 		public double turnExponent = 1.5;
 		/** Time lost when a warp lands in the wrong spot. */
 		public double missRecoverySeconds = 1.5;
+		/**
+		 * Miss model (estimate, tune to taste): your aim after a turn is off by a random amount with this
+		 * spread in degrees even without turning...
+		 */
+		public double aimErrorBaseDeg = 0.3;
+		/** ...plus this much per degree turned (0.02: about 2.1 degrees of spread after a 90 degree turn). */
+		public double aimErrorPerDeg = 0.02;
 	}
 
 	/**
@@ -425,6 +432,8 @@ public final class NrConfig {
 		cost.turnSecondsAt90 = clamp(fixes, "cost.turnSecondsAt90", cost.turnSecondsAt90, 0, 5);
 		cost.turnExponent = clamp(fixes, "cost.turnExponent", cost.turnExponent, 0.5, 4);
 		cost.missRecoverySeconds = clamp(fixes, "cost.missRecoverySeconds", cost.missRecoverySeconds, 0, 30);
+		cost.aimErrorBaseDeg = clamp(fixes, "cost.aimErrorBaseDeg", cost.aimErrorBaseDeg, 0, 10);
+		cost.aimErrorPerDeg = clamp(fixes, "cost.aimErrorPerDeg", cost.aimErrorPerDeg, 0, 1);
 		if (compass.itemName == null || compass.itemName.isBlank()) { compass.itemName = "Wishing Compass"; fixes.add("compass.itemName empty, reset"); }
 		if (compass.particleTypes == null) { compass.particleTypes = new ArrayList<>(); fixes.add("compass.particleTypes missing, reset"); }
 		compass.captureSeconds = clamp(fixes, "compass.captureSeconds", compass.captureSeconds, 0.5, 15);

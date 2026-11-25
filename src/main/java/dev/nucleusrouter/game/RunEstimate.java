@@ -27,8 +27,9 @@ public final class RunEstimate {
 	/** Null if any structure's position is missing. */
 	public static Result estimate(Map<Structure, Vec3> pos, Map<Structure, List<Vec3>> npcs, Vec3 nucleus, NrConfig cfg, double legEfficiency, int pingMs) {
 		for (Structure s : Structure.values()) if (pos.get(s) == null) return null;
-		double perWarp = cfg.cost.baseWarpSeconds + pingMs / 2000.0
-				+ cfg.cost.turnSecondsAt90 * Math.pow(0.5, cfg.cost.turnExponent);
+		dev.nucleusrouter.core.cost.CostModel cost = new dev.nucleusrouter.core.cost.CostModel(cfg, pingMs);
+		// Rough: every warp assumed to need an average 45 degree turn onto a comfortable (2 degree) target
+		double perWarp = cost.warpSeconds(45, 2.0);
 		double perBlock = 1.0 / Math.max(1, cfg.etherwarp.range * legEfficiency);
 		Structure[] all = Structure.values();
 		List<Structure> bestOrder = null;
@@ -60,19 +61,10 @@ public final class RunEstimate {
 
 	/** Time spent at a stop: interactions, pickups, fights, the manual temple, walking between keepers. */
 	static double stopSeconds(Structure s, List<Vec3> npcs, NrConfig cfg, double perWarp, double perBlock) {
-		NrConfig.Stops st = cfg.stops;
-		return switch (s) {
-			case MINES_OF_DIVAN -> {
-				double t = 4 * st.npcInteractionSeconds + st.crystalPickupSeconds;
-				if (npcs != null && npcs.size() > 1) for (int i = 1; i < npcs.size(); i++) t += legSeconds(npcs.get(i - 1), npcs.get(i), perWarp, perBlock);
-				yield t;
-			}
-			case PRECURSOR_CITY -> st.npcInteractionSeconds + st.crystalPickupSeconds;
-			case KING_YOLKAR -> st.npcInteractionSeconds;
-			case GOBLIN_QUEENS_DEN -> st.crystalPickupSeconds + st.queenDenExitTargetSeconds;
-			case JUNGLE_TEMPLE -> st.npcInteractionSeconds + st.templeManualSeconds + st.crystalPickupSeconds;
-			case KHAZAD_DUM -> st.balFightSeconds + st.crystalPickupSeconds;
-		};
+		double t = StopCosts.seconds(s, cfg);
+		if (s == Structure.MINES_OF_DIVAN && npcs != null && npcs.size() > 1)
+			for (int i = 1; i < npcs.size(); i++) t += legSeconds(npcs.get(i - 1), npcs.get(i), perWarp, perBlock);
+		return t;
 	}
 
 	private static List<List<Structure>> permutations(List<Structure> items) {

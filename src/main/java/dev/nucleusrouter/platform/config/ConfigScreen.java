@@ -105,6 +105,8 @@ public final class ConfigScreen {
 				.option(intOpt("Fallback ping (ms)", "Used when ping can't be measured or measuring is off.", d.cost.fallbackPingMs, () -> c.cost.fallbackPingMs, v -> c.cost.fallbackPingMs = v, 0, 2000))
 				.option(dblOpt("Turn time at 90 degrees (s)", "Extra time for a 90 degree turn. 0 degrees costs nothing.", d.cost.turnSecondsAt90, () -> c.cost.turnSecondsAt90, v -> c.cost.turnSecondsAt90 = v, 0, 5))
 				.option(dblOpt("Turn curve exponent", "Turn time = (time at 90) x (angle / 90) ^ exponent. Higher means small turns are cheaper.", d.cost.turnExponent, () -> c.cost.turnExponent, v -> c.cost.turnExponent = v, 0.5, 4))
+				.option(dblOpt("Aim spread without turning (deg)", "How far off your aim typically is even on a straight chain of warps. Used for the chance to miss a small target.", d.cost.aimErrorBaseDeg, () -> c.cost.aimErrorBaseDeg, v -> c.cost.aimErrorBaseDeg = v, 0, 10))
+				.option(dblOpt("Aim spread per degree turned", "Extra aim spread for each degree you turn. 0.02 = about 2 degrees after a 90 degree turn. Bigger = the planner avoids sharp turns onto small targets more.", d.cost.aimErrorPerDeg, () -> c.cost.aimErrorPerDeg, v -> c.cost.aimErrorPerDeg = v, 0, 1))
 				.option(dblOpt("Miss recovery (s)", "Time lost when a warp lands in the wrong spot.", d.cost.missRecoverySeconds, () -> c.cost.missRecoverySeconds, v -> c.cost.missRecoverySeconds = v, 0, 30))
 				.build();
 
