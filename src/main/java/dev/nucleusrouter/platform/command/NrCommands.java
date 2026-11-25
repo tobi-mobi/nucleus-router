@@ -46,6 +46,7 @@ public final class NrCommands {
 						.then(ZoneCommands.captureNode())
 						.then(ExploreCommands.node())
 						.then(literal("lobby").executes(NrCommands::lobby))
+						.then(literal("stops").executes(NrCommands::stops))
 						.then(ZoneCommands.zonesNode())
 						.then(ZoneCommands.zoneNode())
 						.then(literal("compass").executes(ctx -> { dev.nucleusrouter.platform.compass.CompassTracker.status(); return 1; })
@@ -84,6 +85,7 @@ public final class NrCommands {
 		line(src, "/nr structures", "which run structures are found in this lobby, and where");
 		line(src, "/nr structure set <name>", "mark a structure where you stand (divan, precursor, king, queen, temple, khazad)");
 		line(src, "/nr structure clear <name|all>", "forget a structure so it's found again");
+		line(src, "/nr stops", "where the route will stop at each NPC and crystal (blue blocks in the world)");
 		line(src, "/nr lobby", "is this lobby worth setting up? every check with its reason");
 		line(src, "/nr explored [map]", "how much of the Hollows you've explored, where to go next, and a map");
 		line(src, "/nr zones", "each found structure's no-bomb / no-placing zone, and whether you're inside");
@@ -141,6 +143,23 @@ public final class NrCommands {
 		src.sendFeedback(Component.literal(dev.nucleusrouter.game.LobbyEvaluator.anyWarning(reasons)
 				? "  Verdict: consider another lobby (see the [!] lines)." : "  Verdict: nothing against this lobby so far.").withStyle(ChatFormatting.AQUA));
 		src.sendFeedback(Component.literal("  The run time is a rough straight-line estimate until the route planner exists.").withStyle(ChatFormatting.DARK_GRAY));
+		return 1;
+	}
+
+	private static int stops(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource src = ctx.getSource();
+		dev.nucleusrouter.platform.structure.StopsTracker.maybeRecompute(true);
+		var list = dev.nucleusrouter.platform.structure.StopsTracker.stops();
+		src.sendFeedback(header("Stops (" + list.size() + ")"));
+		if (list.isEmpty()) src.sendFeedback(Component.literal("  None yet: find structures first (or run this again in a moment).").withStyle(ChatFormatting.GRAY));
+		for (var s : list) {
+			String where = s.standFeet() == null ? "no spot in reach found (terrain not loaded?)"
+					: Math.round(s.standFeet().x() - 0.5) + " " + Math.round(s.standFeet().y()) + " " + Math.round(s.standFeet().z() - 0.5);
+			String wait = s.waitSeconds() > 0 ? String.format(", %.1f s there%s", s.waitSeconds(), s.manual() ? " (by hand)" : "") : "";
+			src.sendFeedback(Component.literal("  " + s.label() + ": ").withStyle(ChatFormatting.GRAY)
+					.append(Component.literal(where + wait).withStyle(s.ready() ? ChatFormatting.WHITE : ChatFormatting.RED))
+					.append(Component.literal("  " + s.note()).withStyle(ChatFormatting.DARK_GRAY)));
+		}
 		return 1;
 	}
 

@@ -27,7 +27,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 ## Milestone 3: Run routes on existing terrain
 - [x] 3.1 Cost model (base warp + ping, turn time, miss probability × recovery, manual segment times, `/warp nucleus` edge). Unit tests. (§2.6)
 - [x] 3.2 Leg planner A: landing nodes, lazy edges, A* over (node, aim bucket), ray cache + voxel→edge invalidation. Unit tests + benchmark. (§3.3)
-- [ ] 3.3 Default stop points guessed from anchors (keepers, Robot/crystal, King, Queen crystal + den exit ≤ 2.5 s, temple door → temple steps, Bal spot, nucleus). (§2.2, §3.5)
+- [x] 3.3 Default stop points guessed from anchors (keepers, Robot/crystal, King, Queen crystal + den exit ≤ 2.5 s, temple door → temple steps, Bal spot, nucleus). (§2.2, §3.5)
 - [ ] 3.4 Route ordering: precedence (King before Queen), direct vs `/warp nucleus` per transition, keeper sub-order, branch-and-bound. (§3.2)
 - [ ] 3.5 Run-mode renderer: full-route line coloured per leg, dashed manual segments, next 10 targets numbered and fading, optional aim dot, advance on arrival, no replanning off-route. (§5)
 - [ ] 3.6 Run HUD: current stop, next action, 3 s Queen-den countdown, warp count, run timer with per-crystal splits. (§5, §2.2)
@@ -88,6 +88,10 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Can you etherwarp onto barrier blocks? | **Yes** (planner treats barriers as solid targets) | 2026-11-25 |
 | Crystal barrier boxes | All seen so far are **11 x 13 x 11** (Mines of Divan, Precursor City, Khazad-dum, Queen's den in the saves), so they're told apart by the blocks around them | 2026-11-25 |
 | Mines of Divan keeper layout | Same in every lobby (from the user's saves): Lapis +33/+3, Emerald +3/-33, Diamond -33/-3, Gold -3/+33 (x/z from the keepers' centre, same height). The crystal box is ~12 blocks from that centre | 2026-11-25 |
+| How far you can click an NPC | _[VERIFY]_ `stops.npcReach` 3.0 blocks from your eyes (vanilla entity reach). Stop spots are picked within this | |
+| How you take a crystal (Amber, Sapphire) and from how far | _[VERIFY]_ `stops.crystalReach` 4.0 blocks from your eyes to its barrier box. Is it a click on the crystal, or walking into it? | |
+| Where the temple lever puts you (front entrance steps) | _[VERIFY]_ `stops.templeExitOffset` relative to the Door Guardian, default 0 0 0 (at the guardian) | |
+| Mines of Divan / Precursor City: is there a separate crystal pickup? | _[VERIFY]_ Planned as: 4 keeper stops for the Mines (no separate pickup), and the Sapphire pickup counted at Professor Robot's stop | |
 | Hiding Skyblocker's crystal waypoints works | Yes ("hides them nicely") | 2026-11-24 |
 | Hypixel Mod API location packets arrive (via SkyHanni's subscription) and mode = `crystal_hollows` | Yes: `server=mini89R type=SKYBLOCK mode=crystal_hollows map=Crystal Hollows` | 2026-11-24 |
 | Tab list shows `Area: Crystal Hollows` and `Server: mini…` | Yes (`Area: Crystal Hollows`, `Server: mini89R`). No `Ping:` widget in the user's tab list | 2026-11-24 |
@@ -149,6 +153,7 @@ At the end of each milestone: give the user the in-game test checklist plus the 
   - Legs that need more than the time limit come back GAVE_UP (e.g. a 17-warp maze through Precursor City took 6.5 s): route ordering will use /warp nucleus around them, and Milestone 4 builds tunnels for them.
 - 2026-11-25 Benchmarks (`./gradlew test`, printed as [bench]): synthetic hall 245 blocks first route 28 ms; synthetic cave 255/311/750 blocks 260/45/216 ms. **Real lobby mini92AD** (git-ignored `bench/`, from the user's game): keeper to keeper (47 blocks) 4-28 ms, nucleus to keeper (114) 292 ms, keeper to Professor Robot (210) 152 ms; nucleus to/from Robot (215) gave up at 500 ms (route exists, 17 warps, 6.5 s).
 - 2026-11-25 Mines of Divan without visiting all 4 keepers (user): the keeper layout is learned once (all 4 seen, live or from a saved lobby; `nucleusrouter/learned/divan-keepers.json`), then any one keeper places the centre (source LEARNED). Fewer than 4 keepers without a layout now counts as rough ("go closer"), not found. At game start, structures that aren't learned yet are also learned from saved lobby files that have what's needed (crystal box, 4 keepers, or an NPC position taken from its body), so existing saves teach the mod without new visits.
+- 2026-11-25 Default stops (3.3, `game/StopPlan`): nucleus spawn; the 4 keepers (seen, or placed from the keeper layout); Professor Robot (Sapphire pickup counted there); King Yolkar; the Amber crystal; Door Guardian (+ temple parkour by hand) then the front-steps exit; Bal standing on top of the Topaz crystal box. Where to stand (`core/plan/StopPicker`): a warpable spot whose eye is within `stops.npcReach` of the NPC (1x2x1 box) or `stops.crystalReach` of the crystal box, with the most open view (64 rays, open if 15 blocks clear), ties to the closer one. Den exit: /warp nucleus when it counts as leaving and is within the 2.5 s target (it is: 1 s), otherwise an etherwarp exit 30 blocks up (planned in 3.4). Recomputed in the background when structures change; blue blocks in the world, `/nr stops`. Real lobby: 6 stops in 18 ms, all found.
 - 2026-11-24 Note for 1.4: Hypixel reuses server ids (e.g. mini123AB) for new lobbies, so the per-lobby save key must also detect a fresh lobby (e.g. lobby day going backwards), not just the server id.
 
 ## Session log
@@ -180,3 +185,4 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-25: 3.1 cost model (turn time, documented miss model from turn angle and aim margin, /warp nucleus, stop times) + 2 new Cost settings. 96 unit tests pass. Next: 3.2 leg planner.
 - 2026-11-25: 3.2 leg planner: ray-fan candidates, lazy-priced A* over (spot, facing), open-space guidance, anytime refinement, section-indexed caches. Found and fixed on real terrain: structure blocks were excluded as targets. 104 tests pass; 5 of 7 real legs within 500 ms. Next: 3.3 default stop points.
 - 2026-11-25: User: mined blocks and structure blocks respawn, barriers can be warped onto, Mines of Divan still needed all 4 keepers. Added the keeper layout (one keeper is enough) and learning crystals/layout from saved lobbies at startup. 106 tests pass. Untested in-game. Next: 3.3 default stop points.
+- 2026-11-25: 3.3 default stop points + den exit choice, drawn as blue blocks, `/nr stops`. 110 tests pass. Untested in-game; 4 new [VERIFY] questions (reaches, temple exit, crystal pickups). Next: 3.4 route ordering.

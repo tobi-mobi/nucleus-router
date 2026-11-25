@@ -78,6 +78,17 @@ public final class NrConfig {
 		public double npcInteractionSeconds = 1.0;
 		/** Picking up a crystal once you're next to it. Estimate; tune to taste. */
 		public double crystalPickupSeconds = 0.5;
+		/** [VERIFY] How far (blocks, from your eyes) you can click an NPC. Stop spots are picked within this. */
+		public double npcReach = 3.0;
+		/** [VERIFY] How far (blocks, from your eyes to its barrier box) you can take a crystal. */
+		public double crystalReach = 4.0;
+		/**
+		 * [VERIFY] Where the temple lever puts you (the front entrance steps), relative to the Kalhuiki Door
+		 * Guardian, {x, y, z}. Default: at the Door Guardian.
+		 */
+		public double[] templeExitOffset = {0, 0, 0};
+		/** Draw the planned stop spots in the world. */
+		public boolean showStops = true;
 	}
 
 	/** §2.3 Etherwarp. */
@@ -449,6 +460,9 @@ public final class NrConfig {
 		stops.templeManualSeconds = clamp(fixes, "stops.templeManualSeconds", stops.templeManualSeconds, 0, 300);
 		stops.balFightSeconds = clamp(fixes, "stops.balFightSeconds", stops.balFightSeconds, 0, 300);
 		stops.npcInteractionSeconds = clamp(fixes, "stops.npcInteractionSeconds", stops.npcInteractionSeconds, 0, 30);
+		stops.npcReach = clamp(fixes, "stops.npcReach", stops.npcReach, 1, 6);
+		stops.crystalReach = clamp(fixes, "stops.crystalReach", stops.crystalReach, 1, 8);
+		if (stops.templeExitOffset == null || stops.templeExitOffset.length != 3) { stops.templeExitOffset = new double[]{0, 0, 0}; fixes.add("stops.templeExitOffset reset"); }
 		stops.crystalPickupSeconds = clamp(fixes, "stops.crystalPickupSeconds", stops.crystalPickupSeconds, 0, 30);
 
 		etherwarp.range = (int) clamp(fixes, "etherwarp.range", etherwarp.range, 57, 61);
