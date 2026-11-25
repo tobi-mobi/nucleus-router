@@ -82,6 +82,21 @@ class RunPathTest {
 		assertEquals(0, p.advance(0, new Vec3(200.5, 100, 60)), "60 m away is not");
 	}
 
+	/** In-game 2026-11-25: at the temple after skipping many planned warps, it still said "fly to the temple". */
+	@Test
+	void reachingAStructureFarAheadJumpsThere() {
+		List<StopPlan.Stop> stops = List.of(stop("nucleus", StopPlan.Kind.NUCLEUS, 0.5, 0.5), stop("king", StopPlan.Kind.STRUCTURE, 400.5, 0.5),
+				stop("temple", StopPlan.Kind.STRUCTURE, 400.5, 300.5));
+		LegPlanner.Warp[] many = new LegPlanner.Warp[20];
+		for (int i = 0; i < 20; i++) many[i] = warp(20.5 * (i + 1), 0.5);
+		RouteOrder.Plan plan = new RouteOrder.Plan(List.of(new RouteOrder.Step("nucleus", "king", false, 9, 1),
+				new RouteOrder.Step("king", "temple", false, 9, 26), new RouteOrder.Step("temple", "nucleus", true, 1, 0)), 50, List.of());
+		RunPath p = RunPath.build(plan, stops, Map.of("nucleus>king", leg(many)), Set.of("king>temple"));
+		// 20 warps, King stop, fly to temple, temple stop, warp nucleus
+		assertEquals(23, p.advance(0, new Vec3(410, 100, 285)), "at the temple: jump past everything before it; next is /warp nucleus");
+		assertEquals(RunPath.Kind.WARP_NUCLEUS, p.nodes().get(23).kind());
+	}
+
 	@Test
 	void unexploredLegsAreFlownByHand() {
 		List<StopPlan.Stop> stops = List.of(stop("nucleus", StopPlan.Kind.NUCLEUS, 0.5, 0.5), stop("khazad", StopPlan.Kind.STRUCTURE, 200.5, 0.5));

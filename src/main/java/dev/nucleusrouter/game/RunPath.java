@@ -104,6 +104,17 @@ public final class RunPath {
 			if (reached(n, feet, arrived)) best = i;
 		}
 		if (best >= 0) return best + 1;
+		// At a structure further along (e.g. flown there your own way, skipping planned warps): jump there.
+		// In-game 2026-11-25: at the Jungle Temple it still said "fly to Jungle Temple" because the temple was
+		// more than LOOKAHEAD steps ahead.
+		for (int i = index; i < nodes.size(); i++) {
+			Node n = nodes.get(i);
+			if ((n.kind() == Kind.STOP || n.kind() == Kind.FLY) && n.pos().sub(feet).length() <= arrived) {
+				int j = i;
+				while (j + 1 < nodes.size() && nodes.get(j + 1).kind() == Kind.STOP && nodes.get(j + 1).pos().sub(feet).length() <= arrived) j++;
+				return j + 1;
+			}
+		}
 		for (int i = 0; i < nodes.size(); i++) {
 			Node n = nodes.get(i);
 			if (n.kind() == Kind.WARP && n.pos().sub(feet).length() <= LANDED) return i + 1;
