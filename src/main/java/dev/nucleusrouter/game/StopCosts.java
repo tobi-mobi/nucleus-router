@@ -13,7 +13,7 @@ public final class StopCosts {
 	public static double seconds(Structure s, NrConfig cfg) {
 		NrConfig.Stops st = cfg.stops;
 		return switch (s) {
-			case MINES_OF_DIVAN -> 4 * st.npcInteractionSeconds + st.crystalPickupSeconds;
+			case MINES_OF_DIVAN -> 4 * st.npcInteractionSeconds + st.crystalPickupSeconds; // 4 keepers + the Jade crystal
 			case PRECURSOR_CITY -> st.npcInteractionSeconds + st.crystalPickupSeconds;
 			case KING_YOLKAR -> st.npcInteractionSeconds;
 			case GOBLIN_QUEENS_DEN -> st.crystalPickupSeconds + st.queenDenExitTargetSeconds;

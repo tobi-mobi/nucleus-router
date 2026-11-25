@@ -14,7 +14,7 @@ import java.util.List;
  * resets that value for existing users.
  */
 public final class NrConfig {
-	public static final int CURRENT_VERSION = 6;
+	public static final int CURRENT_VERSION = 7;
 	public int configVersion = CURRENT_VERSION;
 
 	public General general = new General();
@@ -78,10 +78,10 @@ public final class NrConfig {
 		public double npcInteractionSeconds = 1.0;
 		/** Picking up a crystal once you're next to it. Estimate; tune to taste. */
 		public double crystalPickupSeconds = 0.5;
-		/** [VERIFY] How far (blocks, from your eyes) you can click an NPC. Stop spots are picked within this. */
+		/** How far (blocks, from your eyes) you can click an NPC. Confirmed 2026-11-25: 3 for everything. */
 		public double npcReach = 3.0;
-		/** [VERIFY] How far (blocks, from your eyes to its barrier box) you can take a crystal. */
-		public double crystalReach = 4.0;
+		/** How far (blocks, from your eyes to its barrier box) you can take a crystal. Confirmed 2026-11-25: 3. */
+		public double crystalReach = 3.0;
 		/**
 		 * [VERIFY] Where the temple lever puts you (the front entrance steps), relative to the Kalhuiki Door
 		 * Guardian, {x, y, z}. Default: at the Door Guardian.
@@ -406,6 +406,11 @@ public final class NrConfig {
 			// Confirmed 2026-11-24: /warp nucleus takes less than a second
 			if (hollows != null && hollows.warpNucleusSeconds == 2.5) { hollows.warpNucleusSeconds = 1.0; notes.add("hollows.warpNucleusSeconds 2.5 -> 1.0 (confirmed)"); }
 			configVersion = 6;
+		}
+		if (configVersion < 7) {
+			// Confirmed 2026-11-25: you can click everything from 3 blocks
+			if (stops != null && stops.crystalReach == 4.0) { stops.crystalReach = 3.0; notes.add("stops.crystalReach 4 -> 3 (confirmed)"); }
+			configVersion = 7;
 		}
 		return notes;
 	}

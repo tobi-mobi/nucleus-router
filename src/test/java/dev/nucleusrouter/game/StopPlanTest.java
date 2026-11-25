@@ -66,7 +66,7 @@ class StopPlanTest {
 		assertEquals(3, stops.size(), "nucleus, King, Bal: nothing for structures not found");
 	}
 
-	/** On the user's real lobby (bench/, git-ignored): every keeper and Professor Robot get a stop spot. */
+	/** On the user's real lobby (bench/, git-ignored): every keeper, the Jade crystal and Professor Robot get a stop spot. */
 	@Test
 	void realLobbyStops() throws Exception {
 		Path file = Path.of("bench", "mini92AD.nrw");
@@ -78,11 +78,15 @@ class StopPlanTest {
 		double[][] pos = {{588.5, 89, 442.5}, {618.5, 89, 478.5}, {654.5, 89, 448.5}, {624.5, 89, 412.5}};
 		for (int i = 0; i < 4; i++) m.observeNametag(Structure.MINES_OF_DIVAN, names[i], pos[i][0], pos[i][1], pos[i][2], 0, true);
 		m.observeNametag(Structure.PRECURSOR_CITY, "Professor Robot", 714.5, 118, 600.5, 0, true);
+		// The Jade crystal's barrier box, as the crystal scanner would find it near the keepers' centre
+		BarrierBoxes.Box jade = BarrierBoxes.pickCrystalBox(BarrierBoxes.group(snap.findBlocks("minecraft:barrier", 590, 60, 410, 660, 130, 480)), 20, 621.5, 89, 445.5);
+		assertNotNull(jade, "the Mines crystal box is in this save");
+		m.setCrystal(Structure.MINES_OF_DIVAN, jade.min(), jade.max());
 		long t = System.nanoTime();
 		List<StopPlan.Stop> stops = StopPlan.build(m, null, PlanWorld.of(snap, PlanWorld.patterns(cfg.plan.unstableTargetBlocks)), cfg);
 		System.out.printf("[bench-real] %d stops in %.0f ms%n", stops.size(), (System.nanoTime() - t) / 1e6);
 		for (StopPlan.Stop s : stops) System.out.printf("[bench-real]   %s: stand %s open %.2f%n", s.label(), s.standFeet(), s.openness());
-		assertEquals(6, stops.size());
+		assertEquals(7, stops.size(), "nucleus, 4 keepers, the Jade crystal, Professor Robot");
 		for (StopPlan.Stop s : stops) assertTrue(s.ready(), s.label() + " has a spot");
 	}
 }

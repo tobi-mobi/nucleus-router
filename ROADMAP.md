@@ -88,10 +88,11 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 | Can you etherwarp onto barrier blocks? | **Yes** (planner treats barriers as solid targets) | 2026-11-25 |
 | Crystal barrier boxes | All seen so far are **11 x 13 x 11** (Mines of Divan, Precursor City, Khazad-dum, Queen's den in the saves), so they're told apart by the blocks around them | 2026-11-25 |
 | Mines of Divan keeper layout | Same in every lobby (from the user's saves): Lapis +33/+3, Emerald +3/-33, Diamond -33/-3, Gold -3/+33 (x/z from the keepers' centre, same height). The crystal box is ~12 blocks from that centre | 2026-11-25 |
-| How far you can click an NPC | _[VERIFY]_ `stops.npcReach` 3.0 blocks from your eyes (vanilla entity reach). Stop spots are picked within this | |
-| How you take a crystal (Amber, Sapphire) and from how far | _[VERIFY]_ `stops.crystalReach` 4.0 blocks from your eyes to its barrier box. Is it a click on the crystal, or walking into it? | |
-| Where the temple lever puts you (front entrance steps) | _[VERIFY]_ `stops.templeExitOffset` relative to the Door Guardian, default 0 0 0 (at the guardian) | |
-| Mines of Divan / Precursor City: is there a separate crystal pickup? | _[VERIFY]_ Planned as: 4 keeper stops for the Mines (no separate pickup), and the Sapphire pickup counted at Professor Robot's stop | |
+| How far you can click NPCs and crystals | **3 blocks** for everything (`stops.npcReach`, `stops.crystalReach`; config v7 moves an untouched 4 to 3) | 2026-11-25 |
+| Jungle Temple sequence | Talk to the Door Guardian to be let in, do the parkour, take the crystal; then **choose**: teleport to the front of the temple, or /warp nucleus | 2026-11-25 |
+| Where the temple teleport puts you (front of the temple) | _[VERIFY]_ `stops.templeExitOffset` relative to the Door Guardian, default 0 0 0 (at the guardian) | |
+| Where a crystal sits | At the **centre of its solid 11x13x11 barrier box** (Amber `/nr inspect`: stands at the box centre), i.e. ~5.5 blocks inside. Crystal stops are therefore planned within 3 blocks of the **box** (standing next to or on it). _[VERIFY]_ that you take crystals from there | 2026-11-25 (partial) |
+| Crystal pickups | Mines of Divan: the Jade crystal is picked up **in the middle of the 4 keepers**. Sapphire and Amber are each a **short warp** from the NPC (own stops) | 2026-11-25 |
 | Hiding Skyblocker's crystal waypoints works | Yes ("hides them nicely") | 2026-11-24 |
 | Hypixel Mod API location packets arrive (via SkyHanni's subscription) and mode = `crystal_hollows` | Yes: `server=mini89R type=SKYBLOCK mode=crystal_hollows map=Crystal Hollows` | 2026-11-24 |
 | Tab list shows `Area: Crystal Hollows` and `Server: mini…` | Yes (`Area: Crystal Hollows`, `Server: mini89R`). No `Ping:` widget in the user's tab list | 2026-11-24 |
@@ -186,3 +187,5 @@ At the end of each milestone: give the user the in-game test checklist plus the 
 - 2026-11-25: 3.2 leg planner: ray-fan candidates, lazy-priced A* over (spot, facing), open-space guidance, anytime refinement, section-indexed caches. Found and fixed on real terrain: structure blocks were excluded as targets. 104 tests pass; 5 of 7 real legs within 500 ms. Next: 3.3 default stop points.
 - 2026-11-25: User: mined blocks and structure blocks respawn, barriers can be warped onto, Mines of Divan still needed all 4 keepers. Added the keeper layout (one keeper is enough) and learning crystals/layout from saved lobbies at startup. 106 tests pass. Untested in-game. Next: 3.3 default stop points.
 - 2026-11-25: 3.3 default stop points + den exit choice, drawn as blue blocks, `/nr stops`. 110 tests pass. Untested in-game; 4 new [VERIFY] questions (reaches, temple exit, crystal pickups). Next: 3.4 route ordering.
+- 2026-11-25: User answered the 3.3 questions: reach 3 for everything; Jade crystal in the middle of the keepers; Sapphire and Amber a short warp from the NPC; temple: after the crystal choose front-of-temple teleport or /warp nucleus. Stops updated (Jade and Sapphire crystal stops). The stop list is not the run order; 3.4 picks the order. Next: 3.4.
+- 2026-11-25: Crystal stops need the barrier box (the crystal is at its centre, ~5.5 blocks inside); the Jade stop waits for the Mines box (found by the crystal scanner / saved lobbies). Real lobby: 7 stops in 24 ms, all with a spot. 111 tests pass.
