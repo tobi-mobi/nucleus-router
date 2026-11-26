@@ -16,6 +16,7 @@ import org.lwjgl.glfw.GLFW;
 public final class Keys {
 	private static KeyMapping map;
 	private static KeyMapping setupConfirm;
+	private static KeyMapping setPoint;
 
 	private Keys() {}
 
@@ -28,6 +29,8 @@ public final class Keys {
 		KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "main"));
 		map = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.nucleusrouter.map", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_M, category));
 		setupConfirm = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.nucleusrouter.setupConfirm", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_BRACKET, category));
+		// Not bound by default (the modpack already uses many keys); set it in Controls
+		setPoint = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.nucleusrouter.setPoint", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, category));
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (map.consumeClick()) {
 				if (client.gui.screen() == null) client.gui.setScreen(new ExploreMapScreen());
@@ -36,6 +39,11 @@ public final class Keys {
 			while (setupConfirm.consumeClick()) {
 				String msg = dev.nucleusrouter.platform.structure.SetupGuide.confirm();
 				if (msg != null) NucleusRouterClient.showLocal(net.minecraft.network.chat.Component.literal(msg).withStyle(net.minecraft.ChatFormatting.GRAY));
+			}
+			// Your own stop point: only reads where you stand
+			while (setPoint.consumeClick()) {
+				String msg = dev.nucleusrouter.platform.structure.SetPointStore.setNearest();
+				NucleusRouterClient.showLocal(net.minecraft.network.chat.Component.literal(msg).withStyle(net.minecraft.ChatFormatting.GOLD));
 			}
 		});
 	}

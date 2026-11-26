@@ -94,7 +94,7 @@ public final class RouteTracker {
 	private static CompletableFuture<Planned> plan(WorldSnapshot snap, StructureMap map, dev.nucleusrouter.game.KeeperLayout layout, NrConfig cfg, int ping,
 			PlanWorld.Columns explored) {
 		// Arrival spots may be anywhere near the structure; the warps on the way only land on explored ground
-		List<StopPlan.Stop> stops = StopPlan.build(map, layout, PlanWorld.of(snap, PlanWorld.patterns(cfg.plan.unstableTargetBlocks)), cfg);
+		List<StopPlan.Stop> stops = StopPlan.build(map, layout, PlanWorld.of(snap, PlanWorld.patterns(cfg.plan.unstableTargetBlocks)), cfg, SetPointStore.snapshot());
 		PlanWorld world = PlanWorld.of(snap, PlanWorld.patterns(cfg.plan.unstableTargetBlocks), explored);
 		Map<String, StopPlan.Stop> byId = new HashMap<>();
 		for (StopPlan.Stop s : stops) byId.put(s.id(), s);

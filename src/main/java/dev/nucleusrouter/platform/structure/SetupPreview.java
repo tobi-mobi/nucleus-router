@@ -131,7 +131,7 @@ public final class SetupPreview {
 	}
 
 	private static List<StopPlan.Stop> stops(WorldSnapshot snap, Inputs in) {
-		return StopPlan.build(in.map(), in.layout(), PlanWorld.of(snap, PlanWorld.patterns(in.cfg().plan.unstableTargetBlocks)), in.cfg());
+		return StopPlan.build(in.map(), in.layout(), PlanWorld.of(snap, PlanWorld.patterns(in.cfg().plan.unstableTargetBlocks)), in.cfg(), SetPointStore.snapshot());
 	}
 
 	// ------------------------------------------------------------------ one leg: /nr design <structure>

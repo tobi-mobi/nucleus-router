@@ -39,6 +39,7 @@ public final class NucleusRouterClient implements ClientModInitializer {
 		dev.nucleusrouter.platform.structure.StructureHud.init();
 		dev.nucleusrouter.platform.structure.CrystalScanner.init();
 		dev.nucleusrouter.platform.structure.KeeperLayouts.init();
+		dev.nucleusrouter.platform.structure.SetPointStore.load();
 		dev.nucleusrouter.platform.structure.StopsTracker.init();
 		dev.nucleusrouter.platform.structure.RunTracker.init();
 		dev.nucleusrouter.platform.structure.RunHud.init();

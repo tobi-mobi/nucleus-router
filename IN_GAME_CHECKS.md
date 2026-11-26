@@ -84,3 +84,12 @@ Anything you only get partly through is still useful: send what you have.
 4. After all bombs and mining: "Placing planned again on the real terrain: N block(s) to place". Then place as usual.
 5. `/nr setup replan` any time: re-plans the current leg's bombs (or the placing once the bombs are done).
 6. `/nr verify` (best: after `/nr route`, and again after the setup): chat says how many planned etherwarps work right now; failing ones get a red box on the target, orange on what's in the way, for a minute. Mine or place a block on a planned warp and run it again: is that warp reported? `/nr verify clear` hides the boxes.
+
+### Milestone 5: your own stop points (5.1)
+1. Stand where you like to be at King Yolkar and type `/nr setpoint` (it picks the nearest stop) or `/nr setpoint king`. Chat says the block and the offset from King Yolkar; a **gold** block with "My stop: King Yolkar" appears under you.
+2. `/nr setpoint list` shows all 7 stops (divan, precursor, king, queen, temple, temple.exit, khazad) and which use your point.
+3. Next lobby: once King Yolkar is found, the gold block is at the same spot relative to him. Is it the same place you chose? `/nr route` and `/nr run` should end the leg there.
+4. Mines of Divan / Queen / Khazad-dum need their crystal box found first (chat tells you if not).
+5. `temple.exit`: after the temple teleport, stand where it put you and `/nr setpoint temple.exit`. That replaces the guessed front-of-temple offset (also answers Q2).
+6. Optional: bind "Save my stop point here (nearest stop)" in Controls > Nucleus Router and try it.
+7. `/nr setpoint clear king` (or `all`) goes back to the automatic spots.

@@ -1,5 +1,6 @@
 {
   "key.category.nucleusrouter.main": "Nucleus Router",
   "key.nucleusrouter.map": "Open the Crystal Hollows map",
-  "key.nucleusrouter.setupConfirm": "Guided setup: confirm / skip step"
+  "key.nucleusrouter.setupConfirm": "Guided setup: confirm / skip step",
+  "key.nucleusrouter.setPoint": "Save my stop point here (nearest stop)"
 }

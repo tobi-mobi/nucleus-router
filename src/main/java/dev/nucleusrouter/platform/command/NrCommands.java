@@ -83,6 +83,7 @@ public final class NrCommands {
 						.then(ExploreCommands.node())
 						.then(literal("lobby").executes(NrCommands::lobby))
 						.then(literal("stops").executes(NrCommands::stops))
+						.then(SetPointCommands.node())
 						.then(literal("run").executes(ctx -> {
 									ctx.getSource().sendFeedback(Component.literal(dev.nucleusrouter.platform.structure.RunTracker.start()).withStyle(ChatFormatting.AQUA));
 									return 1;
@@ -149,6 +150,7 @@ public final class NrCommands {
 		line(src, "/nr verify | verify clear", "check every planned etherwarp (setup tunnels and /nr route) against the world now; failing ones in red");
 		line(src, "/nr route", "plan the run: order of the structures, when to /warp nucleus, total time");
 		line(src, "/nr stops", "where the route will stop at each NPC and crystal (blue blocks in the world)");
+		line(src, "/nr setpoint [stop|list|clear]", "save where you stand as your own spot for the nearest (or named) stop, kept for every lobby");
 		line(src, "/nr lobby", "is this lobby worth setting up? every check with its reason");
 		line(src, "/nr explored [map]", "how much of the Hollows you've explored and where to go next; map opens a map (hover for details)");
 		line(src, "/nr zones", "each found structure's no-bomb / no-placing zone, and whether you're inside");

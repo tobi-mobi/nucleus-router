@@ -32,7 +32,7 @@ public final class StopsTracker {
 
 	public static void init() {
 		ClientTickEvents.END_CLIENT_TICK.register(c -> { if (++ticks % EVERY_TICKS == 0) maybeRecompute(false); });
-		WorldDraw.addLayerWhile(() -> ConfigManager.get().stops.showStops && LocationTracker.state().inHollows(), StopsTracker::draw);
+		WorldDraw.addLayerWhile(() -> LocationTracker.state().inHollows() && (ConfigManager.get().stops.showStops || stops.stream().anyMatch(StopsTracker::own)), StopsTracker::draw);
 	}
 
 	public static List<StopPlan.Stop> stops() { return stops; }
@@ -51,7 +51,7 @@ public final class StopsTracker {
 		var layout = KeeperLayouts.layout();
 		WorldCapture.snapshot().thenApplyAsync(snap -> {
 			long t = System.nanoTime();
-			List<StopPlan.Stop> s = StopPlan.build(snapshotOfMap, layout, PlanWorld.of(snap, PlanWorld.patterns(cfg.plan.unstableTargetBlocks)), cfg);
+			List<StopPlan.Stop> s = StopPlan.build(snapshotOfMap, layout, PlanWorld.of(snap, PlanWorld.patterns(cfg.plan.unstableTargetBlocks)), cfg, SetPointStore.snapshot());
 			NucleusRouterClient.LOG.info("[Nucleus Router] Stops: {} stops in {} ms", s.size(), (System.nanoTime() - t) / 1_000_000);
 			return s;
 		}).whenComplete((s, err) -> Minecraft.getInstance().execute(() -> {
@@ -69,19 +69,26 @@ public final class StopsTracker {
 		return g.fromJson(g.toJson(map), StructureMap.class);
 	}
 
+	/** The stop uses your own stop point (roadmap 5.1); those are always drawn, in gold. */
+	private static boolean own(StopPlan.Stop s) { return s.note().endsWith("(your stop point)"); }
+
 	private static void draw(WorldDraw draw) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player == null) return;
 		Vec3 eye = new Vec3(mc.player.getX(), mc.player.getEyeY(), mc.player.getZ());
+		boolean all = ConfigManager.get().stops.showStops;
 		for (StopPlan.Stop s : stops) {
 			if (s.standFeet() == null || s.kind() == StopPlan.Kind.NUCLEUS) continue;
+			boolean own = own(s);
+			if (!all && !own) continue;
+			int colour = own ? 0xFFAA00 : 0x5599FF;
 			Vec3 f = s.standFeet();
 			int bx = (int) Math.floor(f.x()), by = (int) Math.floor(f.y()) - 1, bz = (int) Math.floor(f.z());
-			draw.box(new AABB(bx, by, bz, bx + 1, by + 1, bz + 1), WorldDraw.argb(255, 0x5599FF), 2f, WorldDraw.argb(70, 0x5599FF), true);
+			draw.box(new AABB(bx, by, bz, bx + 1, by + 1, bz + 1), WorldDraw.argb(255, colour), 2f, WorldDraw.argb(70, colour), true);
 			double dist = f.sub(eye).length();
 			if (dist < 96) {
 				float scale = (float) (0.5 * Math.max(1.0, dist / 12.0));
-				draw.text("Stop: " + s.label(), WorldDraw.mc(f.add(new Vec3(0, 0.8 + scale, 0))), WorldDraw.argb(255, 0x88BBFF), scale, true);
+				draw.text((own ? "My stop: " : "Stop: ") + s.label(), WorldDraw.mc(f.add(new Vec3(0, 0.8 + scale, 0))), WorldDraw.argb(255, own ? 0xFFCC55 : 0x88BBFF), scale, true);
 			}
 		}
 	}
