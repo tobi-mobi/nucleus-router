@@ -84,6 +84,15 @@ public final class NrCommands {
 						.then(literal("lobby").executes(NrCommands::lobby))
 						.then(literal("stops").executes(NrCommands::stops))
 						.then(SetPointCommands.node())
+						.then(literal("bal").executes(ctx -> {
+							ctx.getSource().sendFeedback(Component.literal(dev.nucleusrouter.platform.structure.BalSuggestion.start()).withStyle(ChatFormatting.GRAY));
+							return 1;
+						})
+								.then(literal("clear").executes(ctx -> {
+									dev.nucleusrouter.platform.structure.BalSuggestion.clear();
+									ctx.getSource().sendFeedback(Component.literal("Bal block suggestion hidden.").withStyle(ChatFormatting.GRAY));
+									return 1;
+								})))
 						.then(literal("run").executes(ctx -> {
 									ctx.getSource().sendFeedback(Component.literal(dev.nucleusrouter.platform.structure.RunTracker.start()).withStyle(ChatFormatting.AQUA));
 									return 1;
@@ -151,6 +160,7 @@ public final class NrCommands {
 		line(src, "/nr route", "plan the run: order of the structures, when to /warp nucleus, total time");
 		line(src, "/nr stops", "where the route will stop at each NPC and crystal (blue blocks in the world)");
 		line(src, "/nr setpoint [stop|list|clear]", "save where you stand as your own spot for the nearest (or named) stop, kept for every lobby");
+		line(src, "/nr bal [clear]", "after /nr route: one block to place near Bal that saves warps into the fight (optional)");
 		line(src, "/nr lobby", "is this lobby worth setting up? every check with its reason");
 		line(src, "/nr explored [map]", "how much of the Hollows you've explored and where to go next; map opens a map (hover for details)");
 		line(src, "/nr zones", "each found structure's no-bomb / no-placing zone, and whether you're inside");

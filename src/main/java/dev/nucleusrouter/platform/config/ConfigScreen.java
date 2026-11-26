@@ -101,6 +101,8 @@ public final class ConfigScreen {
 				.option(dblOpt("Reach (blocks)", "Reach used when planning block placements.", d.placing.reach, () -> c.placing.reach, v -> c.placing.reach = v, 1, 6))
 				.option(stringList("Placed block types (fallback)", "Blocks you place are detected automatically, whatever the type. These types also count as placed when they appear in air without the mod seeing you place them.", d.placing.placedBlockTypes, () -> c.placing.placedBlockTypes, v -> c.placing.placedBlockTypes = v))
 				.option(boolOpt("Allowed everywhere outside structures", "If on, the planner may place blocks anywhere outside structure regions." + VERIFY, d.placing.allowedEverywhereOutsideStructures, () -> c.placing.allowedEverywhereOutsideStructures, v -> c.placing.allowedEverywhereOutsideStructures = v))
+				.option(boolOpt("Bal block suggestion", "/nr bal: suggest one block to place near Bal so the route's last warps into the fight become one.", d.placing.balSuggestion, () -> c.placing.balSuggestion, v -> c.placing.balSuggestion = v))
+				.option(dblOpt("Bal block: max distance from the Topaz spot", "How far (blocks) from the spot on the Topaz crystal box the suggested block may be. Your preference.", d.placing.balSpotRadius, () -> c.placing.balSpotRadius, v -> c.placing.balSpotRadius = v, 1, 20))
 				.build();
 
 		ConfigCategory cost = ConfigCategory.createBuilder()

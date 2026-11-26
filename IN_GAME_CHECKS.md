@@ -93,3 +93,9 @@ Anything you only get partly through is still useful: send what you have.
 5. `temple.exit`: after the temple teleport, stand where it put you and `/nr setpoint temple.exit`. That replaces the guessed front-of-temple offset (also answers Q2).
 6. Optional: bind "Save my stop point here (nearest stop)" in Controls > Nucleus Router and try it.
 7. `/nr setpoint clear king` (or `all`) goes back to the automatic spots.
+
+### Milestone 5: Bal block suggestion (5.2, optional)
+1. In a lobby with Khazad-dum found (Topaz crystal box seen), `/nr route`, then `/nr bal`.
+2. Chat either says where to place one block and how many warps it saves, or why there's nothing to suggest.
+3. In the world: yellow block = where to place, green pad + white dot = where to stand and what to click, cyan block + line = the landing spot you warp from straight onto the new block.
+4. Place it: the markers disappear and chat says to `/nr route` again. Does the new route use the block (fewer warps into Khazad-dum)? Is landing there a good place to fight Bal from? If it's too far from where you like to fight, lower Settings > Placing > "Bal block: max distance".

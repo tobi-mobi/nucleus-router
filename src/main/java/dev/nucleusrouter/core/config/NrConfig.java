@@ -216,6 +216,13 @@ public final class NrConfig {
 		/** Confirmed 2026-11-26: inside the Jungle Temple you can't place anywhere (its zone box is used as its size). */
 		public boolean noPlaceInTemple = true;
 		/**
+		 * Bal area (roadmap 5.2, optional): suggest one block to place in Khazad-dum so the route's last warps into
+		 * the Bal fight become a single etherwarp. {@code /nr bal}.
+		 */
+		public boolean balSuggestion = true;
+		/** How far (blocks) from the spot on the Topaz crystal box the suggested block may be. Your preference, not a game fact. */
+		public double balSpotRadius = 6;
+		/**
 		 * Blocks you place are detected automatically, whatever their type. This list is a fallback:
 		 * these types also count as placed when they appear in air without the mod seeing you place them
 		 * (e.g. placed by another player).
@@ -649,6 +656,7 @@ public final class NrConfig {
 		if (etherwarp.rayPassesThrough == null) { etherwarp.rayPassesThrough = new Etherwarp().rayPassesThrough; fixes.add("etherwarp.rayPassesThrough missing, reset"); }
 		if (placing.placedBlockTypes == null) { placing.placedBlockTypes = new Placing().placedBlockTypes; fixes.add("placing.placedBlockTypes missing, reset"); }
 		placing.reach = clamp(fixes, "placing.reach", placing.reach, 1, 6);
+		placing.balSpotRadius = clamp(fixes, "placing.balSpotRadius", placing.balSpotRadius, 1, 20);
 
 		cost.baseWarpSeconds = clamp(fixes, "cost.baseWarpSeconds", cost.baseWarpSeconds, 0, 5);
 		cost.fallbackPingMs = (int) clamp(fixes, "cost.fallbackPingMs", cost.fallbackPingMs, 0, 2000);
