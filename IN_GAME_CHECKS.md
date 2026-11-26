@@ -79,3 +79,11 @@ Claude then moves it to "Confirmed game facts" in `ROADMAP.md`, updates the defa
 4. After the last bomb and mining step, chat says "now the placing". P steps tick off as soon as the block is there.
 5. `]` marks the current step done by hand; `/nr setup back` reopens the last one; `/nr setup stop` ends it. Check in Controls that `]` doesn't clash with another mod in the pack (it can be rebound under "Nucleus Router").
 6. Does the game stay smooth with the guide on?
+
+### Milestone 4: when the setup goes wrong (4.7)
+1. During a B step, throw the Bob-omb somewhere else on purpose (or let one fizzle near a structure). About 4-5 s later chat says what happened ("did nothing", "went off N blocks from the plan", "left N blocks standing") and "Re-planned: ... for this leg". The next B number continues from the highest so far (e.g. B31). Does the message match what you saw?
+2. If a bomb fizzled: chat gives its spot. That's direct evidence for **Q9** (structure zone bounds): send the line.
+3. Skip a throw with `]` without throwing it. After the last bomb, chat says some blocks "are still there: mine them first" with new M steps.
+4. After all bombs and mining: "Placing planned again on the real terrain: N block(s) to place". Then place as usual.
+5. `/nr setup replan` any time: re-plans the current leg's bombs (or the placing once the bombs are done).
+6. `/nr verify` (best: after `/nr route`, and again after the setup): chat says how many planned etherwarps work right now; failing ones get a red box on the target, orange on what's in the way, for a minute. Mine or place a block on a planned warp and run it again: is that warp reported? `/nr verify clear` hides the boxes.

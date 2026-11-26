@@ -60,43 +60,145 @@ public final class SetupSteps {
 	@FunctionalInterface
 	public interface Loaded { boolean loaded(int x, int y, int z); }
 
-	private final List<Step> steps;
-	private final boolean[] done;
+	/** Changed when a leg is re-planned (4.7); client thread only. */
+	private List<Step> steps;
+	private boolean[] done;
 	private int current;
+	/** The designed legs, by {@link Step#leg()}, for re-planning (empty for ready-made test steps). */
+	private final List<dev.nucleusrouter.core.setup.LegDesigner.Design> designs;
 
-	private SetupSteps(List<Step> steps) {
+	private SetupSteps(List<Step> steps, List<dev.nucleusrouter.core.setup.LegDesigner.Design> designs) {
 		this.steps = List.copyOf(steps);
 		this.done = new boolean[steps.size()];
+		this.designs = List.copyOf(designs);
 	}
 
 	/** The checklist for a planned lobby. */
 	public static SetupSteps of(LobbySetup.Result plan, double blastRadius) {
 		List<Step> out = new ArrayList<>();
-		int b = 0, m = 0, p = 0;
+		int[] numbers = {0, 0};
 		List<LobbySetup.LegSetup> legs = plan.setups();
+		List<dev.nucleusrouter.core.setup.LegDesigner.Design> designs = new ArrayList<>();
 		for (int i = 0; i < legs.size(); i++) {
 			LobbySetup.LegSetup leg = legs.get(i);
-			// What this leg's throws must break, in order: each throw gets what the earlier ones haven't
-			Set<Long> remaining = new LinkedHashSet<>(leg.design().toClear());
-			for (BombPlanner.Throw t : leg.bombs().throwsInOrder()) {
-				List<int[]> blocks = new ArrayList<>();
-				for (var it = remaining.iterator(); it.hasNext(); ) {
-					long k = it.next();
-					int[] q = Lane.unpack(k);
-					if (inBlast(t.centre(), blastRadius, q)) { blocks.add(q); it.remove(); }
-				}
-				out.add(new Step(Kind.THROW, "B" + (++b), i, t, List.copyOf(blocks), null));
-			}
-			for (List<int[]> group : groups(leg.bombs().mine())) out.add(new Step(Kind.MINE, "M" + (++m), i, null, group, null));
+			designs.add(leg.design());
+			out.addAll(bombSteps(i, leg.bombs(), leg.design().toClear(), blastRadius, numbers));
 		}
-		for (int i = 0; i < legs.size(); i++)
-			for (PlacementPlanner.Step s : legs.get(i).placing().steps())
-				out.add(new Step(Kind.PLACE, "P" + (++p), i, null, List.of(s.block()), s));
-		return new SetupSteps(out);
+		List<PlacementPlanner.Plan> placing = new ArrayList<>();
+		for (LobbySetup.LegSetup leg : legs) placing.add(leg.placing());
+		out.addAll(placeSteps(placing, 0));
+		return new SetupSteps(out, designs);
+	}
+
+	/**
+	 * Throw and mining steps for one leg's bomb plan. Each throw is meant to break the blocks of {@code toClear} in
+	 * its blast that earlier throws haven't. {@code numbers} = {last B number, last M number}, advanced here.
+	 */
+	public static List<Step> bombSteps(int leg, BombPlanner.Plan plan, java.util.Collection<Long> toClear, double blastRadius, int[] numbers) {
+		List<Step> out = new ArrayList<>();
+		Set<Long> remaining = new LinkedHashSet<>(toClear);
+		for (BombPlanner.Throw t : plan.throwsInOrder()) {
+			List<int[]> blocks = new ArrayList<>();
+			for (var it = remaining.iterator(); it.hasNext(); ) {
+				long k = it.next();
+				int[] q = Lane.unpack(k);
+				if (inBlast(t.centre(), blastRadius, q)) { blocks.add(q); it.remove(); }
+			}
+			out.add(new Step(Kind.THROW, "B" + (++numbers[0]), leg, t, List.copyOf(blocks), null));
+		}
+		for (List<int[]> group : groups(plan.mine())) out.add(new Step(Kind.MINE, "M" + (++numbers[1]), leg, null, group, null));
+		return out;
+	}
+
+	/** Placement steps for every leg's placing plan (index = leg), numbered from {@code lastP} + 1. */
+	public static List<Step> placeSteps(List<PlacementPlanner.Plan> placing, int lastP) {
+		List<Step> out = new ArrayList<>();
+		for (int i = 0; i < placing.size(); i++)
+			for (PlacementPlanner.Step s : placing.get(i).steps())
+				out.add(new Step(Kind.PLACE, "P" + (++lastP), i, null, List.of(s.block()), s));
+		return out;
 	}
 
 	/** From ready-made steps (tests). */
-	public static SetupSteps of(List<Step> steps) { return new SetupSteps(steps); }
+	public static SetupSteps of(List<Step> steps) { return new SetupSteps(steps, List.of()); }
+
+	public List<dev.nucleusrouter.core.setup.LegDesigner.Design> designs() { return designs; }
+
+	/** The highest number used so far for a kind (B12 -> 12), so new steps continue from it. */
+	public int lastNumber(Kind kind) {
+		int max = 0;
+		for (Step s : steps)
+			if (s.kind() == kind) {
+				try { max = Math.max(max, Integer.parseInt(s.number().substring(1))); } catch (NumberFormatException ignored) {}
+			}
+		return max;
+	}
+
+	/** Every throw and mining step is done (the placing can start). */
+	public boolean bombWorkDone() {
+		for (int i = 0; i < steps.size(); i++) if (steps.get(i).kind() != Kind.PLACE && !done[i]) return false;
+		return true;
+	}
+
+	/**
+	 * Re-planned bomb work for one leg (4.7): its throw and mining steps not done yet are replaced by {@code fresh},
+	 * at the place of the first one replaced (or just before the placing).
+	 */
+	public void replaceOpenBombWork(int leg, List<Step> fresh) {
+		List<Step> out = new ArrayList<>();
+		List<Boolean> d = new ArrayList<>();
+		int insertAt = -1;
+		for (int i = 0; i < steps.size(); i++) {
+			Step s = steps.get(i);
+			if (s.leg() == leg && s.kind() != Kind.PLACE && !done[i]) {
+				if (insertAt < 0) insertAt = out.size();
+				continue;
+			}
+			out.add(s);
+			d.add(done[i]);
+		}
+		if (insertAt < 0) insertAt = firstPlace(out);
+		out.addAll(insertAt, fresh);
+		for (int i = 0; i < fresh.size(); i++) d.add(insertAt, false);
+		set(out, d);
+	}
+
+	/** Extra steps (left-over mining) just before the placing. */
+	public void insertBeforePlacing(List<Step> fresh) {
+		List<Step> out = new ArrayList<>(steps);
+		List<Boolean> d = new ArrayList<>();
+		for (boolean b : done) d.add(b);
+		int at = firstPlace(out);
+		out.addAll(at, fresh);
+		for (int i = 0; i < fresh.size(); i++) d.add(at, false);
+		set(out, d);
+	}
+
+	/** Re-planned placing (4.7): every placement not done yet is replaced by {@code fresh}. */
+	public void replaceOpenPlacements(List<Step> fresh) {
+		List<Step> out = new ArrayList<>();
+		List<Boolean> d = new ArrayList<>();
+		for (int i = 0; i < steps.size(); i++) {
+			if (steps.get(i).kind() == Kind.PLACE && !done[i]) continue;
+			out.add(steps.get(i));
+			d.add(done[i]);
+		}
+		out.addAll(fresh);
+		for (int i = 0; i < fresh.size(); i++) d.add(false);
+		set(out, d);
+	}
+
+	private static int firstPlace(List<Step> list) {
+		for (int i = 0; i < list.size(); i++) if (list.get(i).kind() == Kind.PLACE) return i;
+		return list.size();
+	}
+
+	private void set(List<Step> out, List<Boolean> d) {
+		steps = List.copyOf(out);
+		done = new boolean[d.size()];
+		for (int i = 0; i < d.size(); i++) done[i] = d.get(i);
+		moveToFirstOpen();
+	}
 
 	static boolean inBlast(Vec3 c, double r, int[] q) {
 		double dx = q[0] + 0.5 - c.x(), dy = q[1] + 0.5 - c.y(), dz = q[2] + 0.5 - c.z();
@@ -153,8 +255,7 @@ public final class SetupSteps {
 		int newly = 0;
 		// Placements are only judged once every throw and mining step is done: before the blasts, the block a
 		// placement replaces may still be standing (it looks "placed" but a bomb is still to come)
-		boolean bombsDone = true;
-		for (int i = 0; i < steps.size(); i++) if (steps.get(i).kind() != Kind.PLACE && !done[i]) { bombsDone = false; break; }
+		boolean bombsDone = bombWorkDone();
 		for (int i = current; i < Math.min(steps.size(), current + window); i++) {
 			if (done[i]) continue;
 			if (steps.get(i).kind() == Kind.PLACE && !bombsDone) break;

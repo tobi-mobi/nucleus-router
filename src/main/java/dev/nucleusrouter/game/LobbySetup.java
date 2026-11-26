@@ -168,34 +168,18 @@ public final class LobbySetup {
 
 		// 3b. Placements in route order, after all bombs, counting earlier legs' blocks; every lane must keep working
 		long t3 = System.nanoTime();
-		List<LegDesigner.PlannedLane> allLanes = new ArrayList<>();
-		for (String[] pair : used) allLanes.addAll(designs.get(pair[0] + ">" + pair[1]).lanes());
-		// Every leg's targets (and start blocks), as they will be once all placing is done: a helper or pillar is
-		// checked against all lanes in that world, not one where other legs' targets are still missing
-		Set<Long> allTargets = targets(allLanes);
-		// A helper or pillar may not break a lane that works without it (lanes already broken are reported below)
-		SolidQuery baseline = world.after(blasted, allTargets);
-		List<LegDesigner.PlannedLane> working = new ArrayList<>();
-		for (LegDesigner.PlannedLane l : allLanes) if (checker.validate(List.of(l), baseline) == null) working.add(l);
+		List<LegDesigner.Design> usedDesigns = new ArrayList<>();
+		for (String[] pair : used) usedDesigns.add(designs.get(pair[0] + ">" + pair[1]));
+		List<PlacementPlanner.Plan> placing = placeAll(usedDesigns, world, blasted, cfg, pingMs, i -> progress.update("placing", i, used.size()));
 		Set<Long> placed = new LinkedHashSet<>();
 		List<LegSetup> setups = new ArrayList<>();
-		int n = 0;
-		for (String[] pair : used) {
-			progress.update("placing", n++, used.size());
+		for (int i = 0; i < used.size(); i++) {
+			String[] pair = used.get(i);
 			String k = pair[0] + ">" + pair[1];
-			LegDesigner.Design d = designs.get(k);
-			SetupWorld now = world.changed(blasted, Set.copyOf(placed));
-			LegDesigner.AfterBombs after = new LegDesigner(now, params, cost, cfg).afterBombs(d, Set.of());
-			PlacementPlanner.Plan p = new PlacementPlanner(now, cfg).plan(LegDesigner.path(d), after.placements(), Set.of(),
-					(post, added) -> {
-						// Only lanes near the new blocks can be affected
-						List<LegDesigner.PlannedLane> near = new ArrayList<>();
-						for (LegDesigner.PlannedLane l : working) if (near(l, added)) near.add(l);
-						return near.isEmpty() || checker.validate(near, (x, y, z) -> allTargets.contains(Lane.pack(x, y, z)) || post.solid(x, y, z)) == null;
-					});
-			for (PlacementPlanner.Step s : p.steps()) placed.add(Lane.pack(s.block()[0], s.block()[1], s.block()[2]));
+			PlacementPlanner.Plan p = placing.get(i);
+			for (PlacementPlanner.Step st : p.steps()) placed.add(Lane.pack(st.block()[0], st.block()[1], st.block()[2]));
 			if (!p.impossible().isEmpty()) problems.add(name(byId, k) + ": " + p.impossible().size() + " block(s) can't be placed");
-			setups.add(new LegSetup(pair[0], pair[1], d, bombs.get(k), p));
+			setups.add(new LegSetup(pair[0], pair[1], designs.get(k), bombs.get(k), p));
 		}
 		double placeMs = (System.nanoTime() - t3) / 1e6;
 
@@ -208,6 +192,43 @@ public final class LobbySetup {
 		progress.update("done", 1, 1);
 		return new Result(plan, Map.copyOf(designs), List.copyOf(setups), blasted, placed, List.copyOf(problems), wanted.size(),
 				timedOut.get(), designMs, orderMs, bombsMs, placeMs, (System.nanoTime() - t0) / 1e6);
+	}
+
+	/**
+	 * Placements for designed legs, in order, against {@code world} with {@code blasted} gone: each leg's target
+	 * blocks that aren't there, counting the blocks placed for earlier legs. A helper or pillar may not break a lane
+	 * that works without it (checked against all legs' lanes, with every target in place; only lanes near the new
+	 * blocks are re-checked). Also used by the guided setup to re-plan the placing against the real terrain once
+	 * every bomb is done ({@code blasted} empty, {@code world} = the terrain now).
+	 */
+	public static List<PlacementPlanner.Plan> placeAll(List<LegDesigner.Design> legs, SetupWorld world, Set<Long> blasted, NrConfig cfg, int pingMs,
+			java.util.function.IntConsumer progress) {
+		Etherwarp.Params params = Etherwarp.Params.fromConfig(cfg);
+		CostModel cost = new CostModel(cfg, pingMs);
+		LegDesigner checker = new LegDesigner(world, params, cost, cfg);
+		List<LegDesigner.PlannedLane> allLanes = new ArrayList<>();
+		for (LegDesigner.Design d : legs) allLanes.addAll(d.lanes());
+		Set<Long> allTargets = targets(allLanes);
+		SolidQuery baseline = world.after(blasted, allTargets);
+		List<LegDesigner.PlannedLane> working = new ArrayList<>();
+		for (LegDesigner.PlannedLane l : allLanes) if (checker.validate(List.of(l), baseline) == null) working.add(l);
+		Set<Long> placed = new LinkedHashSet<>();
+		List<PlacementPlanner.Plan> out = new ArrayList<>();
+		for (int i = 0; i < legs.size(); i++) {
+			progress.accept(i);
+			LegDesigner.Design d = legs.get(i);
+			SetupWorld now = world.changed(blasted, Set.copyOf(placed));
+			LegDesigner.AfterBombs after = new LegDesigner(now, params, cost, cfg).afterBombs(d, Set.of());
+			PlacementPlanner.Plan p = new PlacementPlanner(now, cfg).plan(LegDesigner.path(d), after.placements(), Set.of(),
+					(post, added) -> {
+						List<LegDesigner.PlannedLane> near = new ArrayList<>();
+						for (LegDesigner.PlannedLane l : working) if (near(l, added)) near.add(l);
+						return near.isEmpty() || checker.validate(near, (x, y, z) -> allTargets.contains(Lane.pack(x, y, z)) || post.solid(x, y, z)) == null;
+					});
+			for (PlacementPlanner.Step st : p.steps()) placed.add(Lane.pack(st.block()[0], st.block()[1], st.block()[2]));
+			out.add(p);
+		}
+		return out;
 	}
 
 	/**

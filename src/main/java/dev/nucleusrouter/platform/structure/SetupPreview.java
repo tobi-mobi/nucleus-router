@@ -90,10 +90,10 @@ public final class SetupPreview {
 	public static LobbySetup.Result lobbyPlan() { return lobbyPlan; }
 
 	/** What the planners need, copied on the client thread. */
-	private record Inputs(NrConfig cfg, StructureMap map, dev.nucleusrouter.game.KeeperLayout layout, PlanWorld.Columns explored,
+	record Inputs(NrConfig cfg, StructureMap map, dev.nucleusrouter.game.KeeperLayout layout, PlanWorld.Columns explored,
 			List<int[]> zones, int ping) {}
 
-	private static Inputs inputs() {
+	static Inputs inputs() {
 		NrConfig cfg = ConfigManager.get();
 		StructureMap map = new com.google.gson.Gson().fromJson(new com.google.gson.Gson().toJson(StructureTracker.map()), StructureMap.class);
 		var visited = ExplorationTracker.coverage().visitedCopy();

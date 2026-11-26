@@ -141,6 +141,7 @@ public final class WorldCapture {
 	public static void onBlockChanged(ClientLevel level, BlockPos pos, BlockState state, boolean byPlayer) {
 		ensureLevel(level);
 		dev.nucleusrouter.platform.debug.BombCalibration.onBlockChanged(pos, state, byPlayer);
+		dev.nucleusrouter.platform.structure.SetupGuide.onBlockChanged(pos, state, byPlayer);
 		NrConfig.Hollows h = ConfigManager.get().hollows;
 		int x = pos.getX(), y = pos.getY(), z = pos.getZ();
 		if (x < h.minX || x > h.maxX || y < h.minY || y > h.maxY || z < h.minZ || z > h.maxZ) return;

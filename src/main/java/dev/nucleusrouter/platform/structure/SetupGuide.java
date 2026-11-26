@@ -6,7 +6,9 @@ import dev.nucleusrouter.core.etherwarp.SolidQuery;
 import dev.nucleusrouter.core.geom.Vec3;
 import dev.nucleusrouter.core.setup.BombPlanner;
 import dev.nucleusrouter.core.setup.PlacementPlanner;
+import dev.nucleusrouter.core.setup.SetupWorld;
 import dev.nucleusrouter.game.LobbySetup;
+import dev.nucleusrouter.game.SetupRepair;
 import dev.nucleusrouter.game.SetupSteps;
 import dev.nucleusrouter.platform.NucleusRouterClient;
 import dev.nucleusrouter.platform.config.ConfigManager;
@@ -14,6 +16,8 @@ import dev.nucleusrouter.platform.location.LocationTracker;
 import dev.nucleusrouter.platform.render.WorldDraw;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.event.player.UseItemCallback;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -42,13 +46,29 @@ import java.util.Set;
  *       "edge" placements say so.</li>
  * </ul>
  * Steps tick themselves off as the blocks change (checked every few ticks against the loaded world; see
- * {@link SetupSteps}); the "confirm / skip setup step" key (default ]) does it by hand. Render-only: nothing is
- * done for you.
+ * {@link SetupSteps}); the "confirm / skip setup step" key (default ]) does it by hand.
+ * <p>
+ * When it doesn't go as planned (roadmap 4.7, setup mode only): a Bob-omb thrown during a throw step is followed for
+ * {@link #JUDGE_AFTER_MS}; if its blocks aren't all gone by then it fizzled, missed or left blocks
+ * ({@link SetupRepair#judge}), and that leg's remaining bomb work is planned again from the terrain as it is now.
+ * Once every bomb is done, blocks still in a lane's way become mining steps, and then the placing is planned again
+ * on the real terrain. {@code /nr setup replan} does the same by hand. Render-only: nothing is done for you.
  */
 public final class SetupGuide {
 	private static final int CHECK_EVERY_TICKS = 5;
 	private static final int CHECK_WINDOW = 60;
 	private static final int SHOW_AHEAD = 3;
+	/** A throw is judged this long after it: flight (up to ~1.3 s for 32 blocks) + fuse (~2.3 s, measured) + margin. */
+	static final long JUDGE_AFTER_MS = 4500;
+
+	/** A Bob-omb thrown during a throw step, being followed. */
+	private record Pending(SetupSteps.Step step, Vec3 eye, long thrownMs, List<int[]> broken) {}
+
+	private static volatile Pending pending;
+	/** Where bombs fizzled this setup: no blast is planned near them again. */
+	private static final List<Vec3> fizzled = new ArrayList<>();
+	private static boolean placingReplanned;
+	private static volatile boolean replanning;
 
 	private static volatile SetupSteps steps;
 	private static int ticks;
@@ -62,6 +82,7 @@ public final class SetupGuide {
 		ClientTickEvents.END_CLIENT_TICK.register(SetupGuide::tick);
 		WorldDraw.addLayerWhile(() -> steps != null && (forceShowForTest || LocationTracker.state().inHollows()), SetupGuide::draw);
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "setup_guide"), SetupGuide::drawHud);
+		UseItemCallback.EVENT.register((player, level, hand) -> { onUse(player); return InteractionResult.PASS; });
 	}
 
 	public static boolean active() { return steps != null; }
@@ -74,13 +95,16 @@ public final class SetupGuide {
 		SetupSteps s = SetupSteps.of(plan, ConfigManager.get().bombs.blastRadius);
 		steps = s;
 		finishedSaid = false;
+		placingReplanned = false;
+		pending = null;
+		fizzled.clear();
 		SetupPreview.clear();
 		check(Minecraft.getInstance());
 		return String.format("Guided setup on: %d steps (%d bombs, %d mining, %d placing). Bombs first, then placing. Steps tick themselves off; press the \"confirm / skip setup step\" key (default ]) to do it by hand. /nr setup back undoes one, /nr setup stop ends it.",
 				s.size(), s.count(SetupSteps.Kind.THROW), s.count(SetupSteps.Kind.MINE), s.count(SetupSteps.Kind.PLACE));
 	}
 
-	public static void stop() { steps = null; }
+	public static void stop() { steps = null; pending = null; }
 
 	/** Gametests only: guide through given steps. */
 	public static void startForTest(SetupSteps s) {
@@ -108,22 +132,156 @@ public final class SetupGuide {
 
 	private static void tick(Minecraft mc) {
 		if (steps == null || mc.level == null || mc.player == null) return;
+		Pending p = pending;
+		if (p != null && System.currentTimeMillis() - p.thrownMs() > JUDGE_AFTER_MS) {
+			pending = null;
+			judge(mc, p);
+		}
 		if (++ticks % CHECK_EVERY_TICKS != 0) return;
 		check(mc);
+	}
+
+	// ------------------------------------------------------------------ 4.7: following throws, re-planning
+
+	private static void onUse(net.minecraft.world.entity.player.Player player) {
+		Minecraft mc = Minecraft.getInstance();
+		SetupSteps s = steps;
+		if (s == null || player != mc.player || s.finished()) return;
+		if (!player.getMainHandItem().getHoverName().getString().toLowerCase(Locale.ROOT).contains("bob-omb")) return;
+		SetupSteps.Step st = s.currentStep();
+		if (st.kind() != SetupSteps.Kind.THROW) return;
+		pending = new Pending(st, new Vec3(player.getX(), player.getEyeY(), player.getZ()), System.currentTimeMillis(), new ArrayList<>());
+	}
+
+	/** From WorldCapture: every block change on the client thread. Collects what breaks after a throw. */
+	public static void onBlockChanged(BlockPos pos, BlockState state, boolean byPlayer) {
+		Pending p = pending;
+		if (p == null || byPlayer || !state.isAir()) return;
+		Vec3 c = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+		// Near the planned blast or anywhere the bomb could have gone (it flies at most ~32 blocks)
+		if (c.sub(p.step().bomb().centre()).length() > 12 && c.sub(p.eye()).length() > 45) return;
+		p.broken().add(new int[]{pos.getX(), pos.getY(), pos.getZ()});
+	}
+
+	private static void judge(Minecraft mc, Pending p) {
+		SetupSteps s = steps;
+		if (s == null || mc.level == null) return;
+		int idx = s.steps().indexOf(p.step());
+		if (idx < 0 || s.done(idx)) return; // ticked off by itself: as planned
+		SetupRepair.Judgement j = SetupRepair.judge(p.step(), p.broken(), liveSolidPassThrough(mc.level));
+		NucleusRouterClient.LOG.info("[Nucleus Router] Setup: {} judged {} (broke {}, left {}, off by {} blocks, centre {})", p.step().number(), j.outcome(),
+				j.broken(), j.leftover(), String.format(Locale.ROOT, "%.1f", j.offBy()), j.centre());
+		String what = switch (j.outcome()) {
+			case DONE -> null;
+			case FIZZLED -> {
+				Vec3 c = p.step().bomb().centre();
+				fizzled.add(c);
+				yield String.format(Locale.ROOT, "%s did nothing (fizzled? Bombs centred inside a structure's zone do nothing). No bomb will be planned within %.0f blocks of %.0f %.0f %.0f again.",
+						p.step().number(), SetupRepair.FIZZLE_RADIUS, c.x(), c.y(), c.z());
+			}
+			case MISSED -> String.format(Locale.ROOT, "%s went off %.0f blocks from the plan.", p.step().number(), j.offBy());
+			case PARTIAL -> String.format(Locale.ROOT, "%s left %d of its blocks standing.", p.step().number(), j.leftover());
+		};
+		if (what == null) return;
+		NucleusRouterClient.showLocal(Component.literal(what + " Re-planning this leg's remaining bombs from the terrain as it is now...").withStyle(ChatFormatting.GOLD));
+		replanLeg(p.step().leg());
+	}
+
+	/** Re-plans one leg's open bomb work on a fresh snapshot (worker thread), then swaps the steps in. */
+	private static void replanLeg(int leg) {
+		SetupSteps s = steps;
+		if (s == null || replanning || leg >= s.designs().size()) return;
+		replanning = true;
+		SetupPreview.Inputs in = SetupPreview.inputs();
+		List<Vec3> noBomb = List.copyOf(fizzled);
+		int[] numbers = {s.lastNumber(SetupSteps.Kind.THROW), s.lastNumber(SetupSteps.Kind.MINE)};
+		var design = s.designs().get(leg);
+		dev.nucleusrouter.platform.world.WorldCapture.snapshot().thenApplyAsync(snap ->
+				SetupRepair.replanBombs(leg, design, SetupWorld.of(snap, in.zones(), in.explored()), noBomb, in.cfg(), numbers), WORKER)
+				.whenComplete((fresh, err) -> Minecraft.getInstance().execute(() -> {
+					replanning = false;
+					if (err != null) { NucleusRouterClient.reportAsyncError(err); return; }
+					if (steps != s) return; // guide restarted meanwhile
+					s.replaceOpenBombWork(leg, fresh);
+					long t = fresh.stream().filter(x -> x.kind() == SetupSteps.Kind.THROW).count();
+					NucleusRouterClient.showLocal(Component.literal(String.format("Re-planned: %d throw(s) and %d mining step(s) for this leg.%s", t, fresh.size() - t,
+							s.finished() ? "" : " Next: " + s.currentStep().number() + ".")).withStyle(ChatFormatting.AQUA));
+				}));
+	}
+
+	/**
+	 * Every bomb is done: blocks still in a lane's way become mining; once there are none, the placing is planned
+	 * again on the real terrain (worker thread).
+	 */
+	private static void replanPlacing(Minecraft mc) {
+		SetupSteps s = steps;
+		if (s == null || replanning || mc.level == null) return;
+		List<SetupSteps.Step> left = SetupRepair.leftovers(s.designs(), liveSolidPassThrough(mc.level), s.lastNumber(SetupSteps.Kind.MINE));
+		if (!left.isEmpty()) {
+			int blocks = left.stream().mapToInt(x -> x.blocks().size()).sum();
+			s.insertBeforePlacing(left);
+			NucleusRouterClient.showLocal(Component.literal(blocks + " block(s) the tunnels need gone are still there: mine them first (" + left.get(0).number()
+					+ (left.size() > 1 ? " to " + left.get(left.size() - 1).number() : "") + ").").withStyle(ChatFormatting.GOLD));
+			return;
+		}
+		placingReplanned = true;
+		replanning = true;
+		SetupPreview.Inputs in = SetupPreview.inputs();
+		var designs = s.designs();
+		int doneP = s.doneCount(SetupSteps.Kind.PLACE);
+		int lastP = doneP == 0 ? 0 : s.lastNumber(SetupSteps.Kind.PLACE);
+		int before = s.count(SetupSteps.Kind.PLACE) - doneP;
+		dev.nucleusrouter.platform.world.WorldCapture.snapshot().thenApplyAsync(snap ->
+				LobbySetup.placeAll(designs, SetupWorld.of(snap, in.zones(), in.explored()), java.util.Set.of(), in.cfg(), in.ping(), i -> {}), WORKER)
+				.whenComplete((plans, err) -> Minecraft.getInstance().execute(() -> {
+					replanning = false;
+					if (err != null) { NucleusRouterClient.reportAsyncError(err); return; }
+					if (steps != s) return;
+					List<SetupSteps.Step> fresh = SetupSteps.placeSteps(plans, lastP);
+					s.replaceOpenPlacements(fresh);
+					int impossible = plans.stream().mapToInt(p -> p.impossible().size()).sum();
+					NucleusRouterClient.showLocal(Component.literal(String.format("All bombs done. Placing planned again on the real terrain: %d block(s) to place (the first plan had %d).%s",
+							fresh.size(), before, impossible > 0 ? " " + impossible + " target block(s) can't be placed: /nr verify shows which warps that affects." : ""))
+							.withStyle(impossible > 0 ? ChatFormatting.GOLD : ChatFormatting.AQUA));
+				}));
+	}
+
+	/** /nr setup replan: plan the current step's leg again now (or the placing, once the bombs are done). */
+	public static String replanNow() {
+		SetupSteps s = steps;
+		if (s == null) return "Guided setup is off: /nr setup start";
+		if (replanning) return "Already re-planning, wait a moment.";
+		if (s.finished()) return "The setup is finished.";
+		if (s.bombWorkDone()) {
+			placingReplanned = false;
+			replanPlacing(Minecraft.getInstance());
+			return "Re-planning the placing on the terrain as it is now...";
+		}
+		replanLeg(s.currentStep().leg());
+		return "Re-planning this leg's remaining bombs on the terrain as it is now...";
+	}
+
+	private static final java.util.concurrent.ExecutorService WORKER = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+		Thread t = new Thread(r, "nucleusrouter-setup-repair");
+		t.setDaemon(true);
+		return t;
+	});
+
+	private static SolidQuery liveSolidPassThrough(ClientLevel level) {
+		Set<String> passThrough = new HashSet<>(ConfigManager.get().etherwarp.rayPassesThrough);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		return (x, y, z) -> {
+			BlockState st = level.getBlockState(pos.set(x, y, z));
+			return !st.isAir() && !passThrough.contains(BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString());
+		};
 	}
 
 	private static void check(Minecraft mc) {
 		SetupSteps s = steps;
 		if (s == null || mc.level == null || !(forceShowForTest || LocationTracker.state().inHollows())) return;
 		ClientLevel level = mc.level;
-		Set<String> passThrough = new HashSet<>(ConfigManager.get().etherwarp.rayPassesThrough);
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-		SolidQuery live = (x, y, z) -> {
-			BlockState st = level.getBlockState(pos.set(x, y, z));
-			return !st.isAir() && !passThrough.contains(BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString());
-		};
+		SolidQuery live = liveSolidPassThrough(level);
 		SetupSteps.Loaded loaded = (x, y, z) -> level.hasChunkAt(x, z);
-		int before = s.current();
 		int newly = s.update(live, loaded, CHECK_WINDOW);
 		if (newly > 0) NucleusRouterClient.LOG.info("[Nucleus Router] Setup: {} step(s) done by themselves, now at {}", newly,
 				s.finished() ? "the end" : s.currentStep().number());
@@ -131,9 +289,9 @@ public final class SetupGuide {
 			finishedSaid = true;
 			NucleusRouterClient.showLocal(Component.literal("Setup finished! Plan the run again (/nr route) and try it (/nr run). /nr setup stop hides the guide.")
 					.withStyle(ChatFormatting.GREEN));
-		} else if (s.current() != before && !s.finished() && before < s.size()
-				&& s.steps().get(before).kind() != SetupSteps.Kind.PLACE && s.currentStep().kind() == SetupSteps.Kind.PLACE) {
-			NucleusRouterClient.showLocal(Component.literal("All bombs and mining done: now the placing (P numbers).").withStyle(ChatFormatting.AQUA));
+		} else if (!s.finished() && s.bombWorkDone() && !placingReplanned && !replanning && !s.designs().isEmpty()) {
+			// Every bomb done: leftovers to mine, or the placing planned again on the real terrain
+			replanPlacing(mc);
 		}
 	}
 

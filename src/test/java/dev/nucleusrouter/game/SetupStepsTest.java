@@ -183,4 +183,141 @@ class SetupStepsTest {
 		assertEquals(2, g.size());
 		assertEquals(3, g.get(0).size());
 	}
+
+	// ------------------------------------------------------------------ 4.7: repair and verify
+
+	/** The simulated world as a SetupWorld (for re-planning on "the terrain as it is now"). */
+	private static SetupWorld asSetupWorld(Sim sim) {
+		return new SetupWorld() {
+			@Override public VoxelClass classAt(int x, int y, int z) {
+				long k = Lane.pack(x, y, z);
+				if (sim.placed.contains(k)) return VoxelClass.PLACED;
+				if (sim.gone.contains(k)) return VoxelClass.AIR;
+				return WORLD.classAt(x, y, z);
+			}
+			@Override public boolean inZone(int x, int y, int z) { return false; }
+			@Override public boolean explored(int x, int z) { return true; }
+		};
+	}
+
+	private static SetupSteps.Step firstThrow(SetupSteps steps) {
+		for (SetupSteps.Step s : steps.steps()) if (s.kind() == SetupSteps.Kind.THROW && !s.blocks().isEmpty()) return s;
+		throw new AssertionError("no throw");
+	}
+
+	@Test
+	void judgesWhatAThrowDid() {
+		SetupSteps steps = SetupSteps.of(plan, CFG.bombs.blastRadius);
+		SetupSteps.Step t = firstThrow(steps);
+		Sim w = new Sim();
+		assertEquals(SetupRepair.Outcome.FIZZLED, SetupRepair.judge(t, List.of(), w).outcome());
+		// As planned
+		Sim done = new Sim();
+		done.doStep(t);
+		List<int[]> broken = new java.util.ArrayList<>();
+		for (long k : done.gone) broken.add(Lane.unpack(k));
+		assertEquals(SetupRepair.Outcome.DONE, SetupRepair.judge(t, broken, done).outcome());
+		// 20 blocks off
+		Sim off = new Sim();
+		Vec3 c = t.bomb().centre().add(new Vec3(0, 0, 20));
+		off.blast(c, CFG.bombs.blastRadius);
+		List<int[]> b2 = new java.util.ArrayList<>();
+		for (long k : off.gone) b2.add(Lane.unpack(k));
+		SetupRepair.Judgement j = SetupRepair.judge(t, b2, off);
+		assertEquals(SetupRepair.Outcome.MISSED, j.outcome());
+		assertEquals(20, j.offBy(), 1.0);
+		// Right place, smaller blast
+		Sim small = new Sim();
+		small.blast(t.bomb().centre(), 3);
+		List<int[]> b3 = new java.util.ArrayList<>();
+		for (long k : small.gone) b3.add(Lane.unpack(k));
+		assertEquals(SetupRepair.Outcome.PARTIAL, SetupRepair.judge(t, b3, small).outcome());
+	}
+
+	/**
+	 * The first bomb fizzles (near a structure, say). Only that leg's remaining bomb work is planned again, with no
+	 * blast near the fizzle; once the bombs are done the placing is planned again on the real terrain; at the end
+	 * every lane works.
+	 */
+	@Test
+	void fizzledBombIsReplannedAndTheSetupStillWorks() {
+		SetupSteps steps = SetupSteps.of(plan, CFG.bombs.blastRadius);
+		Sim world = new Sim();
+		SetupSteps.Step fizzled = steps.currentStep();
+		assertEquals(SetupSteps.Kind.THROW, fizzled.kind());
+		int before = steps.count(SetupSteps.Kind.THROW);
+		int[] numbers = {steps.lastNumber(SetupSteps.Kind.THROW), steps.lastNumber(SetupSteps.Kind.MINE)};
+		List<SetupSteps.Step> fresh = SetupRepair.replanBombs(fizzled.leg(), steps.designs().get(fizzled.leg()), asSetupWorld(world),
+				List.of(fizzled.bomb().centre()), CFG, numbers);
+		for (SetupSteps.Step s : fresh)
+			if (s.kind() == SetupSteps.Kind.THROW)
+				assertTrue(s.bomb().centre().sub(fizzled.bomb().centre()).length() > SetupRepair.FIZZLE_RADIUS, "no bomb near the fizzle");
+		steps.replaceOpenBombWork(fizzled.leg(), fresh);
+		assertNotSame(fizzled, steps.currentStep(), "the fizzled throw is gone from the list");
+		assertNotEquals(fizzled.number(), steps.currentStep().number(), "new steps get new numbers");
+		System.out.printf("[setup-steps] after a fizzle: %d throws (was %d)%n", steps.count(SetupSteps.Kind.THROW), before);
+
+		// Do all the bomb work
+		boolean replacedPlacing = false;
+		while (!steps.finished()) {
+			if (steps.bombWorkDone() && !replacedPlacing) {
+				List<SetupSteps.Step> left = SetupRepair.leftovers(steps.designs(), world, steps.lastNumber(SetupSteps.Kind.MINE));
+				if (!left.isEmpty()) { steps.insertBeforePlacing(left); continue; }
+				var placing = LobbySetup.placeAll(steps.designs(), asSetupWorld(world), Set.of(), CFG, 150, i -> {});
+				for (var p : placing) assertTrue(p.impossible().isEmpty());
+				steps.replaceOpenPlacements(SetupSteps.placeSteps(placing, 0));
+				replacedPlacing = true;
+				continue;
+			}
+			SetupSteps.Step s = steps.currentStep();
+			world.doStep(s);
+			int at = steps.current();
+			steps.update(world, (x, y, z) -> true, 60);
+			if (steps.current() == at) steps.confirmCurrent();
+		}
+		var checker = new dev.nucleusrouter.core.setup.LegDesigner(WORLD, dev.nucleusrouter.core.etherwarp.Etherwarp.Params.fromConfig(CFG),
+				new dev.nucleusrouter.core.cost.CostModel(CFG, 150), CFG);
+		for (var d : steps.designs()) assertNull(checker.validate(d.lanes(), world), "every lane works after the repaired setup");
+	}
+
+	@Test
+	void skippedThrowsLeaveMiningBeforeThePlacing() {
+		SetupSteps steps = SetupSteps.of(plan, CFG.bombs.blastRadius);
+		Sim world = new Sim();
+		steps.confirmCurrent(); // B1 "done" by hand, but never thrown
+		while (!steps.bombWorkDone()) {
+			world.doStep(steps.currentStep());
+			int at = steps.current();
+			steps.update(world, (x, y, z) -> true, 60);
+			if (steps.current() == at) steps.confirmCurrent();
+		}
+		List<SetupSteps.Step> left = SetupRepair.leftovers(steps.designs(), world, steps.lastNumber(SetupSteps.Kind.MINE));
+		assertFalse(left.isEmpty(), "B1's blocks are still there: mine them");
+		int n = steps.size();
+		steps.insertBeforePlacing(left);
+		assertEquals(n + left.size(), steps.size());
+		assertEquals(SetupSteps.Kind.MINE, steps.currentStep().kind());
+	}
+
+	@Test
+	void verifyFindsWarpsThatDontWorkYet() {
+		var p = dev.nucleusrouter.core.etherwarp.Etherwarp.Params.fromConfig(CFG);
+		List<SetupRepair.WarpCheck> checks = new java.util.ArrayList<>();
+		for (LobbySetup.LegSetup leg : plan.setups()) checks.addAll(SetupRepair.lanes(leg.key(), leg.design().lanes()));
+		assertFalse(checks.isEmpty());
+		// Before the setup (solid rock): every warp fails
+		List<SetupRepair.Failure> before = SetupRepair.verify(checks, p, WORLD::solid);
+		assertEquals(checks.size(), before.size());
+		// After the planned setup: none
+		SolidQuery after = WORLD.after(plan.blasted(), plan.placed());
+		assertTrue(SetupRepair.verify(checks, p, after).isEmpty());
+		// One target block missing: that warp is reported, with the reason
+		SetupRepair.WarpCheck w = checks.get(0);
+		long gone = Lane.pack(w.target()[0], w.target()[1], w.target()[2]);
+		SolidQuery missing = (x, y, z) -> Lane.pack(x, y, z) != gone && after.solid(x, y, z);
+		List<SetupRepair.Failure> f = SetupRepair.verify(checks, p, missing);
+		assertFalse(f.isEmpty());
+		assertEquals(w, f.get(0).warp());
+		assertEquals("the target block is missing", f.get(0).why());
+	}
 }
