@@ -142,7 +142,11 @@ public final class LobbySetup {
 			SolidQuery withOthers = (x, y, z) -> { long q = Lane.pack(x, y, z); return others.contains(q) || own.contains(q) || ideal.solid(x, y, z); };
 			if (checker.validate(designs.get(k).lanes(), withOthers) == null) continue;
 			SetupWorld fixed = fixedBlocks(world, others);
-			LegDesigner.Result again = new LegDesigner(fixed, params, cost, cfg).design(block(byId.get(pair[0])), block(byId.get(pair[1])), perLegMs);
+			// One at a time (each sees the re-designed legs before it), so it can't have the parallel per-leg slice:
+			// at most until 70% of the budget is used, leaving the rest for bombs and placing (performance pass 5.3)
+			long leftMs = (t0 + (long) (budgetMs * 0.7) * 1_000_000L - System.nanoTime()) / 1_000_000L;
+			long redesignMs = Math.max(100, Math.min(perLegMs, leftMs));
+			LegDesigner.Result again = new LegDesigner(fixed, params, cost, cfg).design(block(byId.get(pair[0])), block(byId.get(pair[1])), redesignMs);
 			if (again.best() != null) designs.put(k, again.best());
 			else problems.add(name(byId, k) + ": in the way of another leg's target blocks, and no other design found");
 		}

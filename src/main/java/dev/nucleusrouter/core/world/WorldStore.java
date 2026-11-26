@@ -81,7 +81,10 @@ public final class WorldStore {
 				}
 				s.paletteSize = paletteSize;
 				in.readFully(s.orig);
-				in.readFully(s.cur);
+				byte[] cur = new byte[Section.VOLUME];
+				in.readFully(cur);
+				// Most sections have nothing changed: keep one array for both (performance pass 5.3)
+				s.cur = java.util.Arrays.equals(cur, s.orig) ? s.orig : cur;
 				model.putSection(key, s);
 			}
 			return new Loaded(meta, model);

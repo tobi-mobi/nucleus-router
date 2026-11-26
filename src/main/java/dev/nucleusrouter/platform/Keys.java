@@ -31,7 +31,7 @@ public final class Keys {
 		setupConfirm = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.nucleusrouter.setupConfirm", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_BRACKET, category));
 		// Not bound by default (the modpack already uses many keys); set it in Controls
 		setPoint = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.nucleusrouter.setPoint", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, category));
-		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+		dev.nucleusrouter.platform.debug.Perf.onTick(client -> {
 			while (map.consumeClick()) {
 				if (client.gui.screen() == null) client.gui.setScreen(new ExploreMapScreen());
 			}

@@ -40,8 +40,8 @@ public final class StructureHud {
 	private StructureHud() {}
 
 	public static void init() {
-		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "structure_list"), StructureHud::draw);
-		ClientTickEvents.END_CLIENT_TICK.register(c -> { if (++ticks % 10 == 0) update(); });
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "structure_list"), dev.nucleusrouter.platform.debug.Perf.hud("StructureHud", StructureHud::draw));
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> { if (++ticks % 10 == 0) update(); });
 	}
 
 	/** The gate: true once every structure has an exact position. Setup planning (milestone 4) checks this. */

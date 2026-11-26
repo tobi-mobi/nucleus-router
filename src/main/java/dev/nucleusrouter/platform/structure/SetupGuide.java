@@ -79,9 +79,9 @@ public final class SetupGuide {
 	private SetupGuide() {}
 
 	public static void init() {
-		ClientTickEvents.END_CLIENT_TICK.register(SetupGuide::tick);
+		dev.nucleusrouter.platform.debug.Perf.onTick(SetupGuide::tick);
 		WorldDraw.addLayerWhile(() -> steps != null && (forceShowForTest || LocationTracker.state().inHollows()), SetupGuide::draw);
-		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "setup_guide"), SetupGuide::drawHud);
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "setup_guide"), dev.nucleusrouter.platform.debug.Perf.hud("SetupGuide", SetupGuide::drawHud));
 		UseItemCallback.EVENT.register((player, level, hand) -> { onUse(player); return InteractionResult.PASS; });
 	}
 

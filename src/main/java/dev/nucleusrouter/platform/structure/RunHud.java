@@ -50,8 +50,8 @@ public final class RunHud {
 	private RunHud() {}
 
 	public static void init() {
-		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "run_panel"), RunHud::draw);
-		ClientTickEvents.END_CLIENT_TICK.register(RunHud::tick);
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "run_panel"), dev.nucleusrouter.platform.debug.Perf.hud("RunHud", RunHud::draw));
+		dev.nucleusrouter.platform.debug.Perf.onTick(RunHud::tick);
 		ClientReceiveMessageEvents.GAME.register((msg, overlay) -> { if (!overlay) onChat(msg.getString()); });
 		UseItemCallback.EVENT.register((player, level, hand) -> { onUse(player); return InteractionResult.PASS; });
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> { onUse(player); return InteractionResult.PASS; });

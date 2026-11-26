@@ -145,17 +145,40 @@ public final class LegPlanner {
 
 	/** A solid query that records which sections it reads, so the entry can be invalidated later. */
 	private final class Recorder implements SolidQuery {
-		final Set<Long> sections = new HashSet<>();
+		/** Open-addressing set of section keys (no boxing: this runs for every block a ray steps through). */
+		long[] keys = new long[64];
+		boolean[] used = new boolean[64];
+		int size;
 		long last = Long.MIN_VALUE;
 
 		@Override public boolean solid(int x, int y, int z) {
 			long s = section(x >> 4, y >> 4, z >> 4);
-			if (s != last) { sections.add(s); last = s; }
+			if (s != last) { add(s); last = s; }
 			return world.solid(x, y, z);
 		}
 
+		private void add(long k) {
+			int mask = keys.length - 1, i = (int) (k ^ (k >>> 29) ^ (k >>> 42)) * 0x9E3779B9 >>> 7 & mask;
+			while (used[i]) {
+				if (keys[i] == k) return;
+				i = (i + 1) & mask;
+			}
+			used[i] = true;
+			keys[i] = k;
+			if (++size * 2 > keys.length) grow();
+		}
+
+		private void grow() {
+			long[] ok = keys;
+			boolean[] ou = used;
+			keys = new long[ok.length * 2];
+			used = new boolean[ok.length * 2];
+			size = 0;
+			for (int i = 0; i < ok.length; i++) if (ou[i]) add(ok[i]);
+		}
+
 		void index(Object key) {
-			for (long s : sections) bySection.computeIfAbsent(s, k -> new HashSet<>()).add(key);
+			for (int i = 0; i < keys.length; i++) if (used[i]) bySection.computeIfAbsent(keys[i], k -> new HashSet<>()).add(key);
 		}
 	}
 

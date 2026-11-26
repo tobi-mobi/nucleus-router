@@ -124,6 +124,12 @@ public final class NrCommands {
 								})))
 						.then(literal("inspect").executes(InspectCommand::run))
 						.then(literal("dump").executes(DebugCommands::dump))
+						.then(literal("perf").executes(NrCommands::perf)
+								.then(literal("reset").executes(ctx -> {
+									dev.nucleusrouter.platform.debug.Perf.resetMax();
+									ctx.getSource().sendFeedback(Component.literal("Worst times reset.").withStyle(ChatFormatting.GRAY));
+									return 1;
+								})))
 						.then(literal("hud").executes(ctx -> {
 							Minecraft client = ctx.getSource().getClient();
 							client.schedule(() -> client.gui.setScreen(new dev.nucleusrouter.platform.structure.HudEditScreen(null)));
@@ -160,6 +166,7 @@ public final class NrCommands {
 		line(src, "/nr route", "plan the run: order of the structures, when to /warp nucleus, total time");
 		line(src, "/nr stops", "where the route will stop at each NPC and crystal (blue blocks in the world)");
 		line(src, "/nr setpoint [stop|list|clear]", "save where you stand as your own spot for the nearest (or named) stop, kept for every lobby");
+		line(src, "/nr perf [reset]", "how much time the mod's drawing and background checks take, and its memory");
 		line(src, "/nr bal [clear]", "after /nr route: one block to place near Bal that saves warps into the fight (optional)");
 		line(src, "/nr lobby", "is this lobby worth setting up? every check with its reason");
 		line(src, "/nr explored [map]", "how much of the Hollows you've explored and where to go next; map opens a map (hover for details)");
@@ -252,6 +259,23 @@ public final class NrCommands {
 					.append(Component.literal(where + wait).withStyle(s.ready() ? ChatFormatting.WHITE : ChatFormatting.RED))
 					.append(Component.literal("  " + s.note()).withStyle(ChatFormatting.DARK_GRAY)));
 		}
+		return 1;
+	}
+
+	/** {@code /nr perf} (roadmap 5.3): the mod's drawing and tick time on the client thread, plus memory. */
+	private static int perf(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource src = ctx.getSource();
+		double frame = dev.nucleusrouter.platform.debug.Perf.frameMillis();
+		src.sendFeedback(header("Performance"));
+		src.sendFeedback(Component.literal(String.format(java.util.Locale.ROOT, "  Drawing per frame: %.3f ms (budget 0.5 ms)", frame))
+				.withStyle(frame <= 0.5 ? ChatFormatting.GREEN : ChatFormatting.RED));
+		for (String line : dev.nucleusrouter.platform.debug.Perf.report()) src.sendFeedback(Component.literal("  " + line).withStyle(ChatFormatting.GRAY));
+		Runtime rt = Runtime.getRuntime();
+		long used = (rt.totalMemory() - rt.freeMemory()) / 1048576, max = rt.maxMemory() / 1048576;
+		dev.nucleusrouter.platform.world.WorldCapture.snapshot().thenAccept(snap -> Minecraft.getInstance().execute(() ->
+				src.sendFeedback(Component.literal(String.format(java.util.Locale.ROOT, "  Memory: terrain of this lobby %d sections, %.1f MB; game total %d of %d MB",
+						snap.sectionCount(), snap.bytes() / 1048576.0, used, max)).withStyle(ChatFormatting.GRAY))));
+		src.sendFeedback(Component.literal("  (/nr perf reset clears the worst times)").withStyle(ChatFormatting.DARK_GRAY));
 		return 1;
 	}
 

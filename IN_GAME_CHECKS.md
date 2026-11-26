@@ -99,3 +99,9 @@ Anything you only get partly through is still useful: send what you have.
 2. Chat either says where to place one block and how many warps it saves, or why there's nothing to suggest.
 3. In the world: yellow block = where to place, green pad + white dot = where to stand and what to click, cyan block + line = the landing spot you warp from straight onto the new block.
 4. Place it: the markers disappear and chat says to `/nr route` again. Does the new route use the block (fewer warps into Khazad-dum)? Is landing there a good place to fight Bal from? If it's too far from where you like to fight, lower Settings > Placing > "Bal block: max distance".
+
+### Milestone 5: performance (5.3)
+1. In the Hollows with things on screen (best: `/nr setup` preview shown, then `/nr run`), play for a minute and type `/nr perf`. The first line ("Drawing per frame") should be green: under 0.5 ms. If it's red, send the whole output (it lists which overlay or panel is slow).
+2. Same command shows "Memory: terrain of this lobby ... MB": after exploring a lot of a lobby it should be around 30-60 MB. Send the line.
+3. `/nr route` in a big lobby: about how long until the result appears? (It used to be a bit slower; should feel the same or quicker.)
+4. With the whole-lobby preview on (`/nr setup`), far-away bombs and placements no longer show their B/P numbers and markers; they appear when you're within ~48 blocks. Is that fine while setting up?

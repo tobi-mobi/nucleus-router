@@ -83,7 +83,7 @@ public final class SetupPreview {
 
 	public static void init() {
 		WorldDraw.addLayerWhile(() -> shown != null && LocationTracker.state().inHollows(), SetupPreview::draw);
-		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "setup_progress"), SetupPreview::drawProgress);
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "setup_progress"), dev.nucleusrouter.platform.debug.Perf.hud("SetupPreview", SetupPreview::drawProgress));
 	}
 
 	public static void clear() { shown = null; }
@@ -311,6 +311,13 @@ public final class SetupPreview {
 		if (legs == null) return;
 		NrConfig cfg = ConfigManager.get();
 		int bombNo = 0, placeNo = 0;
+		// Performance pass (5.3): a whole lobby is ~1500 shapes and ~350 labels. Labels, markers and click faces
+		// only near you (unreadable further away anyway), blast circles and throw lines within 160 blocks.
+		net.minecraft.client.player.LocalPlayer me = net.minecraft.client.Minecraft.getInstance().player;
+		if (me == null) return;
+		double px = me.getX(), py = me.getEyeY(), pz = me.getZ();
+		java.util.function.ToDoubleFunction<Vec3> d2 = q -> (q.x() - px) * (q.x() - px) + (q.y() - py) * (q.y() - py) + (q.z() - pz) * (q.z() - pz);
+		final double NEAR = 48 * 48, MID = 160 * 160;
 		// Lanes: a line from each lane's start to its end, every target block
 		for (LegView v : legs) {
 			for (LegDesigner.PlannedLane l : v.design().lanes()) {
@@ -329,8 +336,12 @@ public final class SetupPreview {
 		for (LegView v : legs) {
 			for (BombPlanner.Throw t : v.bombs().throwsInOrder()) {
 				bombNo++;
-				draw.marker(WorldDraw.mc(t.standFeet().add(new Vec3(0, 0.1, 0))), 0.3, WorldDraw.argb(255, 0x00E5FF), WorldDraw.argb(80, 0x00E5FF), true);
-				draw.text("B" + bombNo, WorldDraw.mc(t.standFeet().add(new Vec3(0, 2.2, 0))), WorldDraw.argb(255, 0x00E5FF), 0.7f, true);
+				double dt = d2.applyAsDouble(t.centre());
+				if (dt > MID) continue;
+				if (d2.applyAsDouble(t.standFeet()) <= NEAR) {
+					draw.marker(WorldDraw.mc(t.standFeet().add(new Vec3(0, 0.1, 0))), 0.3, WorldDraw.argb(255, 0x00E5FF), WorldDraw.argb(80, 0x00E5FF), true);
+					draw.text("B" + bombNo, WorldDraw.mc(t.standFeet().add(new Vec3(0, 2.2, 0))), WorldDraw.argb(255, 0x00E5FF), 0.7f, true);
+				}
 				draw.line(WorldDraw.mc(t.standFeet().add(new Vec3(0, cfg.etherwarp.eyeHeight, 0))), WorldDraw.mc(t.centre()), WorldDraw.argb(120, 0x00E5FF), 1f, true);
 				draw.circle(WorldDraw.mc(t.centre()), (float) r, WorldDraw.argb(90, 0x00E5FF), true);
 			}
@@ -341,7 +352,10 @@ public final class SetupPreview {
 				placeNo++;
 				int[] b = p.block();
 				int rgb = p.helper() ? 0xFFEB3B : 0xFF9800;
+				double db = d2.applyAsDouble(new Vec3(b[0] + 0.5, b[1] + 0.5, b[2] + 0.5));
+				if (db > MID) continue;
 				draw.outline(new AABB(b[0] + 0.05, b[1] + 0.05, b[2] + 0.05, b[0] + 0.95, b[1] + 0.95, b[2] + 0.95), WorldDraw.argb(200, rgb), 1.5f, true);
+				if (db > NEAR) continue;
 				if (p.pillar()) {
 					if (!p.helper()) draw.text("P" + placeNo + " pillar up", WorldDraw.mc(new Vec3(b[0] + 0.5, b[1] + 1.4, b[2] + 0.5)), WorldDraw.argb(255, 0xFFEB3B), 0.5f, true);
 					continue;
@@ -366,8 +380,10 @@ public final class SetupPreview {
 		int n = 0;
 		for (LegView v : legs) {
 			for (long k : v.bombs().mine()) {
-				if (n++ >= 200) break;
+				if (n >= 200) break;
 				int[] b = Lane.unpack(k);
+				if (d2.applyAsDouble(new Vec3(b[0] + 0.5, b[1] + 0.5, b[2] + 0.5)) > MID) continue;
+				n++;
 				draw.outline(new AABB(b[0], b[1], b[2], b[0] + 1, b[1] + 1, b[2] + 1), WorldDraw.argb(220, 0xFF3030), 2f, true);
 			}
 		}

@@ -68,7 +68,7 @@ public final class LocationTracker {
 			NucleusRouterClient.LOG.info("[Nucleus Router] Hypixel Mod API not installed. Using tab list and scoreboard for location.");
 		}
 
-		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+		dev.nucleusrouter.platform.debug.Perf.onTick(client -> {
 			if (++tickCounter % UPDATE_EVERY_TICKS == 0) update(client);
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {

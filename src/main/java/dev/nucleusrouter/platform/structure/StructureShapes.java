@@ -67,7 +67,7 @@ public final class StructureShapes {
 	private StructureShapes() {}
 
 	public static void init() {
-		ClientTickEvents.END_CLIENT_TICK.register(c -> { if (++ticks % ORIENTATION_EVERY_TICKS == 0) detectOrientations(); });
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> { if (++ticks % ORIENTATION_EVERY_TICKS == 0) detectOrientations(); });
 		WorldDraw.addLayerWhile(() -> ConfigManager.get().structures.showZones && LocationTracker.state().inHollows(), StructureShapes::drawZones);
 	}
 

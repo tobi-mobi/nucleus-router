@@ -47,7 +47,7 @@ public final class ExplorationTracker {
 	private ExplorationTracker() {}
 
 	public static void init() {
-		ClientTickEvents.END_CLIENT_TICK.register(c -> { if (++ticks % EVERY_TICKS == 0) tick(c); });
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> { if (++ticks % EVERY_TICKS == 0) tick(c); });
 		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
 			if (lobby != null && LocationTracker.state().inHollows())
 				coverage.loadChunk(chunk.getPos().getMinBlockX(), chunk.getPos().getMinBlockZ());

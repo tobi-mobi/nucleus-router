@@ -59,7 +59,7 @@ public final class DebugRay {
 		UseItemCallback.EVENT.register((player, level, hand) -> { onUse(player); return InteractionResult.PASS; });
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> { onUse(player); return InteractionResult.PASS; });
 		WorldDraw.addLayer((draw, ctx) -> { if (enabled) drawOverlay(draw); });
-		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(c -> checkTimeout());
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> checkTimeout());
 	}
 
 	public static boolean toggle() {

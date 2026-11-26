@@ -32,7 +32,10 @@ public final class WorldDraw {
 		void draw(WorldDraw draw, LevelExtractionContext context);
 	}
 
-	private static final List<Layer> LAYERS = new CopyOnWriteArrayList<>();
+	/** A layer and the class that added it (for {@code /nr perf}). */
+	private record Named(String name, Layer layer) {}
+
+	private static final List<Named> LAYERS = new CopyOnWriteArrayList<>();
 	private static final WorldDraw INSTANCE = new WorldDraw();
 	private static volatile double avgFrameMicros;
 	private static boolean failedOnce;
@@ -43,7 +46,7 @@ public final class WorldDraw {
 		LevelExtractionEvents.END_EXTRACTION.register(WorldDraw::onEndExtraction);
 	}
 
-	public static void addLayer(Layer layer) { LAYERS.add(layer); }
+	public static void addLayer(Layer layer) { LAYERS.add(new Named(dev.nucleusrouter.platform.debug.Perf.caller(), layer)); }
 
 	/** Average time spent drawing per frame (exponential average), for /nr debug ray stats. */
 	public static double avgFrameMicros() { return avgFrameMicros; }
@@ -51,9 +54,11 @@ public final class WorldDraw {
 	private static void onEndExtraction(LevelExtractionContext ctx) {
 		if (LAYERS.isEmpty()) return;
 		long start = System.nanoTime();
-		for (Layer layer : LAYERS) {
+		for (Named named : LAYERS) {
+			long t = System.nanoTime();
 			try {
-				layer.draw(INSTANCE, ctx);
+				named.layer().draw(INSTANCE, ctx);
+				dev.nucleusrouter.platform.debug.Perf.record(dev.nucleusrouter.platform.debug.Perf.Kind.OVERLAY, named.name(), t);
 			} catch (RuntimeException e) {
 				if (!failedOnce) {
 					failedOnce = true;

@@ -84,11 +84,10 @@ public final class WorldModel {
 		int newLocal = s.local(blockId, overflowId);
 		int origLocal = s.orig[i] & 0xFF;
 		if (origLocal == Section.UNSEEN) {
-			s.orig[i] = (byte) newLocal;
-			s.cur[i] = (byte) newLocal;
+			s.setBoth(i, (byte) newLocal);
 			return;
 		}
-		s.cur[i] = (byte) newLocal;
+		s.setCur(i, (byte) newLocal);
 		BlockClassifier.Kind was = kinds[s.palette[origLocal]];
 		BlockClassifier.Kind now = kinds[s.palette[newLocal]];
 		// Your own placements, and placed-block types appearing in air, don't change what the spot originally was.
@@ -96,7 +95,7 @@ public final class WorldModel {
 		if (was.emptyish() && now == BlockClassifier.Kind.PLACEABLE) return;
 		// Otherwise a more permanent block appearing wins, e.g. a gemstone respawning where we first
 		// saw air means it was mined before we saw it.
-		if (now.rank > was.rank) s.orig[i] = (byte) newLocal;
+		if (now.rank > was.rank) s.setOrig(i, (byte) newLocal);
 	}
 
 	private Section writable(long key) {
@@ -109,6 +108,20 @@ public final class WorldModel {
 			sections.put(key, s);
 		}
 		return s;
+	}
+
+	/** Rough memory use: section count and bytes held by the voxel arrays and palettes, for {@code /nr perf}. */
+	public String memoryReport() {
+		long bytes = 0;
+		for (Section s : sections.values()) bytes += s.bytes();
+		return String.format(java.util.Locale.ROOT, "%d sections, %.1f MB", sections.size(), bytes / 1048576.0);
+	}
+
+	/** Bytes held by the voxel arrays and palettes. */
+	public long bytes() {
+		long bytes = 0;
+		for (Section s : sections.values()) bytes += s.bytes();
+		return bytes;
 	}
 
 	/**
@@ -138,8 +151,8 @@ public final class WorldModel {
 				int olderCur = -1;
 				if (oo >= 0) {
 					olderCur = remap[old.curGlobal(i)];
-					merged.orig[i] = (byte) merged.local(remap[oo], overflowId);
-					merged.cur[i] = (byte) merged.local(olderCur, overflowId);
+					merged.setBoth(i, (byte) merged.local(remap[oo], overflowId));
+					merged.setCur(i, (byte) merged.local(olderCur, overflowId));
 				}
 				if (ours != null && ours.origGlobal(i) >= 0) {
 					// What we first saw this session. If it's what the save last saw, it's no news
@@ -147,9 +160,10 @@ public final class WorldModel {
 					int ourFirst = ours.origGlobal(i);
 					if (ourFirst != olderCur) apply(merged, i, ourFirst);
 					// Our current block was already judged this session (player placement or not), so set it directly.
-					merged.cur[i] = (byte) merged.local(ours.curGlobal(i), overflowId);
+					merged.setCur(i, (byte) merged.local(ours.curGlobal(i), overflowId));
 				}
 			}
+			merged.compact();
 			sections.put(e.getKey(), merged);
 		}
 		version++;

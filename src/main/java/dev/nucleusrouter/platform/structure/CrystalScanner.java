@@ -74,7 +74,7 @@ public final class CrystalScanner {
 	private CrystalScanner() {}
 
 	public static void init() {
-		ClientTickEvents.END_CLIENT_TICK.register(c -> { if (++ticks % EVERY_TICKS == 0) scan(); });
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> { if (++ticks % EVERY_TICKS == 0) scan(); });
 		java.util.concurrent.CompletableFuture.runAsync(CrystalScanner::bootstrapFromSaves);
 	}
 

@@ -34,7 +34,7 @@ public final class RunTracker {
 	private RunTracker() {}
 
 	public static void init() {
-		ClientTickEvents.END_CLIENT_TICK.register(c -> tick(c));
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> tick(c));
 		WorldDraw.addLayerWhile(() -> path != null && (forceShowForTest || LocationTracker.state().inHollows()), RunTracker::draw);
 	}
 

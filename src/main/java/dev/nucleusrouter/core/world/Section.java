@@ -15,17 +15,28 @@ final class Section {
 	static final int UNSEEN = 0;
 	static final int MAX_PALETTE = 256;
 
-	final byte[] orig;
-	final byte[] cur;
+	/** What each position originally was (sticky memory). */
+	byte[] orig;
+	/**
+	 * What is there now. <b>The same array as {@link #orig}</b> until a block differs (mined, placed, or a
+	 * respawning block currently gone): in most sections nothing ever does, which halves the memory (5.3).
+	 * Write only through {@link #setCur}, {@link #setOrig} and {@link #setBoth}.
+	 */
+	byte[] cur;
 	/** Local palette index -> global block id. Slot 0 is the "unseen" marker. */
 	int[] palette;
 	int paletteSize;
 	/** Set when a snapshot references this section; never cleared on this instance. */
 	boolean shared;
 
+	/** Approximate heap bytes (arrays plus object headers). */
+	long bytes() {
+		return 16L + (orig == null ? 0 : orig.length + 16) + (cur == null || cur == orig ? 0 : cur.length + 16) + palette.length * 4L + 16 + 32;
+	}
+
 	Section() {
 		orig = new byte[VOLUME];
-		cur = new byte[VOLUME];
+		cur = orig;
 		palette = new int[8];
 		palette[0] = -1;
 		paletteSize = 1;
@@ -33,10 +44,41 @@ final class Section {
 
 	private Section(Section other) {
 		orig = other.orig.clone();
-		cur = other.cur.clone();
+		cur = other.cur == other.orig ? orig : other.cur.clone();
 		palette = Arrays.copyOf(other.palette, other.palette.length);
 		paletteSize = other.paletteSize;
 	}
+
+	/** Sets what is there now. */
+	void setCur(int i, byte b) {
+		if (cur == orig) {
+			if (orig[i] == b) return;
+			cur = orig.clone();
+		}
+		cur[i] = b;
+	}
+
+	/** Sets what the position originally was (what is there now stays). */
+	void setOrig(int i, byte b) {
+		if (cur == orig) {
+			if (orig[i] == b) return;
+			cur = orig.clone();
+		}
+		orig[i] = b;
+	}
+
+	/** Sets both (a position seen for the first time). */
+	void setBoth(int i, byte b) {
+		orig[i] = b;
+		if (cur != orig) cur[i] = b;
+	}
+
+	/** Shares the arrays again if nothing differs any more. */
+	void compact() {
+		if (cur != orig && Arrays.equals(cur, orig)) cur = orig;
+	}
+
+	boolean sharesArrays() { return cur == orig; }
 
 	Section copy() {
 		return new Section(this);

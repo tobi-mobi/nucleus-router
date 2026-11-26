@@ -75,7 +75,7 @@ public final class BombCalibration {
 	public static void init() {
 		UseItemCallback.EVENT.register((player, level, hand) -> { onUse(player); return InteractionResult.PASS; });
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> { onUse(player); return InteractionResult.PASS; });
-		ClientTickEvents.END_CLIENT_TICK.register(c -> tick());
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> tick());
 		WorldDraw.addLayer((draw, ctx) -> drawResult(draw));
 	}
 

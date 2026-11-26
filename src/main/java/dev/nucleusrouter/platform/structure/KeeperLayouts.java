@@ -40,7 +40,7 @@ public final class KeeperLayouts {
 
 	public static void init() {
 		CompletableFuture.runAsync(KeeperLayouts::loadOrBootstrap);
-		ClientTickEvents.END_CLIENT_TICK.register(c -> { if (++ticks % 20 == 0) tick(); });
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> { if (++ticks % 20 == 0) tick(); });
 	}
 
 	public static KeeperLayout layout() { return layout; }

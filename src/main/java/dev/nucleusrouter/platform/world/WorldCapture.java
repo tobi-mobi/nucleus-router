@@ -81,7 +81,7 @@ public final class WorldCapture {
 		WORLD.execute(() -> model = new WorldModel(classifier()));
 
 		ClientChunkEvents.CHUNK_LOAD.register(WorldCapture::onChunkLoad);
-		ClientTickEvents.END_CLIENT_TICK.register(WorldCapture::onTick);
+		dev.nucleusrouter.platform.debug.Perf.onTick(WorldCapture::onTick);
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			trackedLevel = null;
 			requestedLobby = null;

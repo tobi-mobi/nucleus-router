@@ -35,7 +35,7 @@ public final class BalSuggestion {
 
 	public static void init() {
 		WorldDraw.addLayerWhile(() -> shown != null && LocationTracker.state().inHollows(), BalSuggestion::draw);
-		ClientTickEvents.END_CLIENT_TICK.register(c -> { if (++ticks % 10 == 0) checkPlaced(c); });
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> { if (++ticks % 10 == 0) checkPlaced(c); });
 	}
 
 	public static void clear() { shown = null; }

@@ -34,7 +34,7 @@ public final class LobbyWatcher {
 	private LobbyWatcher() {}
 
 	public static void init() {
-		ClientTickEvents.END_CLIENT_TICK.register(c -> { if (++ticks % EVERY_TICKS == 0) tick(); });
+		dev.nucleusrouter.platform.debug.Perf.onTick(c -> { if (++ticks % EVERY_TICKS == 0) tick(); });
 	}
 
 	/** Facts for the evaluator from what the mod knows right now (client thread). */

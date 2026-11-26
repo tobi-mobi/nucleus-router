@@ -38,14 +38,17 @@ public interface PlanWorld extends SolidQuery {
 	 * has been, even though farther terrain is loaded).
 	 */
 	static PlanWorld of(WorldSnapshot snap, Predicate<String> unstable, Columns explored) {
+		// The pattern test per block type, once (performance pass 5.3: matching names per lookup was slow)
+		boolean[] unstableId = new boolean[snap.blockIdCount()];
+		for (int i = 0; i < unstableId.length; i++) unstableId[i] = unstable.test(snap.blockName(i));
 		return new PlanWorld() {
 			@Override public boolean solid(int x, int y, int z) { return snap.plannedSolid(x, y, z); }
 			@Override public boolean goodTarget(int x, int y, int z) {
 				if (!explored.allowed(x, z)) return false;
 				VoxelClass c = snap.classAt(x, y, z);
 				if (c == VoxelClass.UNKNOWN || !c.plannedSolid() || snap.currentlyAir(x, y, z)) return false;
-				String orig = snap.originalBlock(x, y, z);
-				return orig == null || !unstable.test(orig);
+				int orig = snap.originalId(x, y, z);
+				return orig < 0 || orig >= unstableId.length || !unstableId[orig];
 			}
 		};
 	}

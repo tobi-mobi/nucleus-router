@@ -72,7 +72,7 @@ public final class StructureTracker {
 	public static void init() {
 		matcher = new AnchorMatcher(ConfigManager.get().structures);
 		ConfigManager.onChange(() -> matcher = new AnchorMatcher(ConfigManager.get().structures));
-		ClientTickEvents.END_CLIENT_TICK.register(StructureTracker::onTick);
+		dev.nucleusrouter.platform.debug.Perf.onTick(StructureTracker::onTick);
 		ClientPlayConnectionEvents.DISCONNECT.register((h, c) -> saveIfDirty());
 		ClientLifecycleEvents.CLIENT_STOPPING.register(c -> saveIfDirty());
 		WorldDraw.addLayerWhile(() -> ConfigManager.get().structures.showMarkers && LocationTracker.state().inHollows(), StructureTracker::draw);

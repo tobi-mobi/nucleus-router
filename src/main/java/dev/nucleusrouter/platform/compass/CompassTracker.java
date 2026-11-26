@@ -54,7 +54,7 @@ public final class CompassTracker {
 	public static void init() {
 		UseItemCallback.EVENT.register((player, level, hand) -> { onUse(player); return InteractionResult.PASS; });
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> { onUse(player); return InteractionResult.PASS; });
-		ClientTickEvents.END_CLIENT_TICK.register(CompassTracker::onTick);
+		dev.nucleusrouter.platform.debug.Perf.onTick(CompassTracker::onTick);
 		WorldDraw.addLayerWhile(() -> ConfigManager.get().compass.showInWorld && LocationTracker.state().inHollows()
 				&& (!lines.isEmpty() || captureStartMs >= 0), CompassTracker::draw);
 	}
