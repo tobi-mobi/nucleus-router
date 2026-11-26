@@ -79,10 +79,26 @@ public final class RunHud {
 		lastClickMs = -1; // one teleport per click
 	}
 
+	private static CrystalPickupHolder pickup = new CrystalPickupHolder(null, null);
+
+	/** The pickup detector, rebuilt if the configured heading changes. */
+	private record CrystalPickupHolder(String heading, dev.nucleusrouter.game.CrystalPickup detector) {}
+
 	private static void onChat(String text) {
 		NrConfig cfg = ConfigManager.get();
-		if (!cfg.run.denCountdown || !LocationTracker.state().inHollows()) return;
-		if (DenTimer.isStartMessage(text, cfg.run.denTimerStartMessages)) den.start(System.currentTimeMillis());
+		if (!LocationTracker.state().inHollows()) return;
+		long now = System.currentTimeMillis();
+		if (!java.util.Objects.equals(pickup.heading(), cfg.run.crystalFoundMessage))
+			pickup = new CrystalPickupHolder(cfg.run.crystalFoundMessage, new dev.nucleusrouter.game.CrystalPickup(cfg.run.crystalFoundMessage));
+		String crystal = pickup.detector().onChat(now, text);
+		if (crystal != null) {
+			NucleusRouterClient.LOG.info("[Nucleus Router] Run: {} crystal picked up", crystal);
+			RunClock clock = RunTracker.clock();
+			if (clock != null) clock.onCrystal(now, crystal);
+			if (crystal.equals("Amber") && cfg.run.denCountdown) den.start(now);
+			return;
+		}
+		if (cfg.run.denCountdown && DenTimer.isStartMessage(text, cfg.run.denTimerStartMessages)) den.start(now);
 	}
 
 	/** {@code /nr run den}: start the countdown by hand (to try it out). */

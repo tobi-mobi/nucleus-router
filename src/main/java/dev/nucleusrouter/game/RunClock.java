@@ -68,6 +68,23 @@ public final class RunClock {
 	/** Counted while the timer runs: a normal Aspect of the Void teleport happened. */
 	public void onTeleport(long now) { if (started() && !finished()) teleports++; }
 
+	/**
+	 * A crystal was picked up (chat, see {@link CrystalPickup}): its split is taken now rather than when you leave the
+	 * structure. Returns false if no stop on the route gives that crystal.
+	 */
+	public boolean onCrystal(long now, String crystal) {
+		if (!started() || finished()) return false;
+		long t = now - startMs;
+		for (int i = 0; i < path.size(); i++) {
+			RunPath.StopInfo s = path.stopInfo(i);
+			if (s == null || !s.split().equalsIgnoreCase(crystal)) continue;
+			long[] v = times.computeIfAbsent(i, k -> new long[]{t, -1});
+			if (v[1] < 0) v[1] = t;
+			return true;
+		}
+		return false;
+	}
+
 	/** Call every tick with where you are and how the route index moved ({@code oldIndex -> newIndex}). */
 	public void update(long now, Vec3 feet, int oldIndex, int newIndex) {
 		if (!started() && (feet.sub(origin).length() > START_MOVE || newIndex > oldIndex)) startMs = now;

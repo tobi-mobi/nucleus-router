@@ -46,7 +46,8 @@ import java.util.zip.GZIPOutputStream;
  * crystal for the Queen's den and Khazad-dum), the nearest barrier box and the offset are saved to
  * {@code nucleusrouter/learned/<structure>.json.gz}. If a later NPC sighting disagrees with the learned
  * offset by more than 3 blocks, it is learned again. King Yolkar has no crystal of his own, so his offset is
- * learned from the Queen's den crystal box ([VERIFY] that it is constant).
+ * learned from the Queen's den crystal box; using it is off by default ({@code structures.kingFromQueenCrystal}): in a
+ * new lobby on 2026-11-26 it put him in an empty cave.
  */
 public final class CrystalScanner {
 	private static final int EVERY_TICKS = 200;
@@ -266,8 +267,8 @@ public final class CrystalScanner {
 				NucleusRouterClient.showLocal(Component.literal("Found " + s.displayName + " from its crystal at " + StructureTracker.fmt(p.x(), p.y(), p.z())).withStyle(ChatFormatting.GREEN));
 			}
 		}
-		// Structures measured from another structure's box (King Yolkar from the Queen's den)
-		for (CrystalSignature sig : learned()) {
+		// Structures measured from another structure's box (King Yolkar from the Queen's den): off by default, unreliable
+		for (CrystalSignature sig : ConfigManager.get().structures.kingFromQueenCrystal ? learned() : List.<CrystalSignature>of()) {
 			Structure s = sig.structureEnum();
 			if (s == null || sig.reference() == null || map.locate(s) != null && map.locate(s).source() == StructureMap.Source.NPC) continue;
 			Vec3 d = derivedFor(s, sig, map);

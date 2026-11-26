@@ -116,4 +116,21 @@ class RunClockTest {
 		assertEquals("+3.1", RunClock.formatDelta(3.1));
 		assertEquals("-2.0", RunClock.formatDelta(-2));
 	}
+
+	/** Confirmed 2026-11-26: the pickup message tells when a crystal is taken; the split is that moment. */
+	@Test
+	void crystalSplitAtThePickup() {
+		RunPath p = path();
+		Vec3 start = new Vec3(0.5, 100, 0.5);
+		RunClock c = new RunClock(p, start);
+		c.update(1000, new Vec3(3, 100, 0.5), 0, 0);
+		int i = p.advance(0, new Vec3(300.5, 100, 0.5));
+		c.update(4000, new Vec3(300.5, 100, 0.5), 0, i);
+		assertTrue(c.onCrystal(4800, "Amber"));
+		assertEquals(3800, c.splits().get(1).leaveMs(), "Amber taken 3.8 s in");
+		int n = p.advance(i, new Vec3(0.5, 100, 0.5));
+		c.update(6000, new Vec3(0.5, 100, 0.5), i, n);
+		assertEquals(3800, c.splits().get(1).leaveMs(), "leaving later doesn't move it");
+		assertFalse(c.onCrystal(6100, "Jade"), "no Jade stop on this route (and the run is over)");
+	}
 }

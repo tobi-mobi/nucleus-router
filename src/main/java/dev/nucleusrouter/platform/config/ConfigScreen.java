@@ -167,7 +167,13 @@ public final class ConfigScreen {
 				.option(boolOpt("Run panel", "On-screen panel while running: timer, splits per crystal, warp count, what to do now. Move it with /nr hud.", d.run.showHud, () -> c.run.showHud, v -> c.run.showHud = v))
 				.option(boolOpt("Compare with the plan", "Show the planned run time and how far ahead (-) or behind (+) each split is.", d.run.showPlanDelta, () -> c.run.showPlanDelta, v -> c.run.showPlanDelta = v))
 				.option(boolOpt("Queen's den countdown", "A big 3 s 'Leave den' countdown after taking the Amber crystal.", d.run.denCountdown, () -> c.run.denCountdown, v -> c.run.denCountdown = v))
-				.option(stringList("Den countdown starts on", "Chat lines that mean you just took the Amber crystal (part of the line is enough, colours ignored)." + VERIFY, d.run.denTimerStartMessages, () -> c.run.denTimerStartMessages, v -> c.run.denTimerStartMessages = v))
+				.option(Option.<String>createBuilder()
+						.name(Component.literal("Crystal pickup message"))
+						.description(OptionDescription.of(Component.literal("Heading of the chat message you get when you pick up a crystal (confirmed: \"CRYSTAL FOUND\", with the crystal's name under it). Starts the den countdown for Amber and takes each crystal's split at the pickup.")))
+						.binding(d.run.crystalFoundMessage, () -> c.run.crystalFoundMessage, v -> c.run.crystalFoundMessage = v)
+						.controller(StringControllerBuilder::create)
+						.build())
+				.option(stringList("Den countdown: extra start lines", "More chat lines that start the den countdown, besides the Amber pickup (part of the line is enough, colours ignored). Usually empty.", d.run.denTimerStartMessages, () -> c.run.denTimerStartMessages, v -> c.run.denTimerStartMessages = v))
 				.option(boolOpt("Splits in chat", "Print the run time and splits in chat (only you see it) when the route is finished.", d.run.splitsInChat, () -> c.run.splitsInChat, v -> c.run.splitsInChat = v))
 				.build();
 

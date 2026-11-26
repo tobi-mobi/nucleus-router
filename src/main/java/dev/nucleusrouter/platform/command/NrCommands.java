@@ -172,6 +172,23 @@ public final class NrCommands {
 		kv(src, "Decided by", s.hollowsSource() != null ? s.hollowsSource().name() : "nothing (no source answered)", ChatFormatting.WHITE);
 		kv(src, "Lobby id", s.serverId() != null ? s.serverId() : "unknown", ChatFormatting.WHITE);
 		kv(src, "Scoreboard area", s.scoreboardArea() != null ? s.scoreboardArea() : "unknown", ChatFormatting.WHITE);
+		// Where you stand, and relative to the nearest found structure (for measuring offsets in-game)
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		if (player != null) {
+			kv(src, "Position", String.format(java.util.Locale.ROOT, "%.1f %.1f %.1f  (standing on block %d %d %d)", player.getX(), player.getY(), player.getZ(),
+					(int) Math.floor(player.getX()), (int) Math.floor(player.getY() - 0.01) - 1, (int) Math.floor(player.getZ())), ChatFormatting.WHITE);
+			dev.nucleusrouter.core.geom.Vec3 me = new dev.nucleusrouter.core.geom.Vec3(player.getX(), player.getY(), player.getZ());
+			dev.nucleusrouter.game.StructureMap.Location best = null;
+			for (dev.nucleusrouter.game.Structure st : dev.nucleusrouter.game.Structure.values()) {
+				var l = dev.nucleusrouter.platform.structure.StructureTracker.map().locate(st);
+				if (!dev.nucleusrouter.game.StructureMap.exact(l)) continue;
+				if (best == null || l.pos().sub(me).length() < best.pos().sub(me).length()) best = l;
+			}
+			if (best != null && best.pos().sub(me).length() <= 150) {
+				dev.nucleusrouter.core.geom.Vec3 d = me.sub(best.pos());
+				kv(src, "From " + best.structure().displayName, String.format(java.util.Locale.ROOT, "%+.1f %+.1f %+.1f  (%s)", d.x(), d.y(), d.z(), best.detail()), ChatFormatting.WHITE);
+			}
+		}
 		kv(src, "Lobby day", s.lobbyDay() + "  (clock " + s.clockTicks() + " ticks)", ChatFormatting.WHITE);
 		kv(src, "Ping", s.pingMs() + " ms  (from " + s.pingSource().name() + ")", ChatFormatting.WHITE);
 		kv(src, "Hypixel Mod API", LocationTracker.modApiInstalled() ? LocationTracker.modApiRaw() : "not installed", ChatFormatting.GRAY);

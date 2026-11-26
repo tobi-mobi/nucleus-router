@@ -14,7 +14,7 @@ import java.util.List;
  * resets that value for existing users.
  */
 public final class NrConfig {
-	public static final int CURRENT_VERSION = 8;
+	public static final int CURRENT_VERSION = 9;
 	public int configVersion = CURRENT_VERSION;
 
 	public General general = new General();
@@ -287,6 +287,12 @@ public final class NrConfig {
 		 * A clump of at least this many barriers counts as such a box.
 		 */
 		public int crystalBoxMinBarriers = 20;
+		/**
+		 * Place King Yolkar from a learned offset to the Queen's den crystal. Off: in-game 2026-11-26 it put him in an
+		 * empty cave in a new lobby, so the offset isn't constant (or the box was mistaken). He's then found from his
+		 * name tag or Skyblocker's waypoint.
+		 */
+		public boolean kingFromQueenCrystal = false;
 		/** How often to look at nearby name tags, in ticks (20 = once a second). */
 		public int scanEveryTicks = 10;
 		public List<String> minesOfDivanNames = new ArrayList<>(List.of("Keeper of"));
@@ -337,10 +343,17 @@ public final class NrConfig {
 		/** Big "Leave den" countdown in the middle of the screen after taking the Amber crystal. */
 		public boolean denCountdown = true;
 		/**
-		 * [VERIFY] Chat lines that mean you just took the Amber crystal (starts the 3 s countdown). Matched as
-		 * "contains", colours ignored. Default from the user's report (2026-11-24).
+		 * Heading of the chat message you get when you pick up any crystal (confirmed 2026-11-26: "✦ CRYSTAL FOUND (1/5)"
+		 * with "Amber Crystal" under it; the same for every crystal). Starts the den countdown for Amber and takes
+		 * each crystal's split at the pickup.
 		 */
-		public List<String> denTimerStartMessages = new ArrayList<>(List.of("The Goblin King's foul stench has dissipated"));
+		public String crystalFoundMessage = "CRYSTAL FOUND";
+		/**
+		 * Extra chat lines that start the 3 s den countdown (besides the Amber pickup above). Matched as "contains",
+		 * colours ignored. Empty by default: the old guess ("The Goblin King's foul stench has dissipated") was
+		 * replaced by the confirmed pickup message on 2026-11-26.
+		 */
+		public List<String> denTimerStartMessages = new ArrayList<>();
 		/** Print the splits in chat when the route is finished. */
 		public boolean splitsInChat = true;
 	}
@@ -522,6 +535,12 @@ public final class NrConfig {
 			if (stops != null && stops.showStops) { stops.showStops = false; notes.add("stops.showStops -> off"); }
 			configVersion = 8;
 		}
+		if (configVersion < 9) {
+			// Confirmed 2026-11-26: the Amber pickup is "CRYSTAL FOUND ... Amber Crystal"; the old guessed line is dropped
+			if (run != null && run.denTimerStartMessages != null && run.denTimerStartMessages.remove("The Goblin King's foul stench has dissipated"))
+				notes.add("run.denTimerStartMessages: old guess removed (the crystal pickup message starts the den countdown now)");
+			configVersion = 9;
+		}
 		return notes;
 	}
 
@@ -556,6 +575,7 @@ public final class NrConfig {
 		run.arriveRadius = clamp(fixes, "run.arriveRadius", run.arriveRadius, 3, 100);
 		run.targetsShown = (int) clamp(fixes, "run.targetsShown", run.targetsShown, 1, 30);
 		if (run.denTimerStartMessages == null) { run.denTimerStartMessages = new Run().denTimerStartMessages; fixes.add("run.denTimerStartMessages missing, reset"); }
+		if (run.crystalFoundMessage == null || run.crystalFoundMessage.isBlank()) { run.crystalFoundMessage = new Run().crystalFoundMessage; fixes.add("run.crystalFoundMessage missing, reset"); }
 		plan.sphereRays = (int) clamp(fixes, "plan.sphereRays", plan.sphereRays, 16, 4096);
 		plan.coneRays = (int) clamp(fixes, "plan.coneRays", plan.coneRays, 0, 4096);
 		plan.coneDegrees = clamp(fixes, "plan.coneDegrees", plan.coneDegrees, 5, 90);

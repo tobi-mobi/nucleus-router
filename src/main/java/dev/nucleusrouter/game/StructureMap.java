@@ -212,6 +212,9 @@ public final class StructureMap {
 		version++;
 	}
 
+	/** How rough a King Yolkar position guessed from the Queen's den crystal is (blocks). */
+	public static final double KING_GUESS_UNCERTAINTY = 24;
+
 	/** True if the position is exact (manual, crystal or NPC), so zones and captures can use it. */
 	public static boolean exact(Location l) {
 		return l != null && l.uncertainty() == 0
@@ -274,6 +277,11 @@ public final class StructureMap {
 			return new Location(s, n.pos(), Source.NPC, 0, "name tag " + n.label + (k > 1 ? " (" + k + " seen)" : ""));
 		}
 		if (e.derived != null && e.derived.length == 3) {
+			// King Yolkar measured from the Queen's den crystal: in-game 2026-11-26 this put him in an empty cave, so
+			// the offset isn't reliable. Only a rough hint (not used for planning) until his name tag is seen.
+			if (s == Structure.KING_YOLKAR)
+				return new Location(s, new Vec3(e.derived[0], e.derived[1], e.derived[2]), Source.LEARNED, KING_GUESS_UNCERTAINTY,
+						"guessed from the Queen's den crystal (unreliable: go closer to see his name tag)");
 			return new Location(s, new Vec3(e.derived[0], e.derived[1], e.derived[2]), Source.LEARNED, 0, "learned (from its crystal or keeper layout)");
 		}
 		if (e.skyblocker != null && e.skyblocker.length == 3) {
