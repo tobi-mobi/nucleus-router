@@ -47,7 +47,25 @@ public final class NrCommands {
 						.then(literal("setup").executes(ctx -> {
 							ctx.getSource().sendFeedback(Component.literal(dev.nucleusrouter.platform.structure.SetupPreview.startLobby()).withStyle(ChatFormatting.GRAY));
 							return 1;
-						}))
+						})
+								.then(literal("start").executes(ctx -> {
+									ctx.getSource().sendFeedback(Component.literal(dev.nucleusrouter.platform.structure.SetupGuide.start()).withStyle(ChatFormatting.AQUA));
+									return 1;
+								}))
+								.then(literal("stop").executes(ctx -> {
+									dev.nucleusrouter.platform.structure.SetupGuide.stop();
+									ctx.getSource().sendFeedback(Component.literal("Guided setup off (progress is forgotten; /nr setup start begins again, steps already done tick off by themselves).").withStyle(ChatFormatting.GRAY));
+									return 1;
+								}))
+								.then(literal("skip").executes(ctx -> {
+									String m = dev.nucleusrouter.platform.structure.SetupGuide.confirm();
+									ctx.getSource().sendFeedback(Component.literal(m != null ? m : "Guided setup is off: /nr setup start").withStyle(ChatFormatting.GRAY));
+									return 1;
+								}))
+								.then(literal("back").executes(ctx -> {
+									ctx.getSource().sendFeedback(Component.literal(dev.nucleusrouter.platform.structure.SetupGuide.back()).withStyle(ChatFormatting.GRAY));
+									return 1;
+								})))
 						.then(ZoneCommands.captureNode())
 						.then(ExploreCommands.node())
 						.then(literal("lobby").executes(NrCommands::lobby))
@@ -114,6 +132,7 @@ public final class NrCommands {
 		line(src, "/nr run den", "try the Queen's den countdown (it starts by itself after taking the Amber crystal)");
 		line(src, "/nr design <structure> | design clear", "test: design the setup (lanes, bombs, mining, placing) from where you stand to a structure");
 		line(src, "/nr setup", "plan the whole lobby's setup (tunnels, bombs, placing) and the run order, within 5 s; shown in the world");
+		line(src, "/nr setup start | stop | skip | back", "guided setup: one step at a time (bombs, mining, placing); steps tick off by themselves, key ] confirms/skips");
 		line(src, "/nr route", "plan the run: order of the structures, when to /warp nucleus, total time");
 		line(src, "/nr stops", "where the route will stop at each NPC and crystal (blue blocks in the world)");
 		line(src, "/nr lobby", "is this lobby worth setting up? every check with its reason");

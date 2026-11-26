@@ -146,6 +146,32 @@ public final class RenderGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> dev.nucleusrouter.platform.structure.RunHud.forceShowForTest = false);
 			context.runOnClient(mc -> { dev.nucleusrouter.platform.structure.RunTracker.stop(); dev.nucleusrouter.platform.structure.RunTracker.forceShowForTest = false; });
 			context.runOnClient(mc -> dev.nucleusrouter.platform.structure.StructureHud.forceShowForTest = false);
+
+			// Roadmap 4.6: guided setup. A wall of stone ahead: throw B1 at it, mine M1 next to it, then place P1/P2
+			server.runCommand("fill -12 100 -4 12 110 40 minecraft:air");
+			server.runCommand("fill -6 100 20 6 106 22 minecraft:stone");
+			server.runCommand("fill 3 100 6 3 100 6 minecraft:stone");
+			server.runCommand("tp @p 0.5 100 0.5 0 15");
+			context.waitTicks(20);
+			context.runOnClient(mc -> {
+				var V = (java.util.function.Function<double[], dev.nucleusrouter.core.geom.Vec3>) d -> new dev.nucleusrouter.core.geom.Vec3(d[0], d[1], d[2]);
+				var t = new dev.nucleusrouter.core.setup.BombPlanner.Throw(V.apply(new double[]{0.5, 100, 4.5}), V.apply(new double[]{0.5, 103.5, 20.5}),
+						V.apply(new double[]{0, 0, 1}), new int[]{0, 103, 20}, V.apply(new double[]{0.5, 103.5, 20.5}), false, 40);
+				java.util.List<int[]> blast = new java.util.ArrayList<>();
+				for (int x = -2; x <= 2; x++) for (int y = 101; y <= 105; y++) blast.add(new int[]{x, y, 20});
+				var place = new dev.nucleusrouter.core.setup.PlacementPlanner.Step(new int[]{3, 101, 6}, new int[]{3, 100, 6}, dev.nucleusrouter.core.geom.Face.UP,
+						V.apply(new double[]{1.5, 100, 4.5}), V.apply(new double[]{3.5, 101, 6.5}), V.apply(new double[]{0.6, -0.2, 0.6}), false, false, false, false);
+				var steps = dev.nucleusrouter.game.SetupSteps.of(java.util.List.of(
+						new dev.nucleusrouter.game.SetupSteps.Step(dev.nucleusrouter.game.SetupSteps.Kind.THROW, "B1", 0, t, blast, null),
+						new dev.nucleusrouter.game.SetupSteps.Step(dev.nucleusrouter.game.SetupSteps.Kind.MINE, "M1", 0, null,
+								java.util.List.of(new int[]{-6, 100, 21}, new int[]{-6, 101, 21}), null),
+						new dev.nucleusrouter.game.SetupSteps.Step(dev.nucleusrouter.game.SetupSteps.Kind.PLACE, "P1", 0, null, java.util.List.of(place.block()), place)));
+				dev.nucleusrouter.platform.structure.SetupGuide.forceShowForTest = true;
+				dev.nucleusrouter.platform.structure.SetupGuide.startForTest(steps);
+			});
+			context.waitTicks(20);
+			context.takeScreenshot("nr-11-guided-setup");
+			context.runOnClient(mc -> { dev.nucleusrouter.platform.structure.SetupGuide.stop(); dev.nucleusrouter.platform.structure.SetupGuide.forceShowForTest = false; });
 		}
 	}
 }

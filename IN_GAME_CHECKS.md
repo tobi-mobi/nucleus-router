@@ -71,3 +71,11 @@ Claude then moves it to "Confirmed game facts" in `ROADMAP.md`, updates the defa
 3. Chat: "Lobby setup planned in X s". **Please send that line**: it is the real-lobby speed measurement (target: under 5 s). Then the run order with, per structure, "existing terrain" or "tunnel: N warps; B bombs, M mined, P placed", the run time after the setup, and any "Problem:" lines.
 4. In the world: all legs at once. Bombs are numbered B1, B2... across the whole lobby (do all of them first), then placements P1, P2... "edge" on a P number means: stand on the pillar top and sneak towards the block before placing it.
 5. Optional, also very useful: `/nr dump` in that lobby and send the file it writes, so the planner can be tested on your real terrain.
+
+### Milestone 4: guided setup (4.6)
+1. After `/nr setup`, type `/nr setup start`. A panel at the top shows "Setup 0/N  bombs 0/B  mining 0/M  placing 0/P", the current instruction and how far away it is.
+2. B steps: stand on the cyan spot, aim at the white block (a dot marks the exact point), throw. The cyan wireframe ball is the predicted blast. When every block it should break is gone, the step ticks off by itself and the next one shows. Does it tick off right after the explosion? If a throw doesn't tick off, look at what's left standing, then press `]` (or `/nr setup skip`) and tell Claude.
+3. M steps: mine the red blocks; ticks off when they're all gone.
+4. After the last bomb and mining step, chat says "now the placing". P steps tick off as soon as the block is there.
+5. `]` marks the current step done by hand; `/nr setup back` reopens the last one; `/nr setup stop` ends it. Check in Controls that `]` doesn't clash with another mod in the pack (it can be rebound under "Nucleus Router").
+6. Does the game stay smooth with the guide on?
