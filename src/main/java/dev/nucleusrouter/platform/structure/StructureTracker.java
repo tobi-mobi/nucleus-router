@@ -16,7 +16,6 @@ import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.location.LocationTracker;
 import dev.nucleusrouter.platform.render.WorldDraw;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;

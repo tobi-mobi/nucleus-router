@@ -12,7 +12,6 @@ import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.render.WorldDraw;
 import dev.nucleusrouter.platform.world.BlockRules;
 import dev.nucleusrouter.platform.world.WorldCapture;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.loader.api.FabricLoader;

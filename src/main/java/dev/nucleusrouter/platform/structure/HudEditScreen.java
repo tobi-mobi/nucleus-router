@@ -34,8 +34,8 @@ public final class HudEditScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(g, mouseX, mouseY, delta);
-		drawn[LIST] = StructureHud.drawList(g, pos[LIST][0], pos[LIST][1]);
-		drawn[RUN] = RunHud.drawPanel(g, pos[RUN][0], pos[RUN][1]);
+		drawn[LIST] = StructureHud.drawList(dev.nucleusrouter.platform.render.Hud.of(g), pos[LIST][0], pos[LIST][1]);
+		drawn[RUN] = RunHud.drawPanel(dev.nucleusrouter.platform.render.Hud.of(g), pos[RUN][0], pos[RUN][1]);
 		for (int[] d : drawn) frame(g, d);
 		g.centeredText(font, "Drag a panel to move it. Right-click a panel: default spot. Esc: save and close.", width / 2, height - 20, 0xFFFFFFFF);
 	}
@@ -58,12 +58,12 @@ public final class HudEditScreen extends Screen {
 	@Override
 	public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
 		int panel = panelAt(e.x(), e.y());
-		if (e.button() == 1 && panel >= 0) {
+		if (e.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_RIGHT && panel >= 0) {
 			if (panel == LIST) { NrConfig.Hud d = new NrConfig.Hud(); pos[LIST] = new int[]{d.x, d.y}; }
 			else { NrConfig.Run d = new NrConfig.Run(); pos[RUN] = new int[]{d.hudX, d.hudY}; shifted = false; }
 			return true;
 		}
-		if (e.button() == 0 && panel >= 0) {
+		if (e.button() == com.mojang.blaze3d.platform.InputConstants.MOUSE_BUTTON_LEFT && panel >= 0) {
 			dragging = panel;
 			grabX = e.x() - drawn[panel][0];
 			grabY = e.y() - drawn[panel][1];

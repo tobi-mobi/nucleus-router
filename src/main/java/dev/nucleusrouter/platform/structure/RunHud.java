@@ -1,6 +1,5 @@
 package dev.nucleusrouter.platform.structure;
 
-import dev.nucleusrouter.core.NucleusRouter;
 import dev.nucleusrouter.core.config.NrConfig;
 import dev.nucleusrouter.core.geom.Vec3;
 import dev.nucleusrouter.game.DenTimer;
@@ -11,18 +10,12 @@ import dev.nucleusrouter.game.Structure;
 import dev.nucleusrouter.platform.NucleusRouterClient;
 import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.location.LocationTracker;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 
@@ -50,7 +43,7 @@ public final class RunHud {
 	private RunHud() {}
 
 	public static void init() {
-		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "run_panel"), dev.nucleusrouter.platform.debug.Perf.hud("RunHud", RunHud::draw));
+		dev.nucleusrouter.platform.render.Hud.add("run_panel", "RunHud", RunHud::draw);
 		dev.nucleusrouter.platform.debug.Perf.onTick(RunHud::tick);
 		ClientReceiveMessageEvents.GAME.register((msg, overlay) -> { if (!overlay) onChat(msg.getString()); });
 		UseItemCallback.EVENT.register((player, level, hand) -> { onUse(player); return InteractionResult.PASS; });
@@ -128,7 +121,7 @@ public final class RunHud {
 
 	// ------------------------------------------------------------------ drawing
 
-	private static void draw(GuiGraphicsExtractor g, DeltaTracker delta) {
+	private static void draw(dev.nucleusrouter.platform.render.Hud g) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player == null || mc.getDebugOverlay().showDebugScreen()) return;
 		if (!forceShowForTest && !LocationTracker.state().inHollows()) return;
@@ -137,7 +130,7 @@ public final class RunHud {
 		drawDen(g, cfg); // last, so it's on top
 	}
 
-	private static void drawDen(GuiGraphicsExtractor g, NrConfig cfg) {
+	private static void drawDen(dev.nucleusrouter.platform.render.Hud g, NrConfig cfg) {
 		if (!cfg.run.denCountdown || den.state() == DenTimer.State.IDLE) return;
 		long now = System.currentTimeMillis();
 		String text;
@@ -151,13 +144,8 @@ public final class RunHud {
 			case OUT -> { text = String.format("Out in %.1f s", den.resultSeconds()); color = 0xFF66FF66; }
 			default -> { text = "Den time is up"; color = 0xFFFF5252; }
 		}
-		Font font = Minecraft.getInstance().font;
-		float scale = 2.5f;
-		g.pose().pushMatrix();
-		g.pose().translate(g.guiWidth() / 2f, g.guiHeight() / 2f + 16); // just below the crosshair
-		g.pose().scale(scale, scale);
-		g.centeredText(font, Component.literal(text).withStyle(ChatFormatting.BOLD), 0, 0, color);
-		g.pose().popMatrix();
+		// just below the crosshair
+		g.bigCentered(Component.literal(text).withStyle(ChatFormatting.BOLD), g.width() / 2f, g.height() / 2f + 16, 2.5f, color);
 	}
 
 	/** The panel's lines for the current run (also used by the /nr hud editor). */
@@ -219,18 +207,18 @@ public final class RunHud {
 	}
 
 	/** Draws the panel with its top-left corner at (x, y), kept on screen. Returns {x, y, width, height}. */
-	public static int[] drawPanel(GuiGraphicsExtractor g, int px, int py) {
-		Font font = Minecraft.getInstance().font;
+	public static int[] drawPanel(dev.nucleusrouter.platform.render.Hud g, int px, int py) {
 		List<Component> lines = lines();
 		int w = 0;
-		for (Component c : lines) w = Math.max(w, font.width(c));
-		int h = lines.size() * (font.lineHeight + 1) + 3;
-		int x = Math.max(0, Math.min(px, g.guiWidth() - w - 6)), y = Math.max(0, Math.min(py, g.guiHeight() - h));
+		for (Component c : lines) w = Math.max(w, dev.nucleusrouter.platform.render.Hud.textWidth(c));
+		int lh = dev.nucleusrouter.platform.render.Hud.lineHeight();
+		int h = lines.size() * (lh + 1) + 3;
+		int x = Math.max(0, Math.min(px, g.width() - w - 6)), y = Math.max(0, Math.min(py, g.height() - h));
 		g.fill(x, y, x + w + 6, y + h, 0x90000000);
 		int ty = y + 3;
 		for (Component c : lines) {
-			g.text(font, c, x + 3, ty, 0xFFFFFFFF, true);
-			ty += font.lineHeight + 1;
+			g.text(c, x + 3, ty, 0xFFFFFFFF);
+			ty += lh + 1;
 		}
 		return new int[]{x, y, w + 6, h};
 	}

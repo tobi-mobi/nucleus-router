@@ -7,7 +7,6 @@ import dev.nucleusrouter.core.location.LocationState;
 import dev.nucleusrouter.game.HollowsAreas;
 import dev.nucleusrouter.platform.NucleusRouterClient;
 import dev.nucleusrouter.platform.config.ConfigManager;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;

@@ -1,6 +1,5 @@
 package dev.nucleusrouter.platform.structure;
 
-import dev.nucleusrouter.core.NucleusRouter;
 import dev.nucleusrouter.core.config.NrConfig;
 import dev.nucleusrouter.core.geom.Vec3;
 import dev.nucleusrouter.game.SetupGate;
@@ -9,15 +8,9 @@ import dev.nucleusrouter.game.StructureMap;
 import dev.nucleusrouter.platform.NucleusRouterClient;
 import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.location.LocationTracker;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +33,7 @@ public final class StructureHud {
 	private StructureHud() {}
 
 	public static void init() {
-		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "structure_list"), dev.nucleusrouter.platform.debug.Perf.hud("StructureHud", StructureHud::draw));
+		dev.nucleusrouter.platform.render.Hud.add("structure_list", "StructureHud", StructureHud::draw);
 		dev.nucleusrouter.platform.debug.Perf.onTick(c -> { if (++ticks % 10 == 0) update(); });
 	}
 
@@ -64,7 +57,7 @@ public final class StructureHud {
 		}
 	}
 
-	private static void draw(GuiGraphicsExtractor g, DeltaTracker delta) {
+	private static void draw(dev.nucleusrouter.platform.render.Hud g) {
 		NrConfig.Hud cfg = ConfigManager.get().hud;
 		Minecraft mc = Minecraft.getInstance();
 		if (!forceShowForTest && (!cfg.showStructureList || !LocationTracker.state().inHollows() || mc.player == null)) return;
@@ -78,9 +71,8 @@ public final class StructureHud {
 	}
 
 	/** Draws the list with its top-left corner at (x, y), kept on screen. Returns {x, y, width, height} as drawn. */
-	public static int[] drawList(GuiGraphicsExtractor g, int px, int py) {
+	public static int[] drawList(dev.nucleusrouter.platform.render.Hud g, int px, int py) {
 		Minecraft mc = Minecraft.getInstance();
-		Font font = mc.font;
 		StructureMap map = StructureTracker.map();
 		List<Component> lines = new ArrayList<>();
 		lines.add(Component.literal("Structures " + status.found().size() + "/" + status.total()).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
@@ -95,14 +87,15 @@ public final class StructureHud {
 		if (status.ready()) lines.add(Component.literal("Ready for setup").withStyle(ChatFormatting.GREEN));
 
 		int w = 0;
-		for (Component c : lines) w = Math.max(w, font.width(c));
-		int h = lines.size() * (font.lineHeight + 1) + 3;
-		int x = Math.max(0, Math.min(px, g.guiWidth() - w - 6)), y = Math.max(0, Math.min(py, g.guiHeight() - h));
+		for (Component c : lines) w = Math.max(w, dev.nucleusrouter.platform.render.Hud.textWidth(c));
+		int lh = dev.nucleusrouter.platform.render.Hud.lineHeight();
+		int h = lines.size() * (lh + 1) + 3;
+		int x = Math.max(0, Math.min(px, g.width() - w - 6)), y = Math.max(0, Math.min(py, g.height() - h));
 		g.fill(x, y, x + w + 6, y + h, 0x90000000);
 		int ty = y + 3;
 		for (Component c : lines) {
-			g.text(font, c, x + 3, ty, 0xFFFFFFFF, true);
-			ty += font.lineHeight + 1;
+			g.text(c, x + 3, ty, 0xFFFFFFFF);
+			ty += lh + 1;
 		}
 		return new int[]{x, y, w + 6, h};
 	}

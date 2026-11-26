@@ -9,7 +9,6 @@ import dev.nucleusrouter.game.StructureMap;
 import dev.nucleusrouter.platform.NucleusRouterClient;
 import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.location.LocationTracker;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 

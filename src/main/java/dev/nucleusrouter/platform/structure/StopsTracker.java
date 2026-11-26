@@ -10,7 +10,6 @@ import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.location.LocationTracker;
 import dev.nucleusrouter.platform.render.WorldDraw;
 import dev.nucleusrouter.platform.world.WorldCapture;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.AABB;
 

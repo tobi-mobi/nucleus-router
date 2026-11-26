@@ -1,6 +1,5 @@
 package dev.nucleusrouter.platform.structure;
 
-import dev.nucleusrouter.core.NucleusRouter;
 import dev.nucleusrouter.core.config.NrConfig;
 import dev.nucleusrouter.core.etherwarp.SolidQuery;
 import dev.nucleusrouter.core.geom.Vec3;
@@ -14,19 +13,14 @@ import dev.nucleusrouter.platform.NucleusRouterClient;
 import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.location.LocationTracker;
 import dev.nucleusrouter.platform.render.WorldDraw;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
@@ -81,7 +75,7 @@ public final class SetupGuide {
 	public static void init() {
 		dev.nucleusrouter.platform.debug.Perf.onTick(SetupGuide::tick);
 		WorldDraw.addLayerWhile(() -> steps != null && (forceShowForTest || LocationTracker.state().inHollows()), SetupGuide::draw);
-		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "setup_guide"), dev.nucleusrouter.platform.debug.Perf.hud("SetupGuide", SetupGuide::drawHud));
+		dev.nucleusrouter.platform.render.Hud.add("setup_guide", "SetupGuide", SetupGuide::drawHud);
 		UseItemCallback.EVENT.register((player, level, hand) -> { onUse(player); return InteractionResult.PASS; });
 	}
 
@@ -388,7 +382,7 @@ public final class SetupGuide {
 
 	// ------------------------------------------------------------------ HUD
 
-	private static void drawHud(GuiGraphicsExtractor g, DeltaTracker delta) {
+	private static void drawHud(dev.nucleusrouter.platform.render.Hud g) {
 		SetupSteps s = steps;
 		Minecraft mc = Minecraft.getInstance();
 		if (s == null || mc.player == null || !(forceShowForTest || LocationTracker.state().inHollows())) return;
@@ -406,13 +400,14 @@ public final class SetupGuide {
 			lines.add(String.format(Locale.ROOT, "%.0f m away   (%s = done / skip)", d, dev.nucleusrouter.platform.Keys.setupConfirmName()));
 		}
 		int w = 0;
-		for (String l : lines) w = Math.max(w, mc.font.width(l));
-		int x = g.guiWidth() / 2 - w / 2, y = 16;
-		g.fill(x - 3, y - 2, x + w + 3, y + lines.size() * (mc.font.lineHeight + 1) + 1, 0x90000000);
+		for (String l : lines) w = Math.max(w, dev.nucleusrouter.platform.render.Hud.textWidth(l));
+		int lh = dev.nucleusrouter.platform.render.Hud.lineHeight();
+		int x = g.width() / 2 - w / 2, y = 16;
+		g.fill(x - 3, y - 2, x + w + 3, y + lines.size() * (lh + 1) + 1, 0x90000000);
 		int ty = y;
 		for (int i = 0; i < lines.size(); i++) {
-			g.text(mc.font, lines.get(i), x, ty, i == 1 ? 0xFFFFEB3B : 0xFFFFFFFF, true);
-			ty += mc.font.lineHeight + 1;
+			g.text(lines.get(i), x, ty, i == 1 ? 0xFFFFEB3B : 0xFFFFFFFF);
+			ty += lh + 1;
 		}
 	}
 

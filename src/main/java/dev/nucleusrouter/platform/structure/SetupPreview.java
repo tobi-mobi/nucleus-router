@@ -1,6 +1,5 @@
 package dev.nucleusrouter.platform.structure;
 
-import dev.nucleusrouter.core.NucleusRouter;
 import dev.nucleusrouter.core.config.NrConfig;
 import dev.nucleusrouter.core.cost.CostModel;
 import dev.nucleusrouter.core.etherwarp.Etherwarp;
@@ -23,13 +22,9 @@ import dev.nucleusrouter.platform.config.ConfigManager;
 import dev.nucleusrouter.platform.location.LocationTracker;
 import dev.nucleusrouter.platform.render.WorldDraw;
 import dev.nucleusrouter.platform.world.WorldCapture;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
@@ -83,7 +78,7 @@ public final class SetupPreview {
 
 	public static void init() {
 		WorldDraw.addLayerWhile(() -> shown != null && LocationTracker.state().inHollows(), SetupPreview::draw);
-		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(NucleusRouter.MOD_ID, "setup_progress"), dev.nucleusrouter.platform.debug.Perf.hud("SetupPreview", SetupPreview::drawProgress));
+		dev.nucleusrouter.platform.render.Hud.add("setup_progress", "SetupPreview", SetupPreview::drawProgress);
 	}
 
 	public static void clear() { shown = null; }
@@ -296,14 +291,13 @@ public final class SetupPreview {
 		total = t;
 	}
 
-	private static void drawProgress(GuiGraphicsExtractor g, DeltaTracker delta) {
+	private static void drawProgress(dev.nucleusrouter.platform.render.Hud g) {
 		if (!running) return;
-		Minecraft mc = Minecraft.getInstance();
 		String text = "Nucleus Router: planning the setup: " + phase + (total > 1 ? " " + done + "/" + total : "") + "...";
-		int w = mc.font.width(text);
-		int x = g.guiWidth() / 2 - w / 2, y = 4;
-		g.fill(x - 3, y - 2, x + w + 3, y + mc.font.lineHeight + 1, 0x90000000);
-		g.text(mc.font, text, x, y, 0xFFFFEB3B, true);
+		int w = dev.nucleusrouter.platform.render.Hud.textWidth(text);
+		int x = g.width() / 2 - w / 2, y = 4;
+		g.fill(x - 3, y - 2, x + w + 3, y + dev.nucleusrouter.platform.render.Hud.lineHeight() + 1, 0x90000000);
+		g.text(text, x, y, 0xFFFFEB3B);
 	}
 
 	private static void draw(WorldDraw draw) {
