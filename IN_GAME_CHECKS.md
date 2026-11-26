@@ -47,6 +47,15 @@ Claude then moves it to "Confirmed game facts" in `ROADMAP.md`, updates the defa
 
 ## Test checklists (built, not yet tried in-game)
 
+### Suggested order for one session (covers the most with the least travelling)
+1. **Quick answers first** (5 minutes, anywhere open in the Hollows): Q1 (normal teleport at a wall, up, down), Q8 (placing reach), Q15 (pillar up), Q16 (place from a block's edge), Q7 (2-3 dropped bombs with `/nr calibrate bomb`). These decide whether the setup planner's basic moves are right.
+2. **Find all structures**, then `/nr route` and `/nr setup`. Send the "Lobby setup planned in X s" line, and `/nr dump` if you can.
+3. **One leg of guided setup** (`/nr setup start`): a few throws, one pillar, one edge placement. Note anything that doesn't tick off or looks wrong. Throw one bomb off-plan on purpose to see the re-plan message.
+4. `/nr verify` after that leg.
+5. **A run** with `/nr run` (Milestone 3 checklist): timer, splits, den countdown (Q4, Q5), crystal pickups (Q3, Q6), temple teleport spot (Q2).
+
+Anything you only get partly through is still useful: send what you have.
+
 ### Milestone 3: run mode and run HUD (3.5, 3.6)
 1. `/nr route`, then `/nr run`. The run panel replaces the structure list (top left). The timer starts when you first move 2 blocks.
 2. Between structures it shows "Next: ..." and "To: <structure> <distance>". Inside one it shows "At / Do / Then".
