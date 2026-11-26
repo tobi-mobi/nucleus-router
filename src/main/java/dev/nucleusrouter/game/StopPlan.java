@@ -129,7 +129,7 @@ public final class StopPlan {
 		return new double[]{b[0][0], b[0][1], b[0][2], b[1][0], b[1][1], b[1][2]};
 	}
 
-	private static Vec3 centre(int[][] b) {
+	public static Vec3 centre(int[][] b) {
 		return new Vec3((b[0][0] + b[1][0] + 1) / 2.0, (b[0][1] + b[1][1] + 1) / 2.0, (b[0][2] + b[1][2] + 1) / 2.0);
 	}
 }

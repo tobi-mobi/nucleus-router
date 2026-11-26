@@ -202,4 +202,21 @@ class PlacementPlannerTest {
 		for (PlacementPlanner.Step s : p.steps()) all.add(Lane.pack(s.block()[0], s.block()[1], s.block()[2]));
 		if (p.impossible().isEmpty()) assertNull(designer.validate(d.lanes(), w.after(bombs.blasted(), all)));
 	}
+
+	/** Confirmed 2026-11-26: no placing near crystals or in the temple. No target, helper or pillar goes there. */
+	@Test
+	void nothingPlacedWherePlacingIsRefused() {
+		SetupWorld base = LegDesignerTest.world(PlacementPlannerTest::hall, List.of());
+		SetupWorld w = new SetupWorld() {
+			@Override public VoxelClass classAt(int x, int y, int z) { return base.classAt(x, y, z); }
+			@Override public boolean inZone(int x, int y, int z) { return false; }
+			@Override public boolean explored(int x, int z) { return true; }
+			@Override public boolean placeAllowed(int x, int y, int z) { return x < 0; }
+		};
+		PlacementPlanner.Plan p = plan(w, set(new int[]{5, 100, 0}, new int[]{-5, 103, 0}), q -> true);
+		assertEquals(List.of(Lane.pack(5, 100, 0)), p.impossible(), "x >= 0 refuses placing");
+		for (PlacementPlanner.Step s : p.steps()) assertTrue(s.block()[0] < 0, "helpers and pillars stay where placing works");
+		assertFalse(w.targetAllowed(5, 100, 0), "an empty spot where placing is refused can't be a target");
+		assertTrue(w.targetAllowed(5, 99, 0), "a block already there still can");
+	}
 }

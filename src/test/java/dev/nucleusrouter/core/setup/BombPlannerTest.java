@@ -77,4 +77,25 @@ class BombPlannerTest {
 		assertEquals(5, BombPlanner.progress(path, new int[]{5, 3, 0}), 1e-9);
 		assertEquals(15, BombPlanner.progress(path, new int[]{12, 0, 5}), 1e-9);
 	}
+
+	/** In-game 2026-11-26: in a crater a dropped bomb came to rest a block higher. Dropped throws only onto level ground. */
+	@Test
+	void droppedBombsOnlyOntoLevelGround() {
+		int[] b = {0, 99, 0};
+		assertTrue(BombPlanner.level(b, (x, y, z) -> y <= 99), "flat floor");
+		assertFalse(BombPlanner.level(b, (x, y, z) -> y <= 99 || (x == 1 && y == 100)), "a neighbour one higher");
+		assertFalse(BombPlanner.level(b, (x, y, z) -> y <= 99 && !(x == -1 && z == 1 && y == 99)), "a neighbour one lower");
+	}
+
+	/** Lane targets where placing isn't allowed must survive every blast. */
+	@Test
+	void keptBlocksAreNeverBlasted() {
+		SetupWorld w = LegDesignerTest.world(BombPlannerTest::caveThenRock, List.of());
+		LegDesigner designer = new LegDesigner(w, p, cost, cfg);
+		LegDesigner.Design d = designer.design(new int[]{0, 99, 0}, new int[]{130, 99, 0}).best();
+		java.util.Set<Long> keep = new java.util.HashSet<>();
+		for (int x = 60; x <= 70; x++) keep.add(Lane.pack(x, 95, 0));
+		BombPlanner.Plan plan = new BombPlanner(w, cfg).plan(new int[]{0, 99, 0}, LegDesigner.path(d), d.toClear(), keep);
+		for (long k : keep) assertFalse(plan.blasted().contains(k), "kept block blasted: " + java.util.Arrays.toString(Lane.unpack(k)));
+	}
 }

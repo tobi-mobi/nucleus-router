@@ -285,6 +285,17 @@ public final class LegDesigner {
 		return new AfterBombs(placements, validate(d.lanes(), world.after(blasted, placements)));
 	}
 
+	/** The leg's start block and targets where placing isn't allowed: bombs must leave them standing. */
+	public static Set<Long> keep(Design d, SetupWorld world) {
+		Set<Long> out = new LinkedHashSet<>();
+		for (PlannedLane l : d.lanes())
+			for (int k = 0; k <= l.spec().warps(); k++) {
+				int[] t = l.spec().target(k);
+				if (!world.placeAllowed(t[0], t[1], t[2])) out.add(Lane.pack(t[0], t[1], t[2]));
+			}
+		return out;
+	}
+
 	/** The path the bomb planner follows: the leg start, then every lane's end. */
 	public static List<int[]> path(Design d) {
 		List<int[]> out = new ArrayList<>();

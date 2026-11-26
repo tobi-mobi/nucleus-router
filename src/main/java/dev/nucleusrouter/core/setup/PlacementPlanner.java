@@ -37,8 +37,9 @@ import java.util.function.Predicate;
  *   <li>if a pillar under it would get in a lane's way: a pillar <b>beside</b> it up to the same height; on top,
  *       sneak to the edge and place the target against the pillar's side.</li>
  * </ol>
- * Blocks with no way to place them are reported, not guessed. Placing near large structures is refused in-game
- * (confirmed 2026-11-24, exact distance unknown), so placements inside a structure zone are flagged.
+ * Blocks with no way to place them are reported, not guessed. No block (target, helper or pillar) goes where the
+ * game refuses placing ({@link SetupWorld#placeAllowed}: within 50 blocks of the Jade, Sapphire and Amber crystals,
+ * inside the Jungle Temple; confirmed 2026-11-26). Placements inside a bomb zone are still flagged.
  * <p>
  * The "+2 / +1" targets (a block 2 ahead at eye level or 1 ahead) are not special here: the lane designer
  * chooses where targets go (raised targets give a bigger aim margin) and this planner places whatever it chose.
@@ -145,6 +146,7 @@ public final class PlacementPlanner {
 	 */
 	private List<Step> place(int[] b, SolidQuery now, Set<Long> targets, Vec3 last, int depth, Set<Long> placed,
 			Set<Long> reserved, LanesWork lanesWork, Set<Long> cleared) {
+		if (!world.placeAllowed(b[0], b[1], b[2])) return null; // near a crystal or in the temple: the game refuses it
 		Step direct = directStep(b, now, last, depth > 0);
 		if (direct != null) return new ArrayList<>(List.of(direct));
 		if (depth >= MAX_HELPERS) return null;
@@ -256,6 +258,8 @@ public final class PlacementPlanner {
 		if (!now.solid(cx, ground, cz)) return null;
 		int height = top - ground; // column blocks (b included when under)
 		if (height < 1 || height > maxPillar) return null;
+		for (int y = ground + 1; y <= top; y++) if (!world.placeAllowed(cx, y, cz)) return null;
+		if (!world.placeAllowed(b[0], b[1], b[2])) return null;
 		Set<Long> added = new HashSet<>();
 		for (int y = ground + 1; y <= top; y++) if (!(under && y == top)) added.add(Lane.pack(cx, y, cz));
 		Set<Long> trial = new HashSet<>(placed);

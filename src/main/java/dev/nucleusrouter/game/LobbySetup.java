@@ -157,7 +157,7 @@ public final class LobbySetup {
 		for (String[] pair : used) {
 			bjobs.add(CompletableFuture.runAsync(() -> {
 				LegDesigner.Design d = designs.get(pair[0] + ">" + pair[1]);
-				bombs.put(pair[0] + ">" + pair[1], new BombPlanner(world, cfg).plan(block(byId.get(pair[0])), LegDesigner.path(d), d.toClear()));
+				bombs.put(pair[0] + ">" + pair[1], new BombPlanner(world, cfg).plan(block(byId.get(pair[0])), LegDesigner.path(d), d.toClear(), LegDesigner.keep(d, world)));
 				progress.update("bombs", bombsDone.incrementAndGet(), used.size());
 			}, pool));
 		}
@@ -266,6 +266,7 @@ public final class LobbySetup {
 			}
 			@Override public boolean inZone(int x, int y, int z) { return world.inZone(x, y, z); }
 			@Override public boolean explored(int x, int z) { return world.explored(x, z); }
+			@Override public boolean placeAllowed(int x, int y, int z) { return world.placeAllowed(x, y, z); }
 		};
 	}
 

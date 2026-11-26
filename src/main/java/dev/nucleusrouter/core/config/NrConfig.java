@@ -177,10 +177,16 @@ public final class NrConfig {
 		/** Where the blast is centred. Confirmed 2026-11-24 for direct hits: centre of the block hit. */
 		public BlastCentre blastCentre = BlastCentre.IMPACT_BLOCK_CENTRE;
 		/**
-		 * [VERIFY] For a bomb that dropped at max range, the blast centre is this many blocks above the block it
-		 * landed on. One throw onto a flat crater floor measured 1 exactly; one into a deeper crater suggested 2.
+		 * For a bomb that dropped at max range, the blast centre is this many blocks above the block it landed on.
+		 * Confirmed 2026-11-26 on level ground (1 above, 0.00 off). In a crater it came out 2 above (twice): the bomb
+		 * can rest on a neighbouring block one higher, so see {@link #droppedOnlyOnLevelGround}.
 		 */
 		public int dropCentreBlocksAbove = 1;
+		/**
+		 * Setups only plan a dropped bomb where its landing block and the 8 around it are level (the same height);
+		 * in craters only direct hits (exact in every calibration).
+		 */
+		public boolean droppedOnlyOnLevelGround = true;
 		/** Which vanilla blocks count as Hard Stone (broken for good). Confirmed: minecraft:stone. */
 		public List<String> hardStoneBlocks = new ArrayList<>(List.of("minecraft:stone"));
 		/** Blocks bombs never break. An entry starting with '*' matches by suffix, e.g. "*_log". */
@@ -196,10 +202,19 @@ public final class NrConfig {
 
 	/** §2.5 Placing blocks. */
 	public static final class Placing {
-		/** [VERIFY] Block reach used for planned placements (IN_GAME_CHECKS.md Q8). */
+		/** Block reach used for planned placements. Confirmed 2026-11-26: 4.5. */
 		public double reach = 4.5;
-		/** [VERIFY] Placing allowed everywhere in the Hollows outside structure regions. */
+		/** Kept for old configs; placing rules are the three settings below (confirmed 2026-11-26). */
 		public boolean allowedEverywhereOutsideStructures = true;
+		/**
+		 * Confirmed 2026-11-26: you can't place blocks within this many blocks (each way: an invisible cube) of a
+		 * crystal (Jade, Sapphire, Amber). Planned placements stay outside; targets there must be natural blocks.
+		 */
+		public int noPlaceAroundCrystal = 50;
+		/** Confirmed 2026-11-26: in Khazad-dum you can place everywhere, also near the Topaz crystal. */
+		public boolean placeAroundTopaz = true;
+		/** Confirmed 2026-11-26: inside the Jungle Temple you can't place anywhere (its zone box is used as its size). */
+		public boolean noPlaceInTemple = true;
 		/**
 		 * Blocks you place are detected automatically, whatever their type. This list is a fallback:
 		 * these types also count as placed when they appear in air without the mod seeing you place them
@@ -571,6 +586,7 @@ public final class NrConfig {
 		setup.legTimeLimitMs = (int) clamp(fixes, "setup.legTimeLimitMs", setup.legTimeLimitMs, 50, 60000);
 		setup.maxThrowsPerLeg = (int) clamp(fixes, "setup.maxThrowsPerLeg", setup.maxThrowsPerLeg, 1, 5000);
 		setup.maxPillarBlocks = (int) clamp(fixes, "setup.maxPillarBlocks", setup.maxPillarBlocks, 0, 64);
+		placing.noPlaceAroundCrystal = (int) clamp(fixes, "placing.noPlaceAroundCrystal", placing.noPlaceAroundCrystal, 0, 200);
 		setup.lobbyTimeLimitMs = (int) clamp(fixes, "setup.lobbyTimeLimitMs", setup.lobbyTimeLimitMs, 500, 60000);
 		run.arriveRadius = clamp(fixes, "run.arriveRadius", run.arriveRadius, 3, 100);
 		run.targetsShown = (int) clamp(fixes, "run.targetsShown", run.targetsShown, 1, 30);

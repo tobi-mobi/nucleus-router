@@ -91,7 +91,7 @@ public final class SetupPreview {
 
 	/** What the planners need, copied on the client thread. */
 	record Inputs(NrConfig cfg, StructureMap map, dev.nucleusrouter.game.KeeperLayout layout, PlanWorld.Columns explored,
-			List<int[]> zones, int ping) {}
+			List<int[]> zones, int ping, List<int[]> noPlace) {}
 
 	static Inputs inputs() {
 		NrConfig cfg = ConfigManager.get();
@@ -103,7 +103,31 @@ public final class SetupPreview {
 			int[] b = map.zoneBox(s, StructureShapes.zone(s));
 			if (b != null) zones.add(b);
 		}
-		return new Inputs(cfg, map, KeeperLayouts.layout(), explored, zones, LocationTracker.state().pingMs());
+		return new Inputs(cfg, map, KeeperLayouts.layout(), explored, zones, LocationTracker.state().pingMs(), noPlace(map, cfg));
+	}
+
+	/**
+	 * Where the game refuses placed blocks (confirmed 2026-11-26): a cube of {@code placing.noPlaceAroundCrystal} (50)
+	 * each way around the Jade, Sapphire and Amber crystals (and Topaz unless {@code placing.placeAroundTopaz}), and the
+	 * whole Jungle Temple (its zone box).
+	 */
+	static List<int[]> noPlace(StructureMap map, NrConfig cfg) {
+		List<int[]> out = new ArrayList<>();
+		int r = cfg.placing.noPlaceAroundCrystal;
+		List<Structure> crystals = new ArrayList<>(List.of(Structure.MINES_OF_DIVAN, Structure.PRECURSOR_CITY, Structure.GOBLIN_QUEENS_DEN));
+		if (!cfg.placing.placeAroundTopaz) crystals.add(Structure.KHAZAD_DUM);
+		for (Structure s : crystals) {
+			int[][] box = map.crystalBox(s);
+			Vec3 c = box != null ? StopPlan.centre(box) : StructureMap.exact(map.locate(s)) ? map.locate(s).pos() : null;
+			if (c == null) continue;
+			int cx = (int) Math.floor(c.x()), cy = (int) Math.floor(c.y()), cz = (int) Math.floor(c.z());
+			out.add(new int[]{cx - r, cy - r, cz - r, cx + r, cy + r, cz + r});
+		}
+		if (cfg.placing.noPlaceInTemple) {
+			int[] t = map.zoneBox(Structure.JUNGLE_TEMPLE, StructureShapes.zone(Structure.JUNGLE_TEMPLE));
+			if (t != null) out.add(t);
+		}
+		return out;
 	}
 
 	private static List<StopPlan.Stop> stops(WorldSnapshot snap, Inputs in) {
@@ -130,13 +154,13 @@ public final class SetupPreview {
 				throw new IllegalStateException(target.displayName + " has no arrival spot yet (find it first: /nr stops)");
 			Vec3 f = stop.standFeet();
 			int[] goal = {(int) Math.floor(f.x()), (int) Math.floor(f.y()) - 1, (int) Math.floor(f.z())};
-			SetupWorld w = SetupWorld.of(snap, in.zones(), in.explored());
+			SetupWorld w = SetupWorld.of(snap, in.zones(), in.explored(), in.noPlace());
 			LegDesigner designer = new LegDesigner(w, Etherwarp.Params.fromConfig(cfg), new CostModel(cfg, in.ping()), cfg);
 			LegDesigner.Result r = designer.design(start, goal);
 			LegDesigner.Design d = r.best();
 			if (d == null) return new Object[]{r, null, null, null, null};
 			progress("bombs", 0, 1);
-			BombPlanner.Plan bombs = new BombPlanner(w, cfg).plan(start, LegDesigner.path(d), d.toClear());
+			BombPlanner.Plan bombs = new BombPlanner(w, cfg).plan(start, LegDesigner.path(d), d.toClear(), LegDesigner.keep(d, w));
 			LegDesigner.AfterBombs after = designer.afterBombs(d, bombs.blasted());
 			progress("placing", 0, 1);
 			PlacementPlanner.Plan place = new PlacementPlanner(w, cfg).plan(LegDesigner.path(d), after.placements(), bombs.blasted(),
@@ -188,7 +212,7 @@ public final class SetupPreview {
 		running = true;
 		progress("reading the terrain", 0, 1);
 		WorldCapture.snapshot().thenApplyAsync(snap -> {
-			SetupWorld w = SetupWorld.of(snap, in.zones(), in.explored());
+			SetupWorld w = SetupWorld.of(snap, in.zones(), in.explored(), in.noPlace());
 			return LobbySetup.plan(stops(snap, in), w, terrain, cfg, in.ping(), WORKER_POOL, WORKERS, SetupPreview::progress);
 		}, POOL).whenComplete((res, err) -> mc.execute(() -> {
 			running = false;

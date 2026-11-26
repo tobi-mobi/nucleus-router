@@ -197,7 +197,7 @@ public final class SetupGuide {
 		int[] numbers = {s.lastNumber(SetupSteps.Kind.THROW), s.lastNumber(SetupSteps.Kind.MINE)};
 		var design = s.designs().get(leg);
 		dev.nucleusrouter.platform.world.WorldCapture.snapshot().thenApplyAsync(snap ->
-				SetupRepair.replanBombs(leg, design, SetupWorld.of(snap, in.zones(), in.explored()), noBomb, in.cfg(), numbers), WORKER)
+				SetupRepair.replanBombs(leg, design, SetupWorld.of(snap, in.zones(), in.explored(), in.noPlace()), noBomb, in.cfg(), numbers), WORKER)
 				.whenComplete((fresh, err) -> Minecraft.getInstance().execute(() -> {
 					replanning = false;
 					if (err != null) { NucleusRouterClient.reportAsyncError(err); return; }
@@ -232,7 +232,7 @@ public final class SetupGuide {
 		int lastP = doneP == 0 ? 0 : s.lastNumber(SetupSteps.Kind.PLACE);
 		int before = s.count(SetupSteps.Kind.PLACE) - doneP;
 		dev.nucleusrouter.platform.world.WorldCapture.snapshot().thenApplyAsync(snap ->
-				LobbySetup.placeAll(designs, SetupWorld.of(snap, in.zones(), in.explored()), java.util.Set.of(), in.cfg(), in.ping(), i -> {}), WORKER)
+				LobbySetup.placeAll(designs, SetupWorld.of(snap, in.zones(), in.explored(), in.noPlace()), java.util.Set.of(), in.cfg(), in.ping(), i -> {}), WORKER)
 				.whenComplete((plans, err) -> Minecraft.getInstance().execute(() -> {
 					replanning = false;
 					if (err != null) { NucleusRouterClient.reportAsyncError(err); return; }

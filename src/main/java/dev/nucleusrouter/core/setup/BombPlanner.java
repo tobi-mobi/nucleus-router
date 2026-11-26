@@ -26,6 +26,9 @@ import java.util.Set;
  * {@code dropCentreBlocksAbove} higher). A throw whose blast centre is inside a structure zone fizzles, so it's
  * never planned. Blocks no legal throw can reach become "mine" steps.
  * <p>
+ * Dropped bombs are only planned onto level ground (in a crater one came to rest a block higher, 2026-11-26), and
+ * no throw may break a "keep" block (a lane target where placing isn't allowed).
+ * <p>
  * Simplifications (documented): you can get to any open, explored stand spot (with the Aspect of the Void);
  * ores and gemstones broken by a blast count as solid (they respawn), so throws never rely on them being gone;
  * stand spots are kept out of the blast.
@@ -64,6 +67,7 @@ public final class BombPlanner {
 	private final double eyeHeight;
 	private final double radius;
 	private final int[][] ball;
+	private Set<Long> keep = Set.of();
 
 	public BombPlanner(SetupWorld world, NrConfig cfg) {
 		this.world = world;
@@ -84,6 +88,15 @@ public final class BombPlanner {
 	 * {@code toClear} is what the design needs gone; the order of work follows {@code path} (lane origins and ends).
 	 */
 	public Plan plan(int[] start, List<int[]> path, Set<Long> toClear) {
+		return plan(start, path, toClear, Set.of());
+	}
+
+	/**
+	 * Same; no throw may break a block in {@code keep} (lane targets where placing isn't allowed: if blasted they
+	 * could never be put back).
+	 */
+	public Plan plan(int[] start, List<int[]> path, Set<Long> toClear, Set<Long> keep) {
+		this.keep = keep;
 		long t0 = System.nanoTime();
 		Set<Long> blasted = new HashSet<>();
 		SolidQuery now = (x, y, z) -> world.solid(x, y, z) && !(blasted.contains(Lane.pack(x, y, z)) && world.clearable(x, y, z));
@@ -157,6 +170,8 @@ public final class BombPlanner {
 				Vec3 dir = aim.sub(eye).normalize();
 				BombThrow.Prediction pr = BombThrow.predict(eye, dir, range, cfg.bombs.dropsStraightDownAtMaxRange, now);
 				if (!pr.lands()) continue;
+				// A dropped bomb can rest on a neighbouring block one higher (crater, 2026-11-26): only onto level ground
+				if (pr.dropped() && cfg.bombs.droppedOnlyOnLevelGround && !level(pr.impactBlock(), now)) continue;
 				Vec3 c = pr.blastCentre(cfg.bombs);
 				int cx = (int) Math.floor(c.x()), cy = (int) Math.floor(c.y()), cz = (int) Math.floor(c.z());
 				if (!seenCentres.add(Lane.pack(cx, cy, cz))) continue;
@@ -164,10 +179,15 @@ public final class BombPlanner {
 				// Don't blow up where you stand
 				if (c.sub(feet).length() <= radius + 0.5 || c.sub(new Vec3(feet.x(), feet.y() - 0.5, feet.z())).length() <= radius + 0.5) continue;
 				int gain = 0;
+				boolean breaksKept = false;
 				for (int[] o : ball) {
 					int x = cx + o[0], y = cy + o[1], z = cz + o[2];
-					if (inBlast(c, x, y, z) && remaining.contains(Lane.pack(x, y, z))) gain++;
+					if (!inBlast(c, x, y, z)) continue;
+					long k = Lane.pack(x, y, z);
+					if (remaining.contains(k)) gain++;
+					if (keep.contains(k) && now.solid(x, y, z)) { breaksKept = true; break; }
 				}
+				if (breaksKept) continue;
 				if (gain == 0) continue;
 				if (best == null || gain > best.clears()
 						|| (gain == best.clears() && feet.sub(c).length() < best.standFeet().sub(best.centre()).length()))
@@ -175,6 +195,15 @@ public final class BombPlanner {
 			}
 		}
 		return best;
+	}
+
+	/** The landing block and the 8 around it are level: solid at its height with room above. */
+	static boolean level(int[] b, SolidQuery now) {
+		if (b == null) return false;
+		for (int dx = -1; dx <= 1; dx++)
+			for (int dz = -1; dz <= 1; dz++)
+				if (!now.solid(b[0] + dx, b[1], b[2] + dz) || now.solid(b[0] + dx, b[1] + 1, b[2] + dz)) return false;
+		return true;
 	}
 
 	/** Block (x, y, z) is broken by a blast at {@code c}: its centre is within the radius. */

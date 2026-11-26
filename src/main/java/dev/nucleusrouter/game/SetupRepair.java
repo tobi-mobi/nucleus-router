@@ -76,7 +76,8 @@ public final class SetupRepair {
 			if (now.solid(q[0], q[1], q[2])) remaining.add(k);
 		}
 		SetupWorld world = noBombNear(now, fizzled);
-		BombPlanner.Plan plan = new BombPlanner(world, cfg).plan(d.lanes().get(0).spec().origin(), LegDesigner.path(d), new java.util.LinkedHashSet<>(remaining));
+		BombPlanner.Plan plan = new BombPlanner(world, cfg).plan(d.lanes().get(0).spec().origin(), LegDesigner.path(d), new java.util.LinkedHashSet<>(remaining),
+				LegDesigner.keep(d, now));
 		return SetupSteps.bombSteps(leg, plan, remaining, cfg.bombs.blastRadius, numbers);
 	}
 
@@ -86,6 +87,7 @@ public final class SetupRepair {
 		return new SetupWorld() {
 			@Override public dev.nucleusrouter.core.world.VoxelClass classAt(int x, int y, int z) { return world.classAt(x, y, z); }
 			@Override public boolean explored(int x, int z) { return world.explored(x, z); }
+			@Override public boolean placeAllowed(int x, int y, int z) { return world.placeAllowed(x, y, z); }
 			@Override public boolean inZone(int x, int y, int z) {
 				if (world.inZone(x, y, z)) return true;
 				Vec3 p = new Vec3(x + 0.5, y + 0.5, z + 0.5);

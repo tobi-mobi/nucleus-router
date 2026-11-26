@@ -25,6 +25,12 @@ public interface SetupWorld {
 	/** Inside a structure's bomb-exclusion zone. */
 	boolean inZone(int x, int y, int z);
 
+	/**
+	 * A block may be placed here. Confirmed 2026-11-26: not within 50 blocks (a cube) of the Jade, Sapphire and
+	 * Amber crystals, and nowhere inside the Jungle Temple.
+	 */
+	default boolean placeAllowed(int x, int y, int z) { return true; }
+
 	/** The column has been explored. */
 	boolean explored(int x, int z);
 
@@ -37,10 +43,14 @@ public interface SetupWorld {
 		return c == VoxelClass.HARD_STONE || c == VoxelClass.PLACED;
 	}
 
-	/** Can be an etherwarp target as it stands, or once a block is placed there. Respawning and unseen blocks can't. */
+	/**
+	 * Can be an etherwarp target as it stands, or once a block is placed there. Respawning and unseen blocks can't;
+	 * where placing isn't allowed only a block that is already there can.
+	 */
 	default boolean targetAllowed(int x, int y, int z) {
 		VoxelClass c = classAt(x, y, z);
-		return c != VoxelClass.UNKNOWN && c != VoxelClass.RESPAWNING_SOLID && explored(x, z);
+		if (c == VoxelClass.UNKNOWN || c == VoxelClass.RESPAWNING_SOLID || !explored(x, z)) return false;
+		return placeAllowed(x, y, z) || c.plannedSolid();
 	}
 
 	/** The best case after a setup: only what can't be cleared stays solid. Used to look for lanes. */
@@ -73,6 +83,7 @@ public interface SetupWorld {
 			}
 			@Override public boolean inZone(int x, int y, int z) { return base.inZone(x, y, z); }
 			@Override public boolean explored(int x, int z) { return base.explored(x, z); }
+			@Override public boolean placeAllowed(int x, int y, int z) { return base.placeAllowed(x, y, z); }
 		};
 	}
 
@@ -85,10 +96,16 @@ public interface SetupWorld {
 
 	/** From a terrain snapshot, zone boxes and the explored columns. */
 	static SetupWorld of(WorldSnapshot snap, List<int[]> zones, dev.nucleusrouter.core.plan.PlanWorld.Columns explored) {
+		return of(snap, zones, explored, List.of());
+	}
+
+	/** Same, with boxes where no block may be placed ({minX, minY, minZ, maxX, maxY, maxZ}, inclusive). */
+	static SetupWorld of(WorldSnapshot snap, List<int[]> zones, dev.nucleusrouter.core.plan.PlanWorld.Columns explored, List<int[]> noPlace) {
 		return new SetupWorld() {
 			@Override public VoxelClass classAt(int x, int y, int z) { return snap.classAt(x, y, z); }
 			@Override public boolean inZone(int x, int y, int z) { return inAny(zones, x, y, z); }
 			@Override public boolean explored(int x, int z) { return explored.allowed(x, z); }
+			@Override public boolean placeAllowed(int x, int y, int z) { return !inAny(noPlace, x, y, z); }
 		};
 	}
 }
