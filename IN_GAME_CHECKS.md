@@ -35,12 +35,25 @@ Claude then moves it to "Confirmed game facts" in `ROADMAP.md`, updates the defa
 
 ## Test checklists (built, not yet tried in-game)
 
-### Suggested order for one session (covers the most with the least travelling)
-1. ~~Quick answers~~: all answered 2026-11-26, thanks.
-2. **Find all structures**, then `/nr route` and `/nr setup`. Send the "Lobby setup planned in X s" line, and `/nr dump` if you can.
-3. **One leg of guided setup** (`/nr setup start`): a few throws, one pillar, one edge placement. Note anything that doesn't tick off or looks wrong. Throw one bomb off-plan on purpose to see the re-plan message.
-4. `/nr verify` after that leg.
-5. **A run** with `/nr run` (Milestone 3 checklist): timer, splits, den countdown (starts on "CRYSTAL FOUND ... Amber Crystal"), crystal splits at pickup, temple teleport spot (Q2), King Yolkar marker (Q17).
+### Final test plan (5.5): suggested order, most important first
+Each step lists the checklist below that has the details. Two or three sessions in a fresh, low-day lobby should cover all of it.
+
+**Session 1: plan a lobby (no setup work yet)**
+1. Find all 6 structures (the list at the top left shows 6/6). Then `/nr route` (Milestone 3) and `/nr setup` (4.5). **Send the "Lobby setup planned in X s" line** and, if you can, run `/nr dump` and send the file. That gives real-lobby numbers.
+2. `/nr perf` with the setup preview showing (5.3). Send the output.
+3. At King Yolkar: `/nr setpoint` (5.1), then `/nr setpoint list`.
+
+**Session 2: build the setup**
+4. `/nr setup start` and do at least one whole leg (4.6): throws, mining, a pillar and an edge placement. Note any step that doesn't tick off by itself.
+5. Throw one bomb off-plan on purpose, and skip one throw with `]` (4.7). Do the re-plan messages match what happened?
+6. `/nr verify` after that leg (4.7). It shows any planned warps that don't work.
+7. If a bomb near a structure did nothing: send its chat line (Q9). After each throw: are you still on your block (Q10)?
+
+**Session 3: run it**
+8. `/nr route`, then `/nr run` for a full run (Milestone 3): timer, splits at each "CRYSTAL FOUND", den countdown, warp count.
+9. Right after the temple teleport: `/nr where` and send the "From Jungle Temple" line (Q2), then `/nr setpoint temple.exit` (5.1).
+10. In Khazad-dum: `/nr bal` (5.2, optional).
+11. `/nr perf` once more during the run (5.3).
 
 Anything you only get partly through is still useful: send what you have.
 
@@ -54,11 +67,11 @@ Anything you only get partly through is still useful: send what you have.
 7. `/nr hud` moves both panels. `/nr run stop` brings the structure list back.
 8. Normal-teleport stretches show as arrows with "teleport x5" labels. Do the click counts roughly match?
 
-### Milestone 4 so far: setup design preview (4.1-4.3)
+### Milestone 4: single-leg design preview (4.1-4.4)
 1. Stand somewhere open in the Hollows and type `/nr design <structure>` (divan, precursor, king, queen, temple, khazad). Chat says what was designed. In the world you see the lanes, target blocks, bomb throws and blocks to mine.
 2. Does the design look sensible? Straight lanes, few bends, nothing through ore veins or structures.
 3. Optional: do one throw exactly as shown. Is the crater roughly where the preview says? (Also answers Q10.)
-4. Placements (4.4): "P" numbers on the blocks to place, in order. For a normal one, a yellow spot to stand on and a yellow square on the face to click. Pillars show as a yellow column with "pillar up" on top. Try one of each: can you do it from the shown spot? (Also answers Q8 and Q15.)
+4. Placements (4.4): "P" numbers on the blocks to place, in order. For a normal one, a yellow spot to stand on and a yellow square on the face to click. Pillars show as a yellow column with "pillar up" on top. Try one of each: can you do it from the shown spot?
 5. Chat lists how many target and helper blocks to place. Any it couldn't solve are magenta; tell Claude where.
 6. `/nr design clear` hides it.
 
